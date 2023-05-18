@@ -92,6 +92,8 @@ global demographics="eeduc tage esex erace ems tceb ebornus eorigin"
 
 global jobs1="ejb*_jborse ejb*_clwrk tjb*_empb ejb*_incpb ejb*_jobid ejb*_startwk ejb*_endwk tjb*_mwkhrs tjb*_ind tjb*_occ"
 global jobs2="ejb*_typpay1 tjb*_gamt1 ejb*_bslryb *tbsj*val tjb*_prftb tbsj*debtval tjb*_msum" 
+global jobs1_reshape="ejb@_jborse ejb@_clwrk tjb@_empb ejb@_incpb ejb@_jobid ejb@_startwk ejb@_endwk tjb@_mwkhrs tjb@_ind tjb@_occ"
+global jobs2_reshape="ejb@_typpay1 tjb@_gamt1 ejb@_bslryb tbsj@val tjb@_prftb tbsj@debtval tjb@_msum"
 
 pause on
 
@@ -103,17 +105,48 @@ use $varbasic_ids $jobs1 $jobs2  using ${file`num'}, clear
 
 unique ssuid pnum if (ejb1_jobid == . & ejb2_jobid == . & ejb3_jobid == . & ejb4_jobid == . & ejb5_jobid == . & ejb6_jobid == . & ejb7_jobid == .) ///
        & (tjb1_mwkhrs != . | tjb2_mwkhrs != . |  tjb3_mwkhrs != . | tjb4_mwkhrs != . | tjb5_mwkhrs != . | tjb6_mwkhrs != . | tjb7_mwkhrs != . ) 
-	   
-list ssuid pnum monthcode *jobid *mwkhrs if (ejb1_jobid == . & ejb2_jobid == . & ejb3_jobid == . & ejb4_jobid == . & ejb5_jobid == . & ejb6_jobid == . & ejb7_jobid == .) & (tjb1_mwkhrs != . | tjb2_mwkhrs != . |  tjb3_mwkhrs != . | tjb4_mwkhrs != . | tjb5_mwkhrs != . | tjb6_mwkhrs != . | tjb7_mwkhrs != . ) in 1/5000
 
-list ssuid pnum monthcode *jobid *msum if (ejb1_jobid == . & ejb2_jobid == . & ejb3_jobid == . & ejb4_jobid == . & ejb5_jobid == . & ejb6_jobid == . & ejb7_jobid == .) & (tjb1_mwkhrs != . | tjb2_mwkhrs != . |  tjb3_mwkhrs != . | tjb4_mwkhrs != . | tjb5_mwkhrs != . | tjb6_mwkhrs != . | tjb7_mwkhrs != . ) in 1/5000
+merge m:1 ssuid spanel pnum using unique_individuals, keep(1 3)	   
+capture drop _merge
 
+// listing examples of thoe who who don't have ejb_jobid but have other info 
+di "examples of those who don't have ejb_jobid but have other info"
+list ssuid pnum ssuid_spanel monthcode ejb1_jobid ejb2_jobid tjb1_mwkhrs tjb2_mwkhrs tjb1_msum tjb2_msum tage if (ejb1_jobid == . & ejb2_jobid == . & ejb3_jobid == . & ejb4_jobid == . & ejb5_jobid == . & ejb6_jobid == . & ejb7_jobid == .) & (tjb1_mwkhrs != . | tjb2_mwkhrs != . |  tjb3_mwkhrs != . | tjb4_mwkhrs != . | tjb5_mwkhrs != . | tjb6_mwkhrs != . | tjb7_mwkhrs != . ) in 1/500
+
+// summary of tage here in wide format
+di "summary of tage here in wide format for those that were missing ejb_jobid but had job data"
+codebook tage if (ejb1_jobid == . & ejb2_jobid == . & ejb3_jobid == . & ejb4_jobid == . & ejb5_jobid == . & ejb6_jobid == . & ejb7_jobid == .) & (tjb1_mwkhrs != . | tjb2_mwkhrs != . |  tjb3_mwkhrs != . | tjb4_mwkhrs != . | tjb5_mwkhrs != . | tjb6_mwkhrs != . | tjb7_mwkhrs != . ) 
+
+reshape long $jobs1_reshape $jobs2_reshape, i(ssuid_spanel_pnum_id monthcode) j(job)
+
+// summary of tage here in reshaped form 
+di "summary of tage now that we're in long form looking at codebook of age in instances where they're missing ejb_jobid but have other job information "
+codebook tage if ejb_jobid ==. & tjb_mwkhrs !=. & tjb_msum != . & ejb_startwk !=. & ejb_endwk !=. & ejb_jborse !=.  
+
+// may not get examples here for every file, given the 1/1500 option 
+di "may not get examples here for every file given the 1/1500 filtering"
+list ssuid_spanel_pnum_id ssuid pnum monthcode job ejb_jobid ejb_startwk ejb_endwk ejb_jborse tjb_mwkhrs tjb_msum if ///
+     ejb_jobid ==. & tjb_mwkhrs !=. & tjb_msum != . & ejb_startwk !=. & ejb_endwk !=. & ejb_jborse !=.  in 1/1500
+	 
+
+save sipp2014_wv`num'_reshaped_work_temp, replace //obs here is person-job-month
 }
 
-//testing code for imputing job_ids
-foreach num of numlist 1/7 {
-	replace ejb`num'_jobid = `num' if ejb`num'_jobid == . & tjb`num'_mwkhrs !=. & (tjb`num'_msum !=. | tjb`num'_prftb != .) 
+
+
+// Combining the various datasets we've reshaped above into one dataset that contains all our years of data and is in long format for job level information
+clear
+save sipp_reshaped_work_comb_temp, replace emptyok 
+foreach num of numlist 1/8 {
+	use sipp2014_wv`num'_reshaped_work_temp, clear
+	*keep if ejb_jobid != .
+	append using sipp_reshaped_work_comb_temp
+	save sipp_reshaped_work_comb_temp, replace // this dataset contains person-wave-month-job level rows
 }
+
+list ssuid_spanel_pnum_id ssuid pnum spanel swave monthcode job ejb_jobid tjb_mwkhrs tjb_msum ejb_start ejb_end tjb_occ tjb_ind ejb_jborse tjb_prftb tage if ejb_jobid == . & ejb_jborse != . in 1/15000
+
+unique ssuid_spanel_pnum_id if  ejb_jobid ==. & tjb_mwkhrs !=. & tjb_msum != . & ejb_startwk !=. & ejb_endwk !=. & ejb_jborse !=. & tjb_mwkhrs >15
 
 capture log close 
 
