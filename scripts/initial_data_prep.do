@@ -159,7 +159,7 @@ global jobs2_reshape="ejb@_typpay1 tjb@_gamt1 ejb@_bslryb tbsj@val tjb@_prftb tb
 global wealth="tirakeoval tthr401val tirakeoval tthr401val tval_ast thval_ast tnetworth thnetworth tval_home thval_home teq_home theq_home tptotinc tpearn teq_bus enjflag"
 global debts="tdebt_ast thdebt_ast toeddebtval theq_home tdebt_cc thdebt_cc tdebt_ed thdebt_ed tdebt_home thdebt_home tdebt_bus"  
 
-
+// imputed jobs version 
 foreach num of numlist 1/8 {
 	
 di "wave `num'"
@@ -178,14 +178,36 @@ foreach x of numlist 1/7 {
 
 reshape long $jobs1_reshape $jobs2_reshape, i(ssuid_spanel_pnum_id monthcode) j(job)
 
+save sipp2014_wv`num'_reshaped_work_imputed, replace //obs here is person-job-month
+
+
+}
+
+
+// non-imputed job ids 
+foreach num of numlist 1/8 {
+	
+di "wave `num'"
+
+use $varbasic_ids $jobs1 $jobs2  using ${file`num'}, clear
+
+	
+capture drop _merge
+merge m:1 ssuid spanel pnum using unique_individuals, keep(1 3)
+capture drop _merge
+keep $varbasic_ids $jobs1 $jobs2 ssuid_spanel_pnum_id
+
+reshape long $jobs1_reshape $jobs2_reshape, i(ssuid_spanel_pnum_id monthcode) j(job)
+
 save sipp2014_wv`num'_reshaped_work, replace //obs here is person-job-month
 
 
 }
 
 
-
 // Combining the various datasets we've reshaped above into one dataset that contains all our years of data and is in long format for job level information
+
+// combining non-imputed files (as we get them from SIPP )
 clear
 save sipp_reshaped_work_comb, replace emptyok 
 foreach num of numlist 1/8 {
@@ -193,6 +215,16 @@ foreach num of numlist 1/8 {
 	keep if ejb_jobid != .
 	append using sipp_reshaped_work_comb
 	save sipp_reshaped_work_comb, replace // this dataset contains person-wave-month-job level rows
+}
+
+// combining imputed files
+clear
+save sipp_reshaped_work_comb_imputed, replace emptyok 
+foreach num of numlist 1/8 {
+	use sipp2014_wv`num'_reshaped_work_imputed, clear
+	keep if ejb_jobid != .
+	append using sipp_reshaped_work_comb_imputed
+	save sipp_reshaped_work_comb_imputed, replace // this dataset contains person-wave-month-job level rows
 }
 
 
@@ -205,7 +237,7 @@ foreach num of numlist 1/8 {
 3.1 Descriptive analysis to determine demograhpics of those who are self-employed vs wage&salary vs both
 ------------------------------------------------------------------------------*/
 
-use sipp_reshaped_work_comb, clear  // this dataset contains person-wave-month-job level rows for all years of data we have 
+use sipp_reshaped_work_comb_imputed, clear  // this dataset contains person-wave-month-job level rows for all years of data we have 
 
 merge m:1 ssuid_spanel_pnum_id using unique_individuals, keep(1 3) // bringing in demographic info. Age here is a snapshot from one of our records, someone could have aged out towards the later years, but shouldn't mess with results too much 
 
