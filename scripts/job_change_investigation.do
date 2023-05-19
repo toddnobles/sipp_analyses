@@ -141,7 +141,7 @@ list ssuid_spanel_pnum_id spanel swave monthcode selfemp  change *status if ssui
 list ssuid_spanel_pnum_id spanel swave monthcode selfemp  change *status if ssuid_spanel_pnum_id == 68775
 
 frame copy default precollapse, replace 
-
+/*
 // getting down to one row per person so we can get basic demographics
 collapse (firstnm) *status (max) change, by(ssuid_spanel_pnum_id black sex educ3 immigrant tage) 
 
@@ -276,7 +276,7 @@ table (educ3) (black first_status) if monthcode == 12 & change ==0 , statistic(m
 table (educ3) (black first_status) if monthcode == 12& change == 1,  statistic(mean tnetworth) statistic(median tnetworth) 
 
 
-
+*/
 capture log close 
 
 log using "../_logs/job_change_earnings_`today'.txt", text replace 
@@ -347,12 +347,18 @@ list ssuid_span~d  selfemp  ever_changed  mean* med* sd* months in 1/15  // miss
 
 // Comparing incomes during self-emp period between those who stayed self-employed versus those who switched
 tabstat mean_tpearn if selfemp == 1, by(ever_changed) 
+ttest mean_tpearn if selfemp ==1, by(ever_changed)
 ttest mean_tpearn if selfemp == 1 & black == 1, by(ever_changed)
 ttest mean_tpearn if selfemp ==1 & black ==0, by(ever_changed)
+//surprisingly not significant differences here 
 
 
+// medians (here the median is the medain monthly earnings for an individual, so here we can compare the means of these distributions (of medians) using ttests still )
 tabstat med_tpearn if selfemp==1, by(ever_changed)
 table (ever_changed) (black ) if selfemp ==1 ,  statistic(mean med_tpearn) // as expected for both of these
+ttest med_tpearn if selfemp ==1, by(ever_changed)
+ttest med_tpearn if selfemp ==1 & black ==1, by(ever_changed)
+ttest med_tpearn if selfemp ==1 & black ==0, by(ever_changed)
 
 /// what if we use tjb_msum
 tabstat mean_msum if selfemp == 1, by(ever_changed) 

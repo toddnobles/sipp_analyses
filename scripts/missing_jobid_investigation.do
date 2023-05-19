@@ -139,14 +139,18 @@ clear
 save sipp_reshaped_work_comb_temp, replace emptyok 
 foreach num of numlist 1/8 {
 	use sipp2014_wv`num'_reshaped_work_temp, clear
-	*keep if ejb_jobid != .
+	*keep if ejb_jobid != . // not removing missing job-ids here as we're interested in seeing them later 
 	append using sipp_reshaped_work_comb_temp
 	save sipp_reshaped_work_comb_temp, replace // this dataset contains person-wave-month-job level rows
 }
 
 list ssuid_spanel_pnum_id ssuid pnum spanel swave monthcode job ejb_jobid tjb_mwkhrs tjb_msum ejb_start ejb_end tjb_occ tjb_ind ejb_jborse tjb_prftb tage if ejb_jobid == . & ejb_jborse != . in 1/15000
 
-unique ssuid_spanel_pnum_id if  ejb_jobid ==. & tjb_mwkhrs !=. & tjb_msum != . & ejb_startwk !=. & ejb_endwk !=. & ejb_jborse !=. & tjb_mwkhrs >15
+// how many records of jobs do we have that were >15 hours and had other data but missing ejb_jobid?
+count if ejb_jobid ==. & tjb_mwkhrs !=. & tjb_msum != . & ejb_startwk !=. & ejb_endwk !=. & ejb_jborse !=. & tjb_mwkhrs >15 & tage >15 & tage <65
+
+// how many unique individuals if ejb_jobid 
+*unique ssuid_spanel_pnum_id if  ejb_jobid ==. & tjb_mwkhrs !=. & tjb_msum != . & ejb_startwk !=. & ejb_endwk !=. & ejb_jborse !=. & tjb_mwkhrs >15 & tage >15 & tage <65
 
 capture log close 
 

@@ -23,7 +23,7 @@ log using "./_logs/job_change_earnings_unemployment.txt", text replace
 /*
 * Author: Nobles, Todd
 * Email: tnobles@uw.edu
-* File: job_change_earnings.do
+* File: job_change_earnings_unemployment.do
 
 Goals of Script: 
 	- Tracking those who have spells of unemployment and their earnings
@@ -39,7 +39,7 @@ cd "`datapath'"
 // this dataset contains person-wave-month-job level rows for all years of data we have. 
 // file produced in initial_data_prep.do
 
-use sipp_reshaped_work_comb, clear  
+use sipp_reshaped_work_comb_imputed, clear  
 // bringing in monthly level data 
 merge m:1 ssuid_spanel_pnum_id spanel swave monthcode using sipp_monthly_combined 
 sort ssuid_spanel_pnum_id spanel swave monthcode 
@@ -65,20 +65,22 @@ list ssuid_spanel_pnum_id  swave monthcode job ejb_jborse ejb_startwk ejb_endwk 
 **# 1.1 Recoding demographics and filtering to population of interest
 ------------------------------------------------------------------------------*/
 //working with the black-white sample
+
+/*
 keep if erace==1|erace==2 //this keeps the black and white sample only.
 codebook erace
 
 // recode race
 recode erace (2=1 Black) (nonmiss=0 White), into(black)
 label variable black "race"
-
+*/
 
 // filtering to population of interest
 keep if tage>=18 & tage<=64
 
 codebook ejb_jborse
 
-// note here we're not filtering to only records with tjb_mwkhrs > 15 hours of employment 
+// note here we're not filtering to only records with tjb_mwkhrs > 15 hours of employment. We'll do that later for describing earnings 
 
 
 
@@ -95,10 +97,85 @@ list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main ejb_jborse enjflag t
 **# Switches based on job type (self-emp or paid)
 keep if jb_main == 1 // this keeps main jobs and one record for months where they are fully unemployed
 list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main ejb_jborse enjflag tpearn if ssuid_spanel_pnum_id==5
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main ejb_jborse enjflag tpearn if ssuid_spanel_pnum_id==6 // need to handle people who were never employed
+
+recode enjflag (1=1 unemployed) (2=0 no), into(unemployed_flag)
+codebook enjflag 
+codebook unemployed_flag
+
+// dropping those who never worked in our dataset
+bysort ssuid_spanel_pnum_id: egen sum_enjflag = sum(unemployed_flag)
+bysort ssuid_spanel_pnum_id: gen num_records = _N
+drop if sum_enjflag == num_records
+
 
 replace tpearn = 0 if tpearn == .
+replace tjb_msum = 0 if tjb_msum == .
 
-list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main ejb_jborse enjflag tpearn if ssuid_spanel_pnum_id==5
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main ejb_jborse enjflag tpearn tjb_msum tjb_mwkhrs sum_enjflag if ssuid_spanel_pnum_id==5
+
+
+/// now we can use sum_enjflag as our measure of if it is ever greater than zero then that person experienced unemployment at some point in our dataset
+drop if (ejb_jborse == . | ejb_jborse == 3) // dropping employment types we're not interested in 
+recode ejb_jborse (2=1 SE) (1=0 WS), into(selfemp)
+
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main ejb_jborse selfemp enjflag tpearn tjb_msum tjb_mwkhrs sum_enjflag if ssuid_spanel_pnum_id==5
+
+// comparing those who experienced unemployment versus those who didn't and their earnings 
+gen ever_unemployed = 1 if sum_enjflag >0
+replace ever_unemployed = 0 if sum_enjflag == 0
+codebook ever_unemployed
+
+bysort ssuid_spanel_pnum_id: egen mean_tpearn = mean(tpearn) 
+bysort ssuid_spanel_pnum_id: egen mean_tpearn_se = mean(tpearn) if selfemp == 1
+bysort ssuid_spanel_pnum_id: egen mean_tpearn_ws = mean(tpearn) if selfemp == 0 
+egen tag = tag(ssuid_spanel_pnum_id) // unique id
+
+egen tag2 = tag(ssuid_spanel_pnum_id selfemp)
+su tag2
+bysort ssuid_spanel_pnum_id: egen tag2_sum = sum(tag2) // lets us quickly see who had multiple employment types in our data 
+
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main selfemp tpearn tjb_msum ever_unemployed mean* if ssuid_spanel_pnum_id==  195816
+
+
+tabstat mean_tpearn if tag ==1, by(ever_unemployed) // only taking one row for each individual and look at the egen mean vars we made above 
+ttest mean_tpearn if tag ==1, by(ever_unemployed)
+table (erace) (ever_unemployed) if tag ==1, statistic(mean mean_tpearn)
+ttest mean_tpearn if tag ==1 & erace ==1, by(ever_unemployed)
+ttest mean_tpearn if tag ==1 & erace ==2, by(ever_unemployed)
+
+// what about wage and salary earnings
+ttest mean_tpearn_ws if tag ==1, by(ever_unemployed)
+ttest mean_tpearn_ws if tag ==1 & erace ==1, by(ever_unemployed)
+ttest mean_tpearn_ws if tag ==1 & erace ==2, by(ever_unemployed)
+
+// what about self-employment earnings
+ttest mean_tpearn_se if tag ==1 ,by(ever_unemployed)
+ttest mean_tpearn_se if tag ==1 & erace ==1, by(ever_unemployed)
+ttest mean_tpearn_se if tag ==1 & erace ==2, by(ever_unemployed)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // creating lenient employment type flag. job trumps unemployment flag  (must be unemployed for at least one month to count as unemployed)
 gen employment_type = 1 if ejb_jborse == 1 // W&S
@@ -120,6 +197,8 @@ isid ssuid_spanel_pnum_id swave monthcode // double checking
 
 
 // at this point we have a person-month level file with an employment status for them for each period captured in employment_type 
+
+
 
 
 egen tag = tag(ssuid_spanel_pnum_id employment_type)
