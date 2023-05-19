@@ -16,14 +16,14 @@ cd "`homepath'"
 local c_time = c(current_time)
 local today : display %tdCYND date(c(current_date), "DMY")
 
-log using "./_logs/job_change_earnings_comparisons_imputed`today'.txt", text replace 
+log using "./_logs/job_change_earnings_comparisons_`today'.txt", text replace 
 
 
 /*
 * Author: Nobles, Todd
 * Email: tnobles@gmail.com
 * Date: 2023_05-18
-* File: job_change_earnings_comparisons_imputed.do
+* File: job_change_earnings_comparisons.do
 
 Goals of Script: 
 	- breaking earnings work into new file now that we're working with imputed/non-imputed job_id datasets. The old version of this code was as part of the job_change_investigation.do script 
@@ -39,7 +39,7 @@ cd "`datapath'"
 // this dataset contains person-wave-month-job level rows for all years of data we have. 
 // file produced in initial_data_prep.do
 
-use sipp_reshaped_work_comb_imputed, clear  
+use sipp_reshaped_work_comb, clear  
 merge m:1 ssuid_spanel_pnum_id using unique_individuals, keep(1 3) // bringing in demographic info. Age here is a snapshot from one of our records, someone could have aged out towards the later years, but shouldn't mess with results too much 
 
 
