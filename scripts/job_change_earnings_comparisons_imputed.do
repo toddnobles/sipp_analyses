@@ -47,12 +47,15 @@ merge m:1 ssuid_spanel_pnum_id using unique_individuals, keep(1 3) // bringing i
 **# 1.1 Recoding demographics and filtering to population of interest
 ------------------------------------------------------------------------------*/
 //working with the black-white sample
-keep if erace==1|erace==2 //this keeps the black and white sample only.
 codebook erace
 
 // recode race
-recode erace (2=1 Black) (nonmiss=0 White), into(black)
-label variable black "race"
+
+label define race_labels 1 "white" 2 "black" 3 "asian" 4 "other"
+gen race = erace
+label values race race_labels
+label variable race "race"
+codebook race
 
 
 // filtering to population of interest
@@ -147,7 +150,7 @@ list  swave monthcode change  selfemp *status ever_changed tpearn  if ssuid_span
 // for simplicity we'll only look at the folks who changed job types once and see what happened to their incomes
 keep if ever_changed == 1
 bysort ssuid_spanel_pnum_id (swave monthcode): carryforward first_status, replace
-collapse (mean) mean_tpearn = tpearn (median) med_tpearn = tpearn (sd) sd_tpearn =tpearn, by(ssuid_spanel_pnum_id selfemp tage sex educ3 immigrant black first_status)
+collapse (mean) mean_tpearn = tpearn (median) med_tpearn = tpearn (sd) sd_tpearn =tpearn, by(ssuid_spanel_pnum_id selfemp tage sex educ3 immigrant race first_status)
 reshape wide *_tpearn, i(ssuid_spanel_pnum_id) j(selfemp)
 rename *0 *WS
 rename *1 *SE
@@ -161,12 +164,12 @@ replace group = "WS to lower SE" if first_status ==0 & mean_tpearnWS > mean_tpea
 replace group = "SE to lower WS" if first_status == 1 & mean_tpearnSE > mean_tpearnWS
 replace group = "SE to higher WS" if first_status == 1 & mean_tpearnSE < mean_tpearnWS 
 
-tab group black, missing
-table group black, statistic(percent, across(group)) // interpretation is that 28% of black respondents who switched job types once in our data, started as Self-employed and shifted to a higher paying WS job.
+tab group race, missing
+table group race, statistic(percent, across(group)) // interpretation is that 28% of black respondents who switched job types once in our data, started as Self-employed and shifted to a higher paying WS job.
 table group educ3
 table group educ3, statistic(percent, across(group))
 
-table group (educ3 black) // n-sizes get quite small here 
+table  ( race educ3) group // n-sizes get quite small here 
 
 
 
@@ -188,9 +191,9 @@ keep if ever_changed == 1 | ever_changed == 0
 bysort ssuid_spanel_pnum_id (swave monthcode): carryforward first_status, replace
 
 
-keep if first_status  ==1 
+keep if first_status == 1 
 // here tpearn will vary by month while tjb_prftb will be constant accross the wave.
-collapse (mean) mean_tpearn = tpearn  mean_prft = tjb_prftb  mean_msum = tjb_msum (median) med_tpearn = tpearn med_prftb = tjb_prftb med_msum = tjb_msum (sd) sd_tpearn =tpearn sd_prftb = tjb_prftb sd_msum = tjb_msum (count) months=monthcode, by(ssuid_spanel_pnum_id selfemp tage sex educ3 immigrant black ever_changed)
+collapse (mean) mean_tpearn = tpearn  mean_prft = tjb_prftb  mean_msum = tjb_msum (median) med_tpearn = tpearn med_prftb = tjb_prftb med_msum = tjb_msum (sd) sd_tpearn =tpearn sd_prftb = tjb_prftb sd_msum = tjb_msum (count) months=monthcode, by(ssuid_spanel_pnum_id selfemp tage sex educ3 immigrant race ever_changed)
 
 list ssuid_span~d  selfemp  ever_changed  mean* med* sd* months in 1/15  // missings here are expected structural missing due to WS employment periods not having any business profit reported 
 
@@ -200,66 +203,68 @@ list ssuid_span~d  selfemp  ever_changed  mean* med* sd* months in 1/15  // miss
 // Comparing incomes during self-emp period between those who stayed self-employed versus those who switched
 ttest mean_tpearn if selfemp ==1, by(ever_changed)
 preserve
-version 16.1: table (ever_changed) (black ) if selfemp == 1,  contents(mean mean_tpearn) replace
-bysort black (ever_changed): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
+version 16.1: table (ever_changed) (race ) if selfemp == 1,  contents(mean mean_tpearn) replace
+bysort race (ever_changed): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
 list
 restore
-ttest mean_tpearn if selfemp == 1 & black == 1, by(ever_changed)
-ttest mean_tpearn if selfemp ==1 & black ==0, by(ever_changed)
-//surprisingly not significant differences here 
-
-
-// medians (here the median is the medain monthly earnings for an individual, so here we can compare the means of these distributions (of medians) using ttests still )
-ttest med_tpearn if selfemp ==1, by(ever_changed)
-preserve
-version 16.1: table (ever_changed) (black ) if selfemp == 1,  contents(mean med_tpearn) replace
-bysort black (ever_changed): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
-list
-restore
-ttest med_tpearn if selfemp ==1 & black ==1, by(ever_changed)
-ttest med_tpearn if selfemp ==1 & black ==0, by(ever_changed)
-// none of these significant 
+ttest mean_tpearn if selfemp == 1 & race == 1, by(ever_changed) // white
+ttest mean_tpearn if selfemp ==1 & race ==2, by(ever_changed) // black 
+ttest mean_tpearn if selfemp == 1 & race == 3, by(ever_changed) // asian 
+// not significant differences here 
 
 /// what if we use tjb_msum
 ttest mean_msum if selfemp == 1, by(ever_changed) // significant
 preserve
-version 16.1: table (ever_changed) (black ) if selfemp == 1,  contents(mean mean_msum) replace
-bysort black (ever_changed): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
+version 16.1: table (ever_changed) (race ) if selfemp == 1,  contents(mean mean_msum) replace
+bysort race (ever_changed): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
 list
 restore
-ttest mean_msum if selfemp ==1 & black ==1, by(ever_changed) // not significant
-ttest mean_msum if selfemp ==1 & black ==0, by(ever_changed) // significant 
+ttest mean_msum if selfemp ==1 & race ==1, by(ever_changed) // not significant
+ttest mean_msum if selfemp ==1 & race ==2, by(ever_changed) // significant 
+ttest mean_msum if selfemp ==1 & race == 3, by(ever_changed)
 
+
+// medians (here the median is the medain monthly earnings for an individual, so here we can compare the means of these distributions (of medians) using ttests still )
 ttest med_msum if selfemp==1, by(ever_changed)
 preserve
-version 16.1: table (ever_changed) (black ) if selfemp == 1,  contents(mean med_msum) replace
-bysort black (ever_changed): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
+version 16.1: table (ever_changed) (race ) if selfemp == 1,  contents(mean med_msum) replace
+bysort race (ever_changed): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
 list
 restore
-ttest med_msum if selfemp ==1 & black ==1, by(ever_changed)
-ttest med_msum if selfemp ==1 & black ==0, by(ever_changed)
+ttest med_msum if selfemp ==1 & race ==1, by(ever_changed)
+ttest med_msum if selfemp ==1 & race ==2, by(ever_changed)
+ttest med_msum if selfemp ==1 & race ==3, by(ever_changed)
 
+
+ttest med_tpearn if selfemp ==1, by(ever_changed)
+preserve
+version 16.1: table (ever_changed) (race ) if selfemp == 1,  contents(mean med_tpearn) replace
+bysort race (ever_changed): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
+list
+restore
+ttest med_tpearn if selfemp ==1 & race ==1, by(ever_changed)
+ttest med_tpearn if selfemp ==1 & race ==2, by(ever_changed)
+ttest med_tpearn if selfemp ==1 & race ==3, by(ever_changed)
 
 // comparing profitabilty during self-emp period between those who stayed self-employed versus those who switched to WS 
 ttest mean_prft if selfemp == 1, by(ever_changed) 
 preserve
-version 16.1: table (ever_changed) (black ) if selfemp == 1,  contents(mean mean_prft) replace
-bysort black (ever_changed): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
+version 16.1: table (ever_changed) (race ) if selfemp == 1,  contents(mean mean_prft) replace
+bysort race (ever_changed): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
 list
 restore
-table (ever_changed) (black) if selfemp ==1 , statistic(frequency) // gaind 44 black self employed folks here compared compared to previous version 
-
-ttest mean_prft if selfemp == 1 & black == 1, by(ever_changed)
-ttest mean_prft if selfemp ==1 & black ==0, by(ever_changed)
+table (ever_changed) (race) if selfemp ==1 , statistic(frequency) // gaind 44 black self employed folks here compared compared to previous version 
+ttest mean_prft if selfemp == 1 & race == 1, by(ever_changed)
+ttest mean_prft if selfemp ==1 & race ==2, by(ever_changed)
 
 ttest med_prft if selfemp==1, by(ever_changed)
 preserve
-version 16.1: table (ever_changed) (black ) if selfemp == 1,  contents(mean med_prft) replace
-bysort black (ever_changed): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
+version 16.1: table (ever_changed) (race ) if selfemp == 1,  contents(mean med_prft) replace
+bysort race (ever_changed): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
 list
 restore
-ttest med_prft if selfemp == 1 & black == 1, by(ever_changed)
-ttest med_prft if selfemp ==1 & black ==0, by(ever_changed)
+ttest med_prft if selfemp == 1 & race == 1, by(ever_changed)
+ttest med_prft if selfemp ==1 & race ==2, by(ever_changed)
 
 
 // copmaring income and prftb over educ 
@@ -269,14 +274,21 @@ table (ever_changed) (educ3) if selfemp == 1, statistic(mean mean_prft)
 
 pwmean mean_tpearn if selfemp ==1, over(educ3 ever_changed) mcompare(tukey) pveffects   
 
-table (ever_changed) (educ3) if selfemp == 1 & black ==1 // cell sizes get fairly small here
-// out of curiosity, what do we see though
+table ( race ever_changed) (educ3) if selfemp == 1, statistic(mean mean_tpearn)
 
-table (ever_changed) (educ3) if selfemp ==1 & black == 1, statistic(mean mean_tpearn) 
-table (ever_changed) (educ3) if selfemp ==1 & black == 0, statistic(mean mean_tpearn)
+table (ever_changed) (educ3) if selfemp ==1 & race == 1, statistic(mean mean_tpearn) 
+table (ever_changed) (educ3) if selfemp ==1 & race == 1, statistic(frequency)
 
-pwmean mean_tpearn if selfemp ==1 & black ==1, over(educ3 ever_changed) mcompare(tukey) pveffects   
-pwmean mean_tpearn if selfemp ==1 & black ==0, over(educ3 ever_changed) mcompare(tukey) pveffects   
+table (ever_changed) (educ3) if selfemp ==1 & race == 2, statistic(mean mean_tpearn)
+table (ever_changed) (educ3) if selfemp ==1 & race == 2, statistic(frequency)
+
+table (ever_changed) (educ3) if selfemp ==1 & race == 3, statistic(mean mean_tpearn)
+table (ever_changed) (educ3) if selfemp ==1 & race == 3, statistic(frequency)
+
+
+
+pwmean mean_tpearn if selfemp ==1 & race ==1, over(educ3 ever_changed) mcompare(tukey) pveffects   
+pwmean mean_tpearn if selfemp ==1 & race ==2, over(educ3 ever_changed) mcompare(tukey) pveffects   
 
 
 
@@ -287,15 +299,118 @@ pwmean mean_tpearn if selfemp ==1 & black ==0, over(educ3 ever_changed) mcompare
 
 frame copy precollapse temp2, replace 
 frame change temp2
-sort ssuid_spanel_pnum_id swave monthcode
-list  swave monthcode change  selfemp *status ever_changed  if ssuid_spanel_pnum_id == 199771, sepby(swave)
 drop _merge
 merge 1:1 ssuid_spanel_pnum_id spanel swave monthcode using sipp_monthly_combined, keep(1 3)
 codebook jb_main // only looking at main jobs, just confirming
 
 // still some small n-sizes but better than the earlier analysis
-unique ssuid_spanel_pnum_id if first_status ==1 & ever_changed > 0, by(black educ3) 
-unique ssuid_spanel_pnum_id if first_status ==1 & ever_changed == 0, by(black educ3)
+unique ssuid_spanel_pnum_id if first_status ==1 & ever_changed > 0, by(race educ3) 
+unique ssuid_spanel_pnum_id if first_status ==1 & ever_changed == 0, by(race educ3)
+
+gen changegt0= 1 if ever_changed >0
+replace changegt0 = 0 if ever_changed == 0 
+
+bysort ssuid_spanel_pnum_id (swave monthcode): carryforward first_status, replace
+
+
+keep if first_status == 1 
+// here tpearn will vary by month while tjb_prftb will be constant accross the wave.
+collapse (mean) mean_tpearn = tpearn  mean_prft = tjb_prftb  mean_msum = tjb_msum (median) med_tpearn = tpearn med_prftb = tjb_prftb med_msum = tjb_msum (sd) sd_tpearn =tpearn sd_prftb = tjb_prftb sd_msum = tjb_msum (count) months=monthcode, by(ssuid_spanel_pnum_id selfemp tage sex educ3 immigrant race changegt0)
+
+
+// Comparing incomes during self-emp period between those who stayed self-employed versus those who switched
+ttest mean_tpearn if selfemp ==1, by(changegt0)
+preserve
+version 16.1: table (changegt0) (race ) if selfemp == 1,  contents(mean mean_tpearn) replace
+bysort race (changegt0): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
+list
+restore
+ttest mean_tpearn if selfemp == 1 & race == 1, by(changegt0) // white
+ttest mean_tpearn if selfemp ==1 & race ==2, by(changegt0) // black 
+ttest mean_tpearn if selfemp == 1 & race == 3, by(changegt0) // asian 
+
+/// what if we use tjb_msum
+ttest mean_msum if selfemp == 1, by(changegt0) // significant
+preserve
+version 16.1: table (changegt0) (race ) if selfemp == 1,  contents(mean mean_msum) replace
+bysort race (changegt0): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
+list
+restore
+ttest mean_msum if selfemp ==1 & race ==1, by(changegt0) // not significant
+ttest mean_msum if selfemp ==1 & race ==2, by(changegt0) // significant 
+ttest mean_msum if selfemp ==1 & race == 3, by(changegt0)
+
+
+// medians (here the median is the medain monthly earnings for an individual, so here we can compare the means of these distributions (of medians) using ttests still )
+ttest med_msum if selfemp==1, by(changegt0)
+preserve
+version 16.1: table (changegt0) (race ) if selfemp == 1,  contents(mean med_msum) replace
+bysort race (changegt0): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
+list
+restore
+ttest med_msum if selfemp ==1 & race ==1, by(changegt0)
+ttest med_msum if selfemp ==1 & race ==2, by(changegt0)
+ttest med_msum if selfemp ==1 & race ==3, by(changegt0)
+
+
+ttest med_tpearn if selfemp ==1, by(changegt0)
+preserve
+version 16.1: table (changegt0) (race ) if selfemp == 1,  contents(mean med_tpearn) replace
+bysort race (changegt0): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
+list
+restore
+ttest med_tpearn if selfemp ==1 & race ==1, by(changegt0)
+ttest med_tpearn if selfemp ==1 & race ==2, by(changegt0)
+ttest med_tpearn if selfemp ==1 & race ==3, by(changegt0)
+
+// comparing profitabilty during self-emp period between those who stayed self-employed versus those who switched to WS 
+ttest mean_prft if selfemp == 1, by(changegt0) 
+preserve
+version 16.1: table (changegt0) (race ) if selfemp == 1,  contents(mean mean_prft) replace
+bysort race (changegt0): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
+list
+restore
+table (changegt0) (race) if selfemp ==1 , statistic(frequency)  
+ttest mean_prft if selfemp == 1 & race == 1, by(changegt0)
+ttest mean_prft if selfemp ==1 & race ==2, by(changegt0)
+
+ttest med_prft if selfemp==1, by(changegt0)
+preserve
+version 16.1: table (changegt0) (race ) if selfemp == 1,  contents(mean med_prft) replace
+bysort race (changegt0): gen pct_diff = (table1[_n] - table1[_n-1])/table1[_n]
+list
+restore
+ttest med_prft if selfemp == 1 & race == 1, by(changegt0)
+ttest med_prft if selfemp ==1 & race ==2, by(changegt0)
+
+
+// copmaring income and prftb over educ 
+table (changegt0) (educ3 ) if selfemp == 1,  statistic(mean mean_tpearn) 
+table (changegt0) (educ3) if selfemp == 1, statistic(mean mean_msum) 
+table (changegt0) (educ3) if selfemp == 1, statistic(mean mean_prft)
+
+pwmean mean_tpearn if selfemp ==1, over(educ3 changegt0) mcompare(tukey) pveffects   
+
+table ( race changegt0) (educ3) if selfemp == 1, statistic(mean mean_tpearn)
+
+table (changegt0) (educ3) if selfemp ==1 & race == 1, statistic(mean mean_tpearn) 
+table (changegt0) (educ3) if selfemp ==1 & race == 1, statistic(frequency)
+
+table (changegt0) (educ3) if selfemp ==1 & race == 2, statistic(mean mean_tpearn)
+table (changegt0) (educ3) if selfemp ==1 & race == 2, statistic(frequency)
+
+table (changegt0) (educ3) if selfemp ==1 & race == 3, statistic(mean mean_tpearn)
+table (changegt0) (educ3) if selfemp ==1 & race == 3, statistic(frequency)
+
+
+
+pwmean mean_tpearn if selfemp ==1 & race ==1, over(educ3 changegt0) mcompare(tukey) pveffects   
+pwmean mean_tpearn if selfemp ==1 & race ==2, over(educ3 changegt0) mcompare(tukey) pveffects   
+
+
+
+
+
 
 capture log close  
 
