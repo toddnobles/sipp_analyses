@@ -46,7 +46,7 @@ drop _merge
 keep if tage>=18 & tage<=64
 drop if ejb_jborse == 3 
 
-
+frame copy default temp
 // first keeping in all SE and WS jobs, those less than 15 and secondary jobs 
 gsort ssuid_spanel_pnum_id swave monthcode -tjb_mwkhrs -ejb_jobid  // sort descending by hours, breaking ties by jobid 
 qby ssuid_spanel_pnum_id swave monthcode: gen jb_main=_n==1 // 
@@ -56,7 +56,7 @@ table ejb_jborse selfemp
 
 egen tag = tag(ssuid_spanel_pnum_id swave monthcode selfemp)
 keep if tag ==1 
-keep ssuid_spanel_pnum_id swave monthcode selfemp sex educ3 race
+keep ssuid_spanel_pnum_id swave monthcode selfemp sex educ3 
 
 bysort ssuid_spanel_pnum_id swave monthcode selfemp: gen any_SE_month = 1 if selfemp[_N] == 1
 
@@ -75,43 +75,26 @@ keep ssuid_spanel_pnum_id swave monthcode any_SE_month tpearn
 count if any_SE_month == 0 & tpearn <0 
 
 
-
 **# What about if we use only our main_job method of capturing monthly employment? Any tradeoffs?
+frame change temp 
+keep if tjb_mwkhrs >= 15
+
+gsort ssuid_spanel_pnum_id swave monthcode -tjb_mwkhrs -ejb_jobid  // sort descending by hours, breaking ties by jobid 
+qby ssuid_spanel_pnum_id swave monthcode: gen jb_main=_n==1 // 
+keep if jb_main ==1 // this gets us down to one record per month 
+
+recode ejb_jborse (2=1 SE) (1=0 WS), into(selfemp)
+table ejb_jborse selfemp
 
 
+keep ssuid_spanel_pnum_id swave monthcode selfemp sex educ3
+
+list ssuid_spanel_pnum_id swave monthcode selfemp  if ssuid_spanel_pnum_id ==28558
+
+capture drop _merge
+merge 1:1 ssuid_spanel_pnum_id  swave monthcode using sipp_monthly_combined, keep(1 3)
+keep ssuid_spanel_pnum_id swave monthcode selfemp tpearn
+
+count if selfemp == 0 & tpearn <0 
 
 
-
-
-
-**# marking when their job status changes
-bysort ssuid_spanel_pnum_id (spanel swave monthcode): gen change = ejb_jborse != ejb_jborse[_n-1] & _n >1 
-list ssuid_spanel_pnum_id spanel swave monthcode ejb_jborse  change if ssuid_spanel_pnum_id == 28558, sepby(swave) 
-
-bysort ssuid_spanel_pnum_id (spanel swave monthcode): gen first_status = selfemp if _n==1
-
-by ssuid_spanel_pnum_id: egen ever_changed = total(change)
-table ever_changed
-bysort ever_changed: distinct ssuid_spanel_pnum_id  
-
-gsort ssuid_spanel_pnum_id -change spanel swave monthcode
-
-list ssuid_spanel_pnum_id spanel swave monthcode selfemp first_status change *status if ssuid_spanel_pnum_id == 199771
-by ssuid_spanel_pnum_id: gen second_status = selfemp if change ==1 & _n ==1
-by ssuid_spanel_pnum_id: gen third_status = selfemp if change ==1 & _n ==2
-by ssuid_spanel_pnum_id: gen fourth_status = selfemp if change ==1 & _n ==3
-by ssuid_spanel_pnum_id: gen fifth_status = selfemp if change ==1 & _n ==4
-by ssuid_spanel_pnum_id: gen sixth_status = selfemp if change ==1 & _n ==5
-by ssuid_spanel_pnum_id: gen seventh_status = selfemp if change ==1 & _n ==6
-by ssuid_spanel_pnum_id: gen eighth_status = selfemp if change ==1 & _n ==7
-
-foreach x in first_status second_status third_status fourth_status fifth_status sixth_status seventh_status eighth_status {
-	label values `x' selfemp
-	//bysort ssuid_spanel_pnum_id (`x'): carryforward `x', replace 
-
-}
-
-list ssuid_spanel_pnum_id spanel swave monthcode selfemp  change *status if ssuid_spanel_pnum_id == 199771
-list ssuid_spanel_pnum_id spanel swave monthcode selfemp  change *status if ssuid_spanel_pnum_id == 68775
-
-frame copy default precollapse, replace 
