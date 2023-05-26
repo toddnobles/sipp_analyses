@@ -61,19 +61,6 @@ list ssuid_spanel_pnum_id  spanel swave monthcode job ejb_jborse  ejb_startwk ej
 list ssuid_spanel_pnum_id  swave monthcode job ejb_jborse ejb_startwk ejb_endwk enjflag  tjb_mwkhrs if ssuid_spanel_pnum_id ==199771 // Wave 4 month 7 here we see that you can be marked as a jobless spell even if you get recorded as a job during the month given there can be gaps in start/end weeks that don't stretch a full month-job
 
 
-/*------------------------------------------------------------------------------
-**# 1.1 Recoding demographics and filtering to population of interest
-------------------------------------------------------------------------------*/
-//working with the black-white sample
-
-/*
-keep if erace==1|erace==2 //this keeps the black and white sample only.
-codebook erace
-
-// recode race
-recode erace (2=1 Black) (nonmiss=0 White), into(black)
-label variable black "race"
-*/
 
 // filtering to population of interest
 keep if tage>=18 & tage<=64
@@ -81,8 +68,6 @@ keep if tage>=18 & tage<=64
 codebook ejb_jborse
 
 // note here we're not filtering to only records with tjb_mwkhrs > 15 hours of employment. We'll do that later for describing earnings 
-
-
 
 **# main job
 gsort ssuid_spanel_pnum_id swave monthcode -tjb_mwkhrs -ejb_jobid  // sort descending by hours, breaking ties by jobid 
@@ -121,6 +106,7 @@ recode ejb_jborse (2=1 SE) (1=0 WS), into(selfemp)
 
 list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main ejb_jborse selfemp enjflag tpearn tjb_msum tjb_mwkhrs sum_enjflag if ssuid_spanel_pnum_id==5
 
+**# Generating our earnings measures and flags
 // comparing those who experienced unemployment versus those who didn't and their earnings 
 gen ever_unemployed = 1 if sum_enjflag >0
 replace ever_unemployed = 0 if sum_enjflag == 0
@@ -129,30 +115,46 @@ codebook ever_unemployed
 bysort ssuid_spanel_pnum_id: egen mean_tpearn = mean(tpearn) 
 bysort ssuid_spanel_pnum_id: egen mean_tpearn_se = mean(tpearn) if selfemp == 1
 bysort ssuid_spanel_pnum_id: egen mean_tpearn_ws = mean(tpearn) if selfemp == 0 
-egen tag = tag(ssuid_spanel_pnum_id) // unique id
+egen unique_tag = tag(ssuid_spanel_pnum_id) // unique id
 
 egen tag2 = tag(ssuid_spanel_pnum_id selfemp)
 su tag2
 bysort ssuid_spanel_pnum_id: egen tag2_sum = sum(tag2) // lets us quickly see who had multiple employment types in our data 
 
-list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main selfemp tpearn tjb_msum ever_unemployed mean* if ssuid_spanel_pnum_id==  195816
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main selfemp tpearn tjb_msum ever_unemployed mean* unique_tag tag2_sum if ssuid_spanel_pnum_id==  195816
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main selfemp tpearn tjb_msum ever_unemployed mean* unique_tag tag2_sum if ssuid_spanel_pnum_id==  6
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main selfemp tpearn tjb_msum ever_unemployed mean* unique_tag tag2_sum if ssuid_spanel_pnum_id==  200730
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main selfemp tpearn tjb_msum ever_unemployed mean* unique_tag tag2_sum if ssuid_spanel_pnum_id==  200574
 
 
-tabstat mean_tpearn if tag ==1, by(ever_unemployed) // only taking one row for each individual and look at the egen mean vars we made above 
-ttest mean_tpearn if tag ==1, by(ever_unemployed)
-table (erace) (ever_unemployed) if tag ==1, statistic(mean mean_tpearn)
-ttest mean_tpearn if tag ==1 & erace ==1, by(ever_unemployed)
-ttest mean_tpearn if tag ==1 & erace ==2, by(ever_unemployed)
+unique ssuid_spanel_pnum_id, by(sum_enjflag) // gives us a picture of how many people experienced unemployment and how many months they experienced it. So here ~4000 people were unemployed for one month or less, ~2100 experienced two "months" of unemployment (here someone is marked as unemployed for the month if they experienced as little as a week of unemployment that month)
+
+**# Tables of earnings 
+
+ttest mean_tpearn if unique_tag ==1, by(ever_unemployed)
+table (erace) (ever_unemployed) if unique_tag ==1, statistic(mean mean_tpearn)
+ttest mean_tpearn if unique_tag ==1 & erace ==1, by(ever_unemployed)
+ttest mean_tpearn if unique_tag ==1 & erace ==2, by(ever_unemployed)
 
 // what about wage and salary earnings
-ttest mean_tpearn_ws if tag ==1, by(ever_unemployed)
-ttest mean_tpearn_ws if tag ==1 & erace ==1, by(ever_unemployed)
-ttest mean_tpearn_ws if tag ==1 & erace ==2, by(ever_unemployed)
+ttest mean_tpearn_ws if unique_tag ==1, by(ever_unemployed)
+ttest mean_tpearn_ws if unique_tag ==1 & erace ==1, by(ever_unemployed)
+ttest mean_tpearn_ws if unique_tag ==1 & erace ==2, by(ever_unemployed)
 
 // what about self-employment earnings
-ttest mean_tpearn_se if tag ==1 ,by(ever_unemployed)
-ttest mean_tpearn_se if tag ==1 & erace ==1, by(ever_unemployed)
-ttest mean_tpearn_se if tag ==1 & erace ==2, by(ever_unemployed)
+ttest mean_tpearn_se if unique_tag ==1 ,by(ever_unemployed)
+ttest mean_tpearn_se if unique_tag ==1 & erace ==1, by(ever_unemployed)
+ttest mean_tpearn_se if unique_tag ==1 & erace ==2, by(ever_unemployed)
+
+
+
+// those who ever experience unemployment in our dataset earn less per month on average than those who do not 
+
+
+
+
+
+capture log close 
 
 
 
@@ -164,17 +166,51 @@ ttest mean_tpearn_se if tag ==1 & erace ==2, by(ever_unemployed)
 
 
 
+**# Looking at the various pathways that people take through employment statuses 
 
 
+use sipp_reshaped_work_comb_imputed, clear  
+// bringing in monthly level data 
+merge m:1 ssuid_spanel_pnum_id spanel swave monthcode using sipp_monthly_combined 
+sort ssuid_spanel_pnum_id spanel swave monthcode 
+bysort ssuid_spanel_pnum_id: egen _merge_avg = mean(_merge)
+
+list ssuid_spanel_pnum_id if _merge_avg >2 & _merge_avg <3 in 1/100
+list ssuid_spanel_pnum_id  spanel swave monthcode job ejb_jborse  ejb_startwk ejb_endwk tjb_mwkhrs tpearn  tage enjflag _merge if ssuid_spanel_pnum_id ==5
+// by bringing in the monthly data we get the full 12 months for this person. previously missing months 9 and 10 in the job only data set 
 
 
+// examining how our job variables overlap with unemployment flag that we brought in reingesting data for sipp_monthly_combined
+
+sort ssuid_spanel_pnum_id spanel swave monthcode ejb_startwk
+list ssuid_spanel_pnum_id  swave monthcode job ejb_jborse ejb_startwk ejb_endwk enjflag  tjb_mwkhrs if ssuid_spanel_pnum_id ==199771 // Wave 4 month 7 here we see that you can be marked as a jobless spell even if you get recorded as a job during the month given there can be gaps in start/end weeks that don't stretch a full month-job
 
 
+// filtering to population of interest
+keep if tage>=18 & tage<=64
+
+codebook ejb_jborse
 
 
+**# main job
+gsort ssuid_spanel_pnum_id swave monthcode -tjb_mwkhrs -ejb_jobid  // sort descending by hours, breaking ties by jobid 
 
+duplicates report ssuid_spanel_pnum_id swave monthcode tjb_mwkhrs ejb_jobid  // no ties actually broken 
+qby ssuid_spanel_pnum_id swave monthcode: gen jb_main=_n==1 // 
 
+sort ssuid_spanel_pnum_id swave monthcode 
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main ejb_jborse enjflag tpearn if ssuid_spanel_pnum_id==5
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode ejb_jobid tjb_mwkhrs jb_main ejb_jborse enjflag tpearn if ssuid_spanel_pnum_id==199771
 
+keep if jb_main ==1 // gets us one record for each month with their main job or that they were unemployed 
+recode enjflag (1=1 unemployed) (2=0 no), into(unemployed_flag)
+codebook enjflag 
+codebook unemployed_flag
+
+// dropping those who never worked in our dataset
+bysort ssuid_spanel_pnum_id: egen sum_enjflag = sum(unemployed_flag)
+bysort ssuid_spanel_pnum_id: gen num_records = _N
+drop if sum_enjflag == num_records
 
 
 // creating lenient employment type flag. job trumps unemployment flag  (must be unemployed for at least one month to count as unemployed)
@@ -217,7 +253,7 @@ bysort ssuid_spanel_pnum_id (spanel swave monthcode): gen first_status = employm
 
 by ssuid_spanel_pnum_id: egen ever_changed = total(change)
 table ever_changed
-bysort ever_changed: distinct ssuid_spanel_pnum_id  // counts of people falling into each job change category. ~73k never changed between statuses, ~1500 changed once,
+unique ssuid_spanel_pnum_id, by(ever_changed)  // counts of people falling into each job change category. ~73k never changed between statuses, ~1500 changed once,
 
 gsort ssuid_spanel_pnum_id -change spanel swave monthcode
 
@@ -256,10 +292,37 @@ foreach x in first_status second_status third_status fourth_status fifth_status 
 }
 
 
+egen unique_tag = tag(ssuid_spanel_pnum_id) // unique id
+
+preserve
+keep if unique_tag 
+contract status_*
+gsort -_freq
+list in 1/15
+restore 
+
+
+preserve
+keep if unique_tag
+contract status_1 status_2 status_3 
+gsort -_freq
+list
+restore 
+
+
+preserve
+keep if unique_tag
+contract status_1 status_2 erace 
+gsort erace -_freq
+list 
+restore 
+
+
 sort ssuid_spanel_pnum_id swave monthcode employment_type
 
 local i = 0
-foreach x in first_status second_status third_status fourth_status fifth_status sixth_status seventh_status eighth_status ninth_status tenth_status eleventh_status twelfth_status {
+//fourth_status fifth_status sixth_status seventh_status eighth_status ninth_status tenth_status eleventh_status twelfth_status
+foreach x in first_status second_status third_status  {
 	local i = `i' + 1
 	bysort ssuid_spanel_pnum_id (swave monthcode) employment_type: carryforward `x', gen(status_`i'_lim)  dynamic_condition(employment_type[_n-1]==employment_type[_n])
 
@@ -269,25 +332,24 @@ list ssuid_spanel_pnum_id swave monthcode employment_type status_*_lim if ssuid_
 list ssuid_spanel_pnum_id swave monthcode employment_type status_*_lim if ssuid_spanel_pnum_id ==  199771 
 list ssuid_spanel_pnum_id swave monthcode employment_type status_*_lim if ssuid_spanel_pnum_id ==  28558 
 
-list ssuid_spanel_pnum_id swave monthcode employment_type first_status status_1 status_1_lim if ssuid_spanel_pnum_id ==  28558
 
 frame copy default precollapse, replace 
 
+collapse (mean) tpearn, by(ssuid_spanel_pnum_id status_1 status_2 status_3 status_1_lim status_2_lim status_3_lim erace) cw
 
-**# Unemployed to SE 
-/*
-gen flip_unemp_SE =1  if (status_1 == 4 & status_2 == 2) | ///
-		(status_2 == 4 & status_3 == 2) | ///
-		(status_3 == 4 & status_4 == 2) | ///
-		(status_4 == 4 & status_5 == 2) `| ///
-		(status_5 == 4 & status_6 == 2) | ///
-		(status_6 == 4 & status_7 == 2) | ///
-		(status_7 == 4 & status_8 == 2) | ///
-		(status_8 == 4 & status_9 == 2) | ///
-		(status_9 == 4 & status_10 == 2) | ///
-		(status_10 == 4 & status_11 == 2) | ///
-		(status_11 == 4 & status_12 == 2) 
-*/
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 list ssuid_spanel_pnum_id swave monthcode employment_type if status_1 ==.
 drop if status_1 == . 
