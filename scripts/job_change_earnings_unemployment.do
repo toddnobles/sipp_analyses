@@ -112,6 +112,12 @@ gen ever_unemployed = 1 if sum_enjflag >0
 replace ever_unemployed = 0 if sum_enjflag == 0
 codebook ever_unemployed
 
+// flag for ever self-employed 
+bysort ssuid_spanel_pnum_id: egen sum_se_flag = sum(selfemp) // selfemp coded as 0 for W&S and 1 for SE 
+gen ever_se = 1 if sum_se_flag >0
+replace ever_se = 0 if sum_se_flag == 0 
+codebook ever_se
+
 bysort ssuid_spanel_pnum_id: egen mean_tpearn = mean(tpearn) 
 bysort ssuid_spanel_pnum_id: egen mean_tpearn_se = mean(tpearn) if selfemp == 1
 bysort ssuid_spanel_pnum_id: egen mean_tpearn_ws = mean(tpearn) if selfemp == 0 
@@ -148,9 +154,103 @@ ttest mean_tpearn_se if unique_tag ==1 & erace ==2, by(ever_unemployed)
 
 
 
-// those who ever experience unemployment in our dataset earn less per month on average than those who do not 
 
 
+
+
+
+**# Self-employed sample only 
+// based on the analyses below, we know that the most common employment paths are as follows
+/*
+   |   status_1     status_2     status_3     status_4     status_5   status_6  _freq |
+     |----------------------------------------------------------------------------------|
+  1. |        W&S            .            .            .            .          .  58372 |
+  2. | Unemployed          W&S            .            .            .          .   7858 |
+  3. |         SE            .            .            .            .          .   6095 |
+  4. |        W&S   Unemployed            .            .            .          .   5403 |
+  5. |        W&S   Unemployed          W&S            .            .          .   4659 |
+     |----------------------------------------------------------------------------------|
+  6. | Unemployed          W&S   Unemployed            .            .          .   2325 |
+  7. | Unemployed          W&S   Unemployed          W&S            .          .   1634 |
+  8. |        W&S           SE            .            .            .          .    883 |
+  9. |        W&S   Unemployed          W&S   Unemployed            .          .    735 |
+ 10. |         SE          W&S            .            .            .          .    715 |
+     |----------------------------------------------------------------------------------|
+ 11. | Unemployed           SE            .            .            .          .    597 |
+ 12. |        W&S   Unemployed          W&S   Unemployed          W&S          .    533 |
+ 13. |      Other            .            .            .            .          .    529 |
+ 14. |         SE   Unemployed            .            .            .          .    493 |
+ 15. | Unemployed          W&S   Unemployed          W&S   Unemployed          .    459 |
+     |----------------------------------------------------------------------------------|
+ 16. | Unemployed          W&S   Unemployed          W&S   Unemployed        W&S    311 |
+ 17. |        W&S           SE          W&S            .            .          .    290 |
+ 18. |        W&S   Unemployed           SE            .            .          .    202 |
+ 19. |      Other          W&S            .            .            .          .    188 |
+ 20. | Unemployed        Other            .            .            .          .    178 |
+     |----------------------------------------------------------------------------------|
+ 21. |        W&S        Other            .            .            .          .    155 |
+ 22. | Unemployed           SE   Unemployed            .            .          .    150 |
+ 23. |         SE          W&S           SE            .            .          .    126 |
+ 24. |      Other   Unemployed            .            .            .          .    123 |
+ 25. |         SE   Unemployed           SE            .            .          .    121 |
+     +----------------------------------------------------------------------------------+
+
+*/
+
+// Because of this complexity in when someone is self-employed versus unemployed, we'll look at those who were ever self-employed and their profit, business size, earnings etc 
+
+**# Profitability 
+
+bysort ssuid_spanel_pnum_id: egen mean_tjb_prftb = mean(tjb_prftb) 
+
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main selfemp tpearn tjb_msum tjb_prftb ever_unemployed mean* unique_tag tag2_sum if ssuid_spanel_pnum_id==  32
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main selfemp tpearn tjb_msum tjb_prftb ever_unemployed mean* unique_tag tag2_sum if ssuid_spanel_pnum_id==  74
+
+table (ever_unemployed) (ever_se) if unique_tag ==1, statistic(mean mean_tjb_prftb)
+ttest mean_tjb_prftb if unique_tag ==1 & ever_se == 1, by(ever_unemployed)
+table (ever_unemployed) (erace) if ever_se == 1 & unique_tag == 1
+
+
+**# Business Size 
+// Note that this doesn't capture instances where switched businesses as their main job, so if someone started a small business and then started another larger business that became their main job, we would only capture their first business size. Likely not a meaningful issue for the purposes of these descriptives 
+/*
+Response Code
+1. 1 (Only self)
+2. 2 to 9 employees
+3. 10 to 25 employees
+4. Greater than 25 employees
+*/
+
+tabchi ever_unemployed tjb_empb if unique_tag ==1 & ever_se == 1
+// seems those who experienced unemployment are more likely to work as sole-proprietor or own smaller business 
+tab tjb_empb if unique_tag ==1 & ever_se ==1
+tab ever_unemployed tjb_empb if unique_tag ==1 & ever_se ==1, row
+
+
+
+**# Earnings
+ttest mean_tpearn_se if unique_tag == 1 & ever_se ==1, by(ever_unemployed)
+
+
+
+**# SE who never experienced unemployment 
+// Looking only at SE who have never experienced unemployment, see distribution of those three variables for full SE never unemployed sample and then within races, between races (depending on sample sizes)
+
+su mean_tpearn if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, detail // average monthly earnings
+hist mean_tpearn if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0
+
+su mean_tpearn_se if unique_tag == 1 & ever_se == 1 & ever_unemployed == 0, detail // average monthly earnings when self-employed
+hist mean_tpearn_se if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0
+
+su mean_tjb_prftb if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0, detail // average monthly profit 
+hist mean_tjb_prftb if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0
+
+tab tjb_empb if unique_tag ==1 & ever_se ==1 & ever_unemployed ==0 
+hist tjb_empb if unique_tag == 1 & ever_se == 1 & ever_unemployed ==0
+
+
+table (erace) (ever_unemployed) if unique_tag ==1 & ever_se == 1 
+table (erace) if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, statistic(mean mean_tjb_prftb)
 
 
 
@@ -226,7 +326,7 @@ list ssuid_spanel_pnum_id swave monthcode ejb_jobid job jb_main ejb_jborse enjfl
 list ssuid_spanel_pnum_id swave monthcode ejb_jobid job jb_main ejb_jborse enjflag tpearn tjb_msum employment_type if ssuid_spanel_pnum_id==193993 
 
  // will ignore these few edge cases for now as they just seem to be data entry issues 
-
+drop if employment_type == . 
 unique ssuid_spanel_pnum_id swave monthcode // person month level file here. So we only have one job per month and it's their main job 
 unique ssuid_spanel_pnum_id swave // person years
 isid ssuid_spanel_pnum_id swave monthcode // double checking 
@@ -298,7 +398,7 @@ preserve
 keep if unique_tag 
 contract status_*
 gsort -_freq
-list in 1/15
+list in 1/25
 restore 
 
 
