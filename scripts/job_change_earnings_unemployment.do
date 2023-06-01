@@ -205,10 +205,10 @@ bysort ssuid_spanel_pnum_id: egen mean_tjb_prftb = mean(tjb_prftb)
 
 list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main selfemp tpearn tjb_msum tjb_prftb ever_unemployed mean* unique_tag tag2_sum if ssuid_spanel_pnum_id==  32
 list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main selfemp tpearn tjb_msum tjb_prftb ever_unemployed mean* unique_tag tag2_sum if ssuid_spanel_pnum_id==  74
+// Note that we should be careful how we capture profitability given that it's calcualted after taking the owner self-pay out, so depending on what our self-employed folks take then we're capturing different things here
 
 table (ever_unemployed) (ever_se) if unique_tag ==1, statistic(mean mean_tjb_prftb)
 ttest mean_tjb_prftb if unique_tag ==1 & ever_se == 1, by(ever_unemployed)
-table (ever_unemployed) (erace) if ever_se == 1 & unique_tag == 1
 
 
 **# Business Size 
@@ -220,9 +220,9 @@ Response Code
 3. 10 to 25 employees
 4. Greater than 25 employees
 */
-
+drop _merge
 tabchi ever_unemployed tjb_empb if unique_tag ==1 & ever_se == 1
-// seems those who experienced unemployment are more likely to work as sole-proprietor or own smaller business 
+// seems those who experienced unemployment are more likely to work as sole-proprietor or own smaller business than those who did not experience unemployment
 tab tjb_empb if unique_tag ==1 & ever_se ==1
 tab ever_unemployed tjb_empb if unique_tag ==1 & ever_se ==1, row
 
@@ -231,6 +231,12 @@ tab ever_unemployed tjb_empb if unique_tag ==1 & ever_se ==1, row
 **# Earnings
 ttest mean_tpearn_se if unique_tag == 1 & ever_se ==1, by(ever_unemployed)
 
+**# Business values
+bysort ssuid_spanel_pnum_id: egen mean_tbsjval = mean(tbsjval) 
+
+table (ever_unemployed) (ever_se) if unique_tag ==1, statistic(mean mean_tbsjval) // note there is one person here ssuid_spanel_pnum_id == 67628 who has a data entry error where they report a business value for records that are not SE 
+ttest mean_tbsjval if unique_tag ==1 & ever_se == 1, by(ever_unemployed)
+
 
 
 **# SE who never experienced unemployment 
@@ -238,19 +244,63 @@ ttest mean_tpearn_se if unique_tag == 1 & ever_se ==1, by(ever_unemployed)
 
 su mean_tpearn if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, detail // average monthly earnings
 hist mean_tpearn if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0
+graph box mean_tpearn if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, nooutsides
 
 su mean_tpearn_se if unique_tag == 1 & ever_se == 1 & ever_unemployed == 0, detail // average monthly earnings when self-employed
 hist mean_tpearn_se if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0
+graph box mean_tpearn_se if unique_tag ==1 & ever_se ==1 & ever_unemployed == 0, nooutsides 
 
 su mean_tjb_prftb if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0, detail // average monthly profit 
 hist mean_tjb_prftb if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0
+graph box mean_tjb_prftb if unique_tag ==1 & ever_se ==1 & ever_unemployed == 0, nooutsides 
+
+su mean_tbsjval if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0, detail // average business value  
+hist mean_tbsjval if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0
+hist mean_tbsjval if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0 & mean_tbsjval < 1000000
+
+graph box mean_tbsjval if unique_tag ==1 & ever_se ==1 & ever_unemployed == 0, nooutsides 
 
 tab tjb_empb if unique_tag ==1 & ever_se ==1 & ever_unemployed ==0 
 hist tjb_empb if unique_tag == 1 & ever_se == 1 & ever_unemployed ==0
 
+**# Examining between race differences for those never unemployed 
 
 table (erace) (ever_unemployed) if unique_tag ==1 & ever_se == 1 
-table (erace) if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, statistic(mean mean_tjb_prftb)
+pwmean mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, over(erace)  mcompare(dunnett) pveffects cimeans
+pwmean mean_tpearn if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, over(erace)  mcompare(dunnett) pveffects cimeans
+pwmean mean_tpearn_se if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, over(erace)  mcompare(dunnett) pveffects cimeans
+pwmean mean_tbsjval if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, over(erace)  mcompare(dunnett) pveffects cimeans
+
+
+table (erace) if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, statistic( fvproportion tjb_empb)
+capture drop _merge
+tabchi erace tjb_empb if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0
+
+
+**# Within race diffrences between those who experienced unemployment vs those who didn't 
+hist mean_tpearn if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0, by(erace)
+graph box mean_tpearn if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, nooutsides by(erace)
+
+
+hist mean_tjb_prftb if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0, by(erace)
+graph box mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, nooutsides by(erace)
+ttest mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & erace ==1, by(ever_unemployed)
+ttest mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & erace ==2, by(ever_unemployed)
+ttest mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & erace ==3, by(ever_unemployed)
+
+
+hist mean_tbsjval if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0 & mean_tbsjval < 1000000, by(erace) 
+graph box mean_tbsjval if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, nooutsides by(erace)
+ttest mean_tbsjval if unique_tag ==1 & ever_se == 1 & erace ==1, by(ever_unemployed)
+ttest mean_tbsjval if unique_tag ==1 & ever_se == 1 & erace ==2, by(ever_unemployed)
+ttest mean_tbsjval if unique_tag ==1 & ever_se == 1 & erace ==3, by(ever_unemployed)
+
+
+tabchi ever_unemployed tjb_empb if unique_tag ==1 & ever_se == 1 & erace ==1
+tabchi ever_unemployed tjb_empb if unique_tag ==1 & ever_se == 1 & erace ==2
+tabchi ever_unemployed tjb_empb if unique_tag ==1 & ever_se == 1 & erace ==3
+
+
 
 
 
