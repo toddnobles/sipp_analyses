@@ -112,6 +112,9 @@ bysort ssuid_spanel_pnum_id: egen tag2_sum = sum(tag2) // lets us quickly see wh
 
 unique ssuid_spanel_pnum_id, by(sum_enjflag) // gives us a picture of how many people experienced unemployment and how many months they experienced it. So here ~4000 people were unemployed for one month or less, ~2100 experienced two "months" of unemployment (here someone is marked as unemployed for the month if they experienced as little as a week of unemployment that month)
 
+
+**# Tables of earnings 
+
 /***
 <html>
 <body>
@@ -127,6 +130,13 @@ unique ssuid_spanel_pnum_id, by(sum_enjflag) // gives us a picture of how many p
 <body>
 ***/
 ttest mean_tpearn if unique_tag ==1, by(ever_unemployed)
+
+hist mean_tpearn if unique_tag == 1, by(ever_unemployed)
+webdoc graph, hardcode nokeep
+graph box mean_tpearn if unique_tag ==1, by(ever_unemployed) nooutsides
+webdoc graph, hardcode nokeep
+ 
+ 
 table (erace) (ever_unemployed) if unique_tag ==1, statistic(mean mean_tpearn)
 ttest mean_tpearn if unique_tag ==1 & erace ==1, by(ever_unemployed)
 ttest mean_tpearn if unique_tag ==1 & erace ==2, by(ever_unemployed)
@@ -138,6 +148,8 @@ ttest mean_tpearn if unique_tag ==1 & erace ==2, by(ever_unemployed)
 <p> In the following tables we see that those who ever experienced unemployment and were at some point employed in Wage and Salary, experienced lower average earnings during their wage and salary months than those who never experienced unemployment. This trend holds within our subsamples of black and white respondents. </p>
 <body>
 ***/
+
+
 ttest mean_tpearn_ws if unique_tag ==1, by(ever_unemployed)
 ttest mean_tpearn_ws if unique_tag ==1 & erace ==1, by(ever_unemployed)
 ttest mean_tpearn_ws if unique_tag ==1 & erace ==2, by(ever_unemployed)
@@ -153,7 +165,7 @@ ttest mean_tpearn_se if unique_tag ==1 ,by(ever_unemployed)
 ttest mean_tpearn_se if unique_tag ==1 & erace ==1, by(ever_unemployed)
 ttest mean_tpearn_se if unique_tag ==1 & erace ==2, by(ever_unemployed)
 
-
+**# Full SE sample
 
 /***
 <html>
@@ -162,6 +174,21 @@ ttest mean_tpearn_se if unique_tag ==1 & erace ==2, by(ever_unemployed)
 <body>
 <p> Because of this complexity in when someone is self-employed versus unemployed, we'll look at those who were ever self-employed and their profit, business size, earnings etc </p>
 ***/
+
+/***
+<html>
+<body>
+<h3>Earnings </h3>
+<p> same as earlier table with lower earnings associated with unemploymet </p> 
+<body>
+***/
+hist mean_tpearn_se if unique_tag == 1 & ever_se ==1, by(ever_unemployed)
+webdoc graph, hardcode nokeep
+graph box mean_tpearn_se if unique_tag ==1 & ever_se == 1, by(ever_unemployed) nooutsides
+webdoc graph, hardcode nokeep
+ 
+ttest mean_tpearn_se if unique_tag == 1 & ever_se ==1, by(ever_unemployed)
+
 
 /***
 <html>
@@ -178,7 +205,31 @@ bysort ssuid_spanel_pnum_id: egen mean_tjb_prftb = mean(tjb_prftb)
 //list monthcode jb_main selfemp tpearn tjb_msum tjb_prftb ever_unemployed mean*   if ssuid_spanel_pnum_id==  74
 
 table (ever_unemployed) (ever_se) if unique_tag ==1, statistic(mean mean_tjb_prftb)
+hist mean_tjb_prftb if unique_tag == 1 & ever_se ==1, by(ever_unemployed)
+webdoc graph, hardcode nokeep
+graph box mean_tjb_prftb if unique_tag ==1 & ever_se ==1, by(ever_unemployed) nooutsides 
+webdoc graph, hardcode nokeep
 ttest mean_tjb_prftb if unique_tag ==1 & ever_se == 1, by(ever_unemployed)
+
+
+
+/***
+<html>
+<body>
+<h3>Business Value </h3>
+<p> Note there is one person here ssuid_spanel_pnum_id == 67628 who has a data entry error where they report a business value for records that are not SE. We see that those who experienced unemployment had less valuable businesses on average.
+<body>
+***/
+bysort ssuid_spanel_pnum_id: egen mean_tbsjval = mean(tbsjval) 
+
+table (ever_unemployed) (ever_se) if unique_tag ==1, statistic(mean mean_tbsjval) 
+hist mean_tbsjval if unique_tag == 1 & ever_se ==1 & mean_tbsjval < 1000000, by(ever_unemployed)
+webdoc graph, hardcode nokeep
+
+graph box mean_tbsjval if unique_tag ==1 & ever_se ==1, by(ever_unemployed) nooutsides 
+webdoc graph, hardcode nokeep
+
+ttest mean_tbsjval if unique_tag ==1 & ever_se == 1, by(ever_unemployed)
 
 
 /***
@@ -198,6 +249,11 @@ Response Code
 4. Greater than 25 employees
 */
 drop _merge
+
+tab ever_unemployed tjb_empb if unique_tag ==1 & ever_se ==1
+hist tjb_empb if unique_tag == 1 & ever_se == 1, by(ever_unemployed) percent
+webdoc graph, hardcode nokeep
+
 tabchi ever_unemployed tjb_empb if unique_tag ==1 & ever_se == 1
 // seems those who experienced unemployment are more likely to work as sole-proprietor or own smaller business than those who did not experience unemployment
 tab tjb_empb if unique_tag ==1 & ever_se ==1
@@ -205,154 +261,129 @@ tab ever_unemployed tjb_empb if unique_tag ==1 & ever_se ==1, row
 
 
 
-/***
-<html>
-<body>
-<h3>Earnings </h3>
-<p> same as earlier table with lower earnings associated with unemploymet </p> 
-<body>
-***/
-ttest mean_tpearn_se if unique_tag == 1 & ever_se ==1, by(ever_unemployed)
+
+**# SE Between Race, never unemployed
 
 /***
 <html>
 <body>
-<h3>Business Value </h3>
-<p> Note there is one person here ssuid_spanel_pnum_id == 67628 who has a data entry error where they report a business value for records that are not SE. We see that those who experienced unemployment had less valuable businesses on average.
-<body>
-***/
-bysort ssuid_spanel_pnum_id: egen mean_tbsjval = mean(tbsjval) 
-
-table (ever_unemployed) (ever_se) if unique_tag ==1, statistic(mean mean_tbsjval) 
-ttest mean_tbsjval if unique_tag ==1 & ever_se == 1, by(ever_unemployed)
-
-
-/***
-<html>
-<body>
-<h1>SE who never experienced unemployment </h1>
-<body>
-<p> Looking only at SE who have never experienced unemployment, see distribution of those three variables for full SE never unemployed sample and then within races, between races (depending on sample sizes)
- </p>
-***/
-
-
-/***
-<html>
-<body>
-<h3>Earnings </h3>
-<body>
-***/
-
-su mean_tpearn if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, detail // average monthly earnings
-hist mean_tpearn if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0
-webdoc graph, hardcode
-graph box mean_tpearn if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, nooutsides
-webdoc graph, hardcode
- 
-/***
-<html>
-<body>
-<h3>Self-employment only earnings </h3>
-<body>
-***/
-
-su mean_tpearn_se if unique_tag == 1 & ever_se == 1 & ever_unemployed == 0, detail // average monthly earnings when self-employed
-hist mean_tpearn_se if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0
-webdoc graph, hardcode
-graph box mean_tpearn_se if unique_tag ==1 & ever_se ==1 & ever_unemployed == 0, nooutsides 
-webdoc graph, hardcode
-
-
-/***
-<html>
-<body>
-<h3>Profitability </h3>
-<body>
-***/
-
-su mean_tjb_prftb if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0, detail // average monthly profit 
-hist mean_tjb_prftb if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0
-webdoc graph, hardcode
-graph box mean_tjb_prftb if unique_tag ==1 & ever_se ==1 & ever_unemployed == 0, nooutsides 
-webdoc graph, hardcode
-
-/***
-<html>
-<body>
-<h3>Business Value </h3>
-<body>
-***/
-
-su mean_tbsjval if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0, detail // average business value  
-hist mean_tbsjval if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0 & mean_tbsjval < 1000000
-webdoc graph, hardcode
-
-graph box mean_tbsjval if unique_tag ==1 & ever_se ==1 & ever_unemployed == 0, nooutsides 
-webdoc graph, hardcode
-
-tab tjb_empb if unique_tag ==1 & ever_se ==1 & ever_unemployed ==0 
-hist tjb_empb if unique_tag == 1 & ever_se == 1 & ever_unemployed ==0
-webdoc graph, hardcode
-
-/***
-<html>
-<body>
-<h1>Examining between race differences for those never unemployed  </h1>
+<h1>SE: Examining between race differences for those never unemployed  </h1>
 <p> With our broad measure of ever_se we have adequate n-sizes for some comparisons here. </p>
 <body>
 ***/
 table (erace) (ever_unemployed) if unique_tag ==1 & ever_se == 1 
 
-/***
-<html>
-<body>
-<h4> Profitability: <h4> 
-<p> Using white respondents as a reference group, the only statistically significant difference in profitability is between white and black respondents. </p>
-<body>
-***/
-pwmean mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, over(erace)  mcompare(dunnett) pveffects cimeans
+
 
 /***
 <html>
 <body>
-<h4> earnings: <h4> 
-<p> Using white respondents as a reference group, the only statistically significant difference in profitability is between white and black respondents. </p>
-<body>
-***/
-pwmean mean_tpearn if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, over(erace)  mcompare(dunnett) pveffects cimeans
-
-/***
-<html>
-<body>
-<h4> SE earnings <h4>
+<h3> SE earnings </h3>
 <body>
 ***/
 pwmean mean_tpearn_se if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, over(erace)  mcompare(dunnett) pveffects cimeans
 
+
 /***
 <html>
 <body>
-<h4> business value: <h4> 
+<h3> Profitability: </h3> 
+<p> Using white respondents as a reference group, the only statistically significant difference in profitability is between white and black respondents. </p>
+<body>
+***/
+
+pwmean mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, over(erace)  mcompare(dunnett) pveffects cimeans
+
+
+/***
+<html>
+<body>
+<h3> Business value: </h3> 
 <p> Using white respondents as a reference group, the only statistically significant difference in business value is between white and black respondents. </p>
 <body>
 ***/
 pwmean mean_tbsjval if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, over(erace)  mcompare(dunnett) pveffects cimeans
 
 
+/***
+<html>
+<body>
+<h3> Business size </h3> 
+<p> </p>
+<body>
+***/
+
 table (erace) if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, statistic( fvproportion tjb_empb)
 capture drop _merge
 tabchi erace tjb_empb if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0
 
 
+**# Between Races, unemployed
 
+
+/***
+<html>
+<body>
+<h1>Examining between race differences for those unemployed  </h1>
+<p> With our broad measure of ever_se we have adequate n-sizes for some comparisons here. </p>
+<body>
+***/
+table (erace) (ever_unemployed) if unique_tag ==1 & ever_se == 1 
+
+
+/***
+<html>
+<body>
+<h3> Earnings: </h3> 
+<p> Interstingly, no significant differences between white and other groups for those who did experience unemployment </p>
+<body>
+***/
+pwmean mean_tpearn if unique_tag ==1 & ever_se == 1 & ever_unemployed == 1, over(erace)  mcompare(dunnett) pveffects cimeans
+
+pwmean mean_tpearn_se if unique_tag ==1 & ever_se == 1 & ever_unemployed == 1, over(erace)  mcompare(dunnett) pveffects cimeans
+
+
+/***
+<html>
+<body>
+<h3> Profitability: </h3> 
+<p> Interstingly, no significant differences between white and other groups for those who did experience unemployment </p>
+<body>
+***/
+pwmean mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & ever_unemployed == 1, over(erace)  mcompare(dunnett) pveffects cimeans
+
+
+/***
+<html>
+<body>
+<h3> Business value: </h3> 
+<p> no significant differences between white and other groups for those who did experience unemployment. </p>
+<body>
+***/
+pwmean mean_tbsjval if unique_tag ==1 & ever_se == 1 & ever_unemployed == 1, over(erace)  mcompare(dunnett) pveffects cimeans
+
+/***
+<html>
+<body>
+<h3> Business size: </h3> 
+<p> </p>
+<body>
+***/
+table (erace) if unique_tag ==1 & ever_se == 1 & ever_unemployed == 1, statistic( fvproportion tjb_empb)
+capture drop _merge
+tabchi erace tjb_empb if unique_tag ==1 & ever_se == 1 & ever_unemployed == 1
+
+
+
+
+**# Within race over unemployment status
 /***
 <html>
 <body>
 <h1>Within race diffrences between those who experienced unemployment vs those who didn't </h1>
 <body>
 ***/
-**# 
+
 
 /***
 <html>
@@ -360,22 +391,26 @@ tabchi erace tjb_empb if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0
 <h3>Earnings </h3>
 <body>
 ***/
-hist mean_tpearn if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0, by(erace)
-webdoc graph, hardcode
-graph box mean_tpearn if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, nooutsides by(erace)
-webdoc graph, hardcode
+hist mean_tpearn if unique_tag == 1 & ever_se ==1, by(erace ever_unemployed)
+webdoc graph, hardcode nokeep
+graph box mean_tpearn if unique_tag ==1 & ever_se == 1, nooutsides by(erace ever_unemployed)
+webdoc graph, hardcode nokeep
+
+ttest mean_tpearn if unique_tag ==1 & ever_se == 1 & erace ==1, by(ever_unemployed)
+ttest mean_tpearn if unique_tag ==1 & ever_se == 1 & erace ==2, by(ever_unemployed)
+ttest mean_tpearn if unique_tag ==1 & ever_se == 1 & erace ==3, by(ever_unemployed)
 
 /***
 <html>
 <body>
 <h3>Profitability</h3>
-<p> Interestingly, the difference in profitablity is not statistically significantly different within black respondents comparing those who were unemployed vs not. This is for white respondents and is at the .1 level for asian respondents  
+<p>  the difference in profitablity is not statistically significantly different within black respondents comparing those who were unemployed vs not. This is for white respondents and is at the .1 level for asian respondents  </p>
 <body>
 ***/
-hist mean_tjb_prftb if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0, by(erace)
-webdoc graph, hardcode
-graph box mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, nooutsides by(erace)
-webdoc graph, hardcode
+hist mean_tjb_prftb if unique_tag == 1 & ever_se ==1, by(erace ever_unemployed)
+webdoc graph, hardcode nokeep
+graph box mean_tjb_prftb if unique_tag ==1 & ever_se == 1, nooutsides by(erace ever_unemployed)
+webdoc graph, hardcode nokeep
 ttest mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & erace ==1, by(ever_unemployed)
 ttest mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & erace ==2, by(ever_unemployed)
 ttest mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & erace ==3, by(ever_unemployed)
@@ -388,10 +423,10 @@ ttest mean_tjb_prftb if unique_tag ==1 & ever_se == 1 & erace ==3, by(ever_unemp
 <p> Black respondents who experinced unemployment have avg business value that is not statistically different than their always employed peers. This is not true for White and Asian samples. </p> 
 <body>
 ***/
-hist mean_tbsjval if unique_tag == 1 & ever_se ==1 & ever_unemployed == 0 & mean_tbsjval < 1000000, by(erace) 
-webdoc graph, hardcode
-graph box mean_tbsjval if unique_tag ==1 & ever_se == 1 & ever_unemployed == 0, nooutsides by(erace)
-webdoc graph, hardcode
+hist mean_tbsjval if unique_tag == 1 & ever_se ==1  & mean_tbsjval < 1000000, by(erace ever_unemployed) 
+webdoc graph, hardcode nokeep
+graph box mean_tbsjval if unique_tag ==1 & ever_se == 1, nooutsides by(erace ever_unemployed)
+webdoc graph, hardcode nokeep
 ttest mean_tbsjval if unique_tag ==1 & ever_se == 1 & erace ==1, by(ever_unemployed)
 ttest mean_tbsjval if unique_tag ==1 & ever_se == 1 & erace ==2, by(ever_unemployed)
 ttest mean_tbsjval if unique_tag ==1 & ever_se == 1 & erace ==3, by(ever_unemployed)
@@ -404,6 +439,9 @@ ttest mean_tbsjval if unique_tag ==1 & ever_se == 1 & erace ==3, by(ever_unemplo
 <p> Again unemployment doesn't seem to have the same effect for our black subsample as it does in the white or asian subsample </p> 
 <body>
 ***/
+
+hist tjb_empb if ever_se == 1 & unique_tag ==1, by(erace ever_unemployed) 
+webdoc graph, hardcode nokeep
 tabchi ever_unemployed tjb_empb if unique_tag ==1 & ever_se == 1 & erace ==1
 tabchi ever_unemployed tjb_empb if unique_tag ==1 & ever_se == 1 & erace ==2
 tabchi ever_unemployed tjb_empb if unique_tag ==1 & ever_se == 1 & erace ==3
@@ -449,4 +487,6 @@ tabchi ever_unemployed tjb_empb if unique_tag ==1 & ever_se == 1 & erace ==3
  25. |         SE   Unemployed           SE            .            .          .    121 |
      +----------------------------------------------------------------------------------+
 */
+
+//cd "/Volumes/Extreme SSD/SIPP Data Files/outputs/"
 
