@@ -18,8 +18,10 @@ set linesize 255
 <body>
 <h1>Bringing in data</h1>
 ***/
+**# Data import
 
 use sipp_reshaped_work_comb_imputed, clear  
+
 // bringing in monthly level data 
 merge m:1 ssuid_spanel_pnum_id spanel swave monthcode using sipp_monthly_combined 
 sort ssuid_spanel_pnum_id spanel swave monthcode 
@@ -29,11 +31,14 @@ list ssuid_spanel_pnum_id if _merge_avg >2 & _merge_avg <3 in 1/100
 list ssuid_spanel_pnum_id  spanel swave monthcode job ejb_jborse  ejb_startwk ejb_endwk tjb_mwkhrs tpearn  tage enjflag _merge if ssuid_spanel_pnum_id ==5
 // by bringing in the monthly data we get the full 12 months for this person. previously missing months 9 and 10 in the job only data set 
 
-
-// examining how our job variables overlap with unemployment flag that we brought in reingesting data for sipp_monthly_combined
-
+/***
+<html>
+<body>
+<p>examining how our job variables overlap with unemployment flag that we brought in reingesting data for sipp_monthly_combined in data. Wave 4 month 7 here we see that you can be marked as a jobless spell even if you get recorded as a job during the month given there can be gaps in start/end weeks that don't stretch a full month-job </p>
+***/
 sort ssuid_spanel_pnum_id spanel swave monthcode ejb_startwk
-list ssuid_spanel_pnum_id  swave monthcode job ejb_jborse ejb_startwk ejb_endwk enjflag  tjb_mwkhrs if ssuid_spanel_pnum_id ==199771 // Wave 4 month 7 here we see that you can be marked as a jobless spell even if you get recorded as a job during the month given there can be gaps in start/end weeks that don't stretch a full month-job
+list ssuid_spanel_pnum_id  swave monthcode job ejb_jborse ejb_startwk ejb_endwk enjflag  tjb_mwkhrs if ssuid_spanel_pnum_id ==199771 
+
 
 
 // filtering to population of interest
@@ -41,8 +46,13 @@ keep if tage>=18 & tage<=64
 
 codebook ejb_jborse
 
-
+/***
+<html>
+<body>
+<h3>Creating main job flag</h3>
+***/
 **# main job
+
 gsort ssuid_spanel_pnum_id swave monthcode -tjb_mwkhrs -ejb_jobid  // sort descending by hours, breaking ties by jobid 
 
 duplicates report ssuid_spanel_pnum_id swave monthcode tjb_mwkhrs ejb_jobid  // no ties actually broken 
@@ -62,13 +72,19 @@ bysort ssuid_spanel_pnum_id: egen sum_enjflag = sum(unemployed_flag)
 bysort ssuid_spanel_pnum_id: gen num_records = _N
 drop if sum_enjflag == num_records
 
+/***
+<html>
+<body>
+<h3>creating lenient employment type flag</h3>
+<p> job trumps unemployment flag  (must be unemployed for at least one month to count as unemployed)</p>
+***/
+**# employment type flag 
 
-// creating lenient employment type flag. job trumps unemployment flag  (must be unemployed for at least one month to count as unemployed)
 gen employment_type = 1 if ejb_jborse == 1 // W&S
 replace employment_type = 2 if ejb_jborse == 2 // SE
 replace employment_type = 3 if ejb_jborse == 3 // other 
 replace employment_type = 4 if ejb_jborse == . & enjflag == 1
-codebook employment_type 
+codebook employment_type
 
 
 list ssuid_spanel_pnum_id swave monthcode ejb_jobid job jb_main ejb_jborse enjflag tpearn tjb_msum employment_type if ssuid_spanel_pnum_id==272
@@ -81,11 +97,11 @@ unique ssuid_spanel_pnum_id swave monthcode // person month level file here. So 
 unique ssuid_spanel_pnum_id swave // person years
 isid ssuid_spanel_pnum_id swave monthcode // double checking 
 
-
-// at this point we have a person-month level file with an employment status for them for each period captured in employment_type 
-
-
-
+/***
+<html>
+<body>
+<h3>at this point we have a person-month level file with an employment status for them for each period captured in employment_type </h3>
+***/
 
 egen tag = tag(ssuid_spanel_pnum_id employment_type)
 su tag
@@ -103,7 +119,7 @@ bysort ssuid_spanel_pnum_id (spanel swave monthcode): gen first_status = employm
 
 by ssuid_spanel_pnum_id: egen ever_changed = total(change)
 table ever_changed
-unique ssuid_spanel_pnum_id, by(ever_changed)  // counts of people falling into each job change category. ~73k never changed between statuses, ~1500 changed once,
+unique ssuid_spanel_pnum_id, by(ever_changed)  // counts of people falling into each job change category. 
 
 gsort ssuid_spanel_pnum_id -change spanel swave monthcode
 
@@ -182,10 +198,6 @@ foreach x in first_status second_status third_status  {
 list ssuid_spanel_pnum_id swave monthcode employment_type status_*_lim if ssuid_spanel_pnum_id ==  178409 
 list ssuid_spanel_pnum_id swave monthcode employment_type status_*_lim if ssuid_spanel_pnum_id ==  199771 
 list ssuid_spanel_pnum_id swave monthcode employment_type status_*_lim if ssuid_spanel_pnum_id ==  28558 
-
-
-* frame copy default precollapse, replace 
-
 
 
 bysort ssuid_spanel_pnum_id status_1_lim: egen tpearn_s1 = mean(tpearn) if status_1_lim == employment_type
