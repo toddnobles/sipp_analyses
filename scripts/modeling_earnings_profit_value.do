@@ -3,7 +3,7 @@ webdoc toc 5
 
 /***
 <html>
-<head><title>Preliminary models of earnings, profit and business value </title></head>
+<title>Preliminary models of earnings, profit and business value </title>
 <p> Goals of analysis: 
 Models (Earnings): Run models 1 and 2 for each comparison groups: 
 (1) those who started as wage and salary versus those who entered wage and salary from unemployment, 
@@ -77,19 +77,67 @@ recode industry1 (0010/0560=1  "Agriculture, Forestry, Fishing and Hunting, and 
 
 label variable industry2 "Industry"
 
+recode eorigin (1 = 1 "Hispanic") (2 = 0 "Not Hispanic"), gen(hispanic)
+label variable hispanic "Hispanic"
+tab hispanic eorigin
+
+
+
 label variable erace "Race"
 label define race_label	 1 "White" 2 "Black" 3 "Asian" 4 "Residual"
 label values erace race_label 
 
+tab hispanic erace 
+ 
+// addressing instances where erace is not constant within individuals 
+* list ssuid_spanel_pnum_id  ssuid spanel pnum shhadid swave monthcode erace initial_race if race_tag_sum >1, sepby(ssuid_spanel_pnum_id)
+bysort ssuid_spanel_pnum_id (swave monthcode): gen initial_race = erace[1]
+label values initial_race race_label 
+label variable initial_race "Race"
+
+egen hisp_tag = tag(ssuid_spanel_pnum_id hispanic)
+bysort ssuid_spanel_pnum_id: egen hisp_tag_sum = sum(hisp_tag)
+unique ssuid_spanel_pnum_id if hisp_tag_sum > 1
+
+bysort ssuid_spanel_pnum_id (swave monthcode): gen initial_hisp = hispanic[1]
+label define hisp_label 1 "Hispanic" 0 "Not Hispanic"
+label values initial_hisp hisp_label
+label variable initial_hisp "Hispanic"
+
+
 frame copy default profits, replace
 frame copy default earnings, replace
 frame copy default bizvalue, replace 
+
+
+global controls= "i.sex i.initial_hisp age age2 immigrant parent industry2"
+
 
 /***
 <html>
 <body>
 <h2>Earnings Models</h2>
 ***/
+frame change earnings 
+
+// flags for our samples of interest 
+gen se_only =1 if status_1 == 2 & status_2 == . 
+replace se_only = 0 if se_only == .
+gen ws_se =1 if status_1 == 1 & status_2 == 2
+replace ws_se = 0 if ws_se == .
+gen unemp_se=1 if status_1 == 4 & status_2 ==2 
+replace unemp_se = 0 if unemp_se == . 
+gen ws_only = 1 if status_1 ==2 & status_2 == . 
+replace ws_only = 0 if ws_only == . 
+gen unemp_ws = 1 if status_1 == 4 & status_2 == 1
+replace unemp_ws = 0 if unemp_ws == . 
+
+
+gen month_over = monthcode if swave == 1
+replace month_over = monthcode + 12 if swave == 2
+replace month_over = monthcode + 24 if swave ==3 
+replace month_over = monthcode + 36 if swave == 4 
+
 
 **# WS vs Unemp to WS
 /***
@@ -97,6 +145,40 @@ frame copy default bizvalue, replace
 <body>
 <h3>WS vs Unemp to WS</h3>
 ***/
+preserve
+keep if ws_only == 1 | unemp_ws == 1
+tab ws_only unemp_ws, missing
+
+list ssuid_spanel_pnum_id swave monthcode employment_type status_1 status_2 status_3 months_* tpearn tjb_msum  in 50/500, sepby(ssuid_spanel_pnum_id)
+
+// modifying tpearn for these folks 
+su tpearn tjb_msum, detail
+
+gen ln_tjb_msum = ln(tjb_msum+1) if tjb_msum != . 
+egen min_tpearn = min(tpearn)
+replace min_tpearn = min_tpearn *-1
+gen ln_tpearn = ln(tpearn + min_tpearn+1) if tpearn !=. 
+
+xtset ssuid_spanel_pnum_id  month_over
+
+// comparison group here is ws_only  
+ 
+foreach x of varlist tjb_msum tpearn ln_tpearn {
+    
+quietly xtreg `x' i.unemp_ws, vce(robust)  mle
+eststo ws_`x'1_re
+
+quietly xtreg `x' i.unemp_ws i.educ3 i.initial_race $controls, vce(robust) mle
+eststo ws_`x'2_re
+
+quietly xtreg `x' i.unemp_ws, fe vce(robust) 
+eststo ws_`x'1_fe
+
+quietly xtreg `x' i.unemp_ws i.educ3 i.initial_race $controls, fe vce(robust)
+eststo ws_`x'2_fe
+}
+
+restore
 
 **# SE vs Unemp to SE 
 /***
@@ -104,13 +186,124 @@ frame copy default bizvalue, replace
 <body>
 <h3>SE vs Unemp to SE</h3>
 ***/
+preserve
+keep if se_only == 1 | unemp_se == 1
+tab se_only unemp_se, missing
 
+// modifying tpearn for these folks 
+gen ln_tjb_msum = ln(tjb_msum+1) if tjb_msum != . 
+egen min_tpearn = min(tpearn)
+replace min_tpearn = min_tpearn *-1
+gen ln_tpearn = ln(tpearn + min_tpearn+1) if tpearn !=. 
+
+xtset ssuid_spanel_pnum_id  month_over
+
+// comparison group here is se_only 
+ 
+foreach x of varlist tjb_msum tpearn ln_tpearn {
+    
+quietly xtreg `x' i.unemp_se, vce(robust)  mle
+eststo se_`x'1_re
+
+quietly xtreg `x' i.unemp_se i.educ3 i.initial_race $controls, vce(robust) mle
+eststo se_`x'2_re
+
+quietly xtreg `x' i.unemp_se, fe vce(robust) 
+eststo se_`x'1_fe
+
+quietly xtreg `x' i.unemp_se i.educ3 i.initial_race $controls, fe vce(robust)
+eststo se_`x'2_fe
+}
+
+restore 
 **# WS to SE vs Unemp to SE 
 /***
 <html>
 <body>
 <h3>WS to SE vs Unemp to SE</h3>
 ***/
+preserve
+keep if ws_se == 1 | unemp_se == 1
+tab ws_se unemp_se, missing
+
+// modifying tpearn for these folks 
+gen ln_tjb_msum = ln(tjb_msum+1) if tjb_msum != . 
+egen min_tpearn = min(tpearn)
+replace min_tpearn = min_tpearn *-1
+gen ln_tpearn = ln(tpearn + min_tpearn+1) if tpearn !=. 
+
+xtset ssuid_spanel_pnum_id  month_over
+
+// comparison group here is ws_se  
+ 
+foreach x of varlist tjb_msum tpearn ln_tpearn {
+    
+quietly xtreg `x' i.unemp_se, vce(robust)  mle
+eststo wsse_`x'1_re
+
+quietly xtreg `x' i.unemp_se i.educ3 i.initial_race $controls, vce(robust) mle
+eststo wsse_`x'2_re
+
+quietly xtreg `x' i.unemp_se, fe vce(robust) 
+eststo wsse_`x'1_fe
+
+quietly xtreg `x' i.unemp_se i.educ3 i.initial_race $controls, fe vce(robust)
+eststo wsse_`x'2_fe
+}
+
+restore 
+
+**# Earnings Tables
+/***
+<html>
+<body>
+<h2>Earnings Tables</h2>
+***/
+
+/***
+<html>
+<body>
+<h3>Earnings: WS vs Unemp to WS: FE </h3>
+***/
+esttab ws_*_fe, legend label collabels(none) varlabels(_cons Constant) title(Earnings WS vs Unemp to WS: FE) aic bic 
+
+/***
+<html>
+<body>
+<h3>Earnings: WS vs Unemp to WS: RE </h3>
+***/
+esttab ws_tjb_msum*_re ws_tpearn*_re ws_ln_tpearn*_re , legend label varlabels(_cons Constant) title(Earnings WS vs Unemp to WS: RE) aic bic 
+
+/***
+<html>
+<body>
+<h3>Earnings: se vs Unemp to se Fixed Effects </h3>
+***/
+esttab se_*_fe, legend label collabels(none) varlabels(_cons Constant) title(Earnings se vs Unemp to se Fixed Effects) aic bic 
+
+/***
+<html>
+<body>
+<h3>Earnings: se vs Unemp to se Random Effects </h3>
+***/
+esttab se_tjb_msum*_re se_tpearn*_re se_ln_tpearn*_re , legend label varlabels(_cons Constant) title(Earnings se vs Unemp to se Random Effects) aic bic 
+
+/***
+<html>
+<body>
+<h3>Earnings: ws to se vs Unemp to se Fixed Effects </h3>
+***/
+esttab wsse*fe, legend label collabels(none) varlabels(_cons Constant) title(Earnings ws to se vs Unemp to se Fixed effects) aic bic 
+
+/***
+<html>
+<body>
+<h3>Earnings: ws to se vs Unemp to se Random Effects </h3>
+***/
+
+esttab wsse_tjb_msum*_re wsse_tpearn*_re wsse_ln_tpearn*_re , legend label varlabels(_cons Constant) title(Earnings ws to se vs Unemp to se Random effects) aic bic 
+
+eststo clear 
 
 
 /***
@@ -167,22 +360,30 @@ foreach x in  tjb_prftb  {
 sum tjb_prftb profpos prof10k ln_tjb_prftb
 
 
-global controls= "sex age age2 immigrant parent industry2"
 
 xtset ssuid_spanel_pnum_id swave 
 
 // comparison group here is se_only 
-eststo, title("M1"): quietly xtlogit profpos i.unemp_se
-eststo, title("M2"): quietly xtlogit profpos i.unemp_se i.educ3 i.erace $controls
+eststo, title("M1"): quietly xtlogit profpos i.unemp_se, vce(robust)
+eststo, title("M2"): quietly xtlogit profpos i.unemp_se i.educ3 i.initial_race $controls, vce(robust)
 
-eststo, title("M1"): quietly xtlogit prof10k i.unemp_se
-eststo, title("M2"): quietly xtlogit prof10k i.unemp_se i.educ3 i.erace $controls
+eststo, title("M1"): quietly xtlogit prof10k i.unemp_se, vce(robust)
+eststo, title("M2"): quietly xtlogit prof10k i.unemp_se i.educ3 i.initial_race $controls, vce(robust)
 
-eststo, title("M1"): quietly xtreg ln_tjb_prftb i.unemp_se
-eststo, title("M2"): quietly xtreg ln_tjb_prftb i.unemp_se i.educ3 i.erace $controls
+eststo, title("M1"): quietly xtreg ln_tjb_prftb i.unemp_se, vce(robust)
+eststo, title("M2"): quietly xtreg ln_tjb_prftb i.unemp_se i.educ3 i.initial_race $controls, vce(robust)
+
+
 
 esttab, legend label collabels(none) varlabels(_cons Constant) title(Profit SE vs Unemp to SE)
 eststo clear
+
+eststo, title("M2 FE"): quietly xtlogit profpos i.unemp_se i.educ3 i.initial_race $controls,  fe
+eststo, title("M2 FE"): quietly xtlogit prof10k i.unemp_se i.educ3 i.initial_race $controls,  fe
+eststo, title("M2 FE"): quietly xtreg ln_tjb_prftb i.unemp_se i.educ3 i.initial_race $controls,  fe
+esttab, legend label  varlabels(_cons Constant) title(Profit SE vs Unemp to SE Fixed Effects)
+eststo clear 
+
 restore 
 
 **# Profit: WS to SE vs unemp to SE  
@@ -210,16 +411,23 @@ sum tjb_prftb profpos prof10k ln_tjb_prftb
 xtset ssuid_spanel_pnum_id swave 
 
 // comparison group here is ws_se 
-eststo, title("M1"): quietly xtlogit profpos i.unemp_se 
-eststo, title("M2"): quietly xtlogit profpos i.unemp_se i.educ3 i.erace $controls
+eststo, title("M1"): quietly xtlogit profpos i.unemp_se, vce(robust)
+eststo, title("M2"): quietly xtlogit profpos i.unemp_se i.educ3 i.initial_race $controls, vce(robust)
 
-eststo, title("M1"): quietly xtlogit prof10k i.unemp_se
-eststo, title("M2"): quietly xtlogit prof10k i.unemp_se i.educ3 i.erace $controls
+eststo, title("M1"): quietly xtlogit prof10k i.unemp_se, vce(robust)
+eststo, title("M2"): quietly xtlogit prof10k i.unemp_se i.educ3 i.initial_race $controls, vce(robust)
 
-eststo, title("M1"): quietly xtreg ln_tjb_prftb i.unemp_se
-eststo, title("M2"): quietly xtreg ln_tjb_prftb i.unemp_se i.educ3 i.erace $controls 
+eststo, title("M1"): quietly xtreg ln_tjb_prftb i.unemp_se, vce(robust)
+eststo, title("M2"): quietly xtreg ln_tjb_prftb i.unemp_se i.educ3 i.initial_race $controls, vce(robust) 
 
 esttab, stats(N) legend label collabels(none) varlabels(_cons Constant) title(Profit: WS to SE vs Unemp to SE)
+eststo clear
+
+eststo, title("M2 FE"): quietly xtlogit profpos i.unemp_se i.educ3 i.initial_race $controls, fe
+eststo, title("M2 FE"): quietly xtlogit prof10k i.unemp_se i.educ3 i.initial_race $controls, fe
+eststo, title("M2 FE"): quietly xtreg ln_tjb_prftb i.unemp_se i.educ3 i.initial_race $controls, fe
+esttab, legend label  varlabels(_cons Constant) title(Profit WS to SE vs Unemp to SE Fixed Effects)
+
 eststo clear
 
 restore
@@ -258,10 +466,13 @@ gen ln_tbsjval = ln(tbsjval)
 hist tbsjval 
 hist ln_tbsjval
 xtset ssuid_spanel_pnum_id swave
-eststo, title("M1"): quietly xtreg tbsjval i.unemp_se
-eststo, title("M2"): quietly xtreg tbsjval i.unemp_se i.educ3 i.erace  $controls
-eststo, title("M1"): quietly xtreg ln_tbsjval i.unemp_se
-eststo, title("M2"): quietly xtreg ln_tbsjval i.unemp_se i.educ3 i.erace  $controls
+eststo, title("M1"): quietly xtreg tbsjval i.unemp_se, vce(robust)
+eststo, title("M2"): quietly xtreg tbsjval i.unemp_se i.educ3 i.initial_race  $controls, vce(robust)
+eststo, title("M1"): quietly xtreg ln_tbsjval i.unemp_se, vce(robust)
+eststo, title("M2"): quietly xtreg ln_tbsjval i.unemp_se i.educ3 i.initial_race  $controls, vce(robust)
+
+eststo, title("M2"): quietly xtreg tbsjval i.unemp_se i.educ3 i.initial_race  $controls, fe 
+eststo, title("M2"): quietly xtreg ln_tbsjval i.unemp_se i.educ3 i.initial_race  $controls, fe 
 
 
 esttab, legend label collabels(none) varlabels(_cons Constant) title(Business Value SE vs Unemp to SE)
@@ -282,11 +493,16 @@ keep if tbsjval != .
 
 gen ln_tbsjval = ln(tbsjval)
 xtset ssuid_spanel_pnum_id swave
-eststo, title("M1"): quietly xtreg tbsjval i.unemp_se 
-eststo, title("M2"): quietly xtreg tbsjval i.unemp_se i.educ3 i.erace $controls 
+eststo, title("M1"): quietly xtreg tbsjval i.unemp_se, vce(robust) 
+eststo, title("M2"): quietly xtreg tbsjval i.unemp_se i.educ3 i.initial_race $controls, vce(robust) 
 
-eststo, title("M1"): quietly xtreg ln_tbsjval i.unemp_se 
-eststo, title("M2"): quietly xtreg ln_tbsjval i.unemp_se i.educ3 i.erace $controls 
+eststo, title("M1"): quietly xtreg ln_tbsjval i.unemp_se, vce(robust) 
+eststo, title("M2"): quietly xtreg ln_tbsjval i.unemp_se i.educ3 i.initial_race $controls, vce(robust)
+
+ 
+eststo, title("M2"): quietly xtreg tbsjval i.unemp_se i.educ3 i.initial_race $controls,  fe 
+eststo, title("M2"): quietly xtreg ln_tbsjval i.unemp_se i.educ3 i.initial_race $controls,  fe 
+
 esttab, legend label collabels(none) varlabels(_cons Constant) title(Business Value WS to SE vs Unemp to SE)
 
 eststo clear 
