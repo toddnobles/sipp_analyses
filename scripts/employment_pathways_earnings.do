@@ -154,7 +154,6 @@ by ssuid_spanel_pnum_id: gen second_status = employment_type1 if change ==1 & _n
 by ssuid_spanel_pnum_id: gen third_status = employment_type1 if change ==1 & _n ==2
 by ssuid_spanel_pnum_id: gen fourth_status = employment_type1 if change ==1 & _n ==3
 by ssuid_spanel_pnum_id: gen fifth_status = employment_type1 if change ==1 & _n ==4
-/*
 by ssuid_spanel_pnum_id: gen sixth_status = employment_type1 if change ==1 & _n ==5
 by ssuid_spanel_pnum_id: gen seventh_status = employment_type1 if change ==1 & _n ==6
 by ssuid_spanel_pnum_id: gen eighth_status = employment_type1 if change ==1 & _n ==7
@@ -162,9 +161,9 @@ by ssuid_spanel_pnum_id: gen ninth_status = employment_type1 if change ==1 & _n 
 by ssuid_spanel_pnum_id: gen tenth_status = employment_type1 if change ==1 & _n ==9
 by ssuid_spanel_pnum_id: gen eleventh_status = employment_type1 if change ==1 & _n ==10
 by ssuid_spanel_pnum_id: gen twelfth_status = employment_type1 if change ==1 & _n ==11
-*/
 
-foreach x in first_status ever_changed second_status third_status fourth_status fifth_status {
+
+foreach x in first_status second_status third_status fourth_status fifth_status sixth_status seventh_status eighth_status ninth_status tenth_status eleventh_status twelfth_status {
 	label values `x' employment_types
 	//bysort ssuid_spanel_pnum_id (`x'): carryforward `x', replace 
 
@@ -177,7 +176,7 @@ list ssuid_spanel_pnum_id spanel swave monthcode employment_type1  change *statu
 
 
 local i = 0
-foreach x in first_status second_status third_status fourth_status fifth_status {
+foreach x in first_status second_status third_status fourth_status fifth_status sixth_status seventh_status eighth_status ninth_status tenth_status eleventh_status twelfth_status  {
 	gsort ssuid_spanel_pnum_id -`x' 
 	local i = `i' + 1
 	by ssuid_spanel_pnum_id: carryforward `x', gen(status_`i') 
@@ -214,8 +213,8 @@ restore
 sort ssuid_spanel_pnum_id swave monthcode employment_type1
 
 local i = 0
-//fourth_status fifth_status sixth_status seventh_status eighth_status ninth_status tenth_status eleventh_status twelfth_status
-foreach x in first_status second_status third_status  {
+
+foreach x in first_status second_status third_status fourth_status fifth_status sixth_status seventh_status eighth_status ninth_status tenth_status eleventh_status twelfth_status {
 	local i = `i' + 1
 	bysort ssuid_spanel_pnum_id (swave monthcode) employment_type1: carryforward `x', gen(status_`i'_lim)  dynamic_condition(employment_type1[_n-1]==employment_type1[_n])
 
@@ -244,11 +243,17 @@ bysort ssuid_spanel_pnum_id: carryforward tpearn_s3, replace
 <p> Here we create a measure of how long people held each employment status. So we can now create a person-level flag for if someone experienced unemployment for 3 months or 6 months. </p>
 ***/
 sort ssuid_spanel_pnum_id swave monthcode 
-list ssuid_spanel_pnum_id swave monthcode status_1 status_2 status_3 status_1_lim status_2_lim status_3_lim if ssuid_spanel_pnum_id== 704 
+list ssuid_spanel_pnum_id swave monthcode status_1 status_2 status_3 status_4 status_5  status_1_lim status_2_lim status_3_lim status_4_lim status_5_lim if ssuid_spanel_pnum_id== 704 
 
+forval x = 1/12 {
+	by ssuid_spanel_pnum_id: egen months_s`x' = count(status_`x'_lim)
+	
+}
+/*
 by ssuid_spanel_pnum_id: egen months_s1 = count(status_1_lim)
 by ssuid_spanel_pnum_id: egen months_s2 = count(status_2_lim)
 by ssuid_spanel_pnum_id: egen months_s3 = count(status_3_lim)
+*/
 
 list ssuid_spanel_pnum_id swave monthcode status_1 status_2 status_3 status_1_lim status_2_lim status_3_lim months_* if ssuid_spanel_pnum_id== 704 
 
@@ -277,6 +282,7 @@ su months_s3 if status_3 == 4 & unique_tag ==1, detail
 tabstat months_s1 if status_1 ==4 & unique_tag ==1, by(erace) statistic(mean sd min med max n)
 tabstat months_s2 if status_2 ==4 & unique_tag ==1, by(erace) statistic(mean sd min med max n)
 tabstat months_s3 if status_3 ==4 & unique_tag ==1, by(erace) statistic(mean sd min med max n)
+
 
 
 /***
