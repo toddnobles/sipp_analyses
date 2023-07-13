@@ -120,23 +120,44 @@ global controls= "i.sex i.initial_hisp age age2 immigrant parent industry2"
 ***/
 frame change earnings 
 
-// flags for our samples of interest 
-gen se_only =1 if status_1 == 2 & status_2 == . 
-replace se_only = 0 if se_only == .
-gen ws_se =1 if status_1 == 1 & status_2 == 2
-replace ws_se = 0 if ws_se == .
-gen unemp_se=1 if status_1 == 4 & status_2 ==2 
-replace unemp_se = 0 if unemp_se == . 
-gen ws_only = 1 if status_1 ==2 & status_2 == . 
-replace ws_only = 0 if ws_only == . 
-gen unemp_ws = 1 if status_1 == 4 & status_2 == 1
-replace unemp_ws = 0 if unemp_ws == . 
-
-
 gen month_over = monthcode if swave == 1
 replace month_over = monthcode + 12 if swave == 2
 replace month_over = monthcode + 24 if swave ==3 
 replace month_over = monthcode + 36 if swave == 4 
+
+/***
+<html>
+<body>
+<h3> creating flags that signal which type of employment change occurred </h4>
+***/
+
+bysort ssuid_spanel_pnum_id (month_over): gen unemp_se = 1 if employment_type1[_n] ==2 & employment_type1[_n-1] == 4 // unemp_se 
+bysort ssuid_spanel_pnum_id (month_over): gen unemp_ws = 1 if employment_type1[_n] ==1 & employment_type1[_n-1] == 4 // unemp_ws
+bysort ssuid_spanel_pnum_id (month_over): gen ws_se = 1 if employment_type1[_n] == 2 & employment_type1[_n-1] == 1 // ws_se 
+bysort ssuid_spanel_pnum_id (month_over): gen se_ws = 1 if employment_type1[_n] == 1 & employment_type1[_n-1] == 2 // se_ws 
+
+list employment_type status_1_lim-status_10_lim tpearn tjb_msum unemp_ws unemp_se ws_se se_ws change if ssuid_spanel_pnum_id== 199553 
+
+// ws_se period 
+bysort ssuid_spanel_pnum_id (month_over): carryforward ws_se, gen(ws_se_period) dynamic_condition(employment_type1[_n] == employment_type1[_n-1])
+// unemp_se period 
+bysort ssuid_spanel_pnum_id (month_over): carryforward unemp_se, gen(unemp_se_period) dynamic_condition(employment_type1[_n] == employment_type1[_n-1])
+// unemp_ws period 
+bysort ssuid_spanel_pnum_id (month_over): carryforward unemp_ws, gen(unemp_ws_period) dynamic_condition(employment_type1[_n] == employment_type1[_n-1])
+
+
+
+
+// flags for our samples of interest 
+gen se_only =1 if status_1 == 2 & status_2 == . 
+replace se_only = 0 if se_only == .
+gen ws_only = 1 if status_1 ==1 & status_2 == . 
+replace ws_only = 0 if ws_only == . 
+
+bysort ssuid_spanel_pnum_id: egen ever_unemp_ws = sum(unemp_ws) // flag for ever transitioning from unemp to ws 
+bysort ssuid_spanel_pnum_id: egen ever_unemp_se = sum(unemp_se) // flag for ever transitioning from unemp to se 
+
+// do we want to drop those months where someone is working less than 15 hours? 
 
 
 **# WS vs Unemp to WS
@@ -146,10 +167,13 @@ replace month_over = monthcode + 36 if swave == 4
 <h3>WS vs Unemp to WS</h3>
 ***/
 preserve
-keep if ws_only == 1 | unemp_ws == 1
-tab ws_only unemp_ws, missing
+keep if ws_only == 1 | ever_unemp_ws >0 // keeping  those who were always w&S or those who at some point went from unemployed to w&s
 
-list ssuid_spanel_pnum_id swave monthcode employment_type status_1 status_2 status_3 months_* tpearn tjb_msum  in 50/500, sepby(ssuid_spanel_pnum_id)
+// now need to limit this second group to only the appropriate months they meet these status qualifications
+keep if ws_only ==1 | unemp_ws_period == 1 
+tab ws_only unemp_ws_period, missing
+
+* list ssuid_spanel_pnum_id month_over employment_type  tpearn tjb_msum  in 50/500, sepby(ssuid_spanel_pnum_id)
 
 // modifying tpearn for these folks 
 su tpearn tjb_msum, detail
@@ -165,17 +189,18 @@ xtset ssuid_spanel_pnum_id  month_over
  
 foreach x of varlist tjb_msum tpearn ln_tpearn {
     
-quietly xtreg `x' i.unemp_ws, vce(robust)  mle
+quietly xtreg `x' i.ws_only, vce(robust)  mle
 eststo ws_`x'1_re
 
-quietly xtreg `x' i.unemp_ws i.educ3 i.initial_race $controls, vce(robust) mle
+quietly xtreg `x' i.ws_only i.educ3 i.initial_race $controls, vce(robust) mle
 eststo ws_`x'2_re
-
-quietly xtreg `x' i.unemp_ws, fe vce(robust) 
+ /*
+quietly xtreg `x' i.ws_only, fe vce(robust) 
 eststo ws_`x'1_fe
 
-quietly xtreg `x' i.unemp_ws i.educ3 i.initial_race $controls, fe vce(robust)
+quietly xtreg `x' i.ws_only i.educ3 i.initial_race $controls, fe vce(robust)
 eststo ws_`x'2_fe
+*/
 }
 
 restore
@@ -187,8 +212,13 @@ restore
 <h3>SE vs Unemp to SE</h3>
 ***/
 preserve
-keep if se_only == 1 | unemp_se == 1
-tab se_only unemp_se, missing
+
+keep if se_only == 1 | ever_unemp_se >0 // keeping those who were always se or those who at some point went from unemployed to se 
+
+// now limiting the unemp_se group to only the appropriate monts they were self-employed 
+keep if se_only ==1 | unemp_se_period == 1 
+
+tab se_only unemp_se_period, missing
 
 // modifying tpearn for these folks 
 gen ln_tjb_msum = ln(tjb_msum+1) if tjb_msum != . 
@@ -202,17 +232,17 @@ xtset ssuid_spanel_pnum_id  month_over
  
 foreach x of varlist tjb_msum tpearn ln_tpearn {
     
-quietly xtreg `x' i.unemp_se, vce(robust)  mle
+quietly xtreg `x' i.se_only, vce(robust)  mle
 eststo se_`x'1_re
 
-quietly xtreg `x' i.unemp_se i.educ3 i.initial_race $controls, vce(robust) mle
+quietly xtreg `x' i.se_only i.educ3 i.initial_race $controls, vce(robust) mle
 eststo se_`x'2_re
 
-quietly xtreg `x' i.unemp_se, fe vce(robust) 
-eststo se_`x'1_fe
+*quietly xtreg `x' i.se_only, fe vce(robust) 
+*eststo se_`x'1_fe
 
-quietly xtreg `x' i.unemp_se i.educ3 i.initial_race $controls, fe vce(robust)
-eststo se_`x'2_fe
+*quietly xtreg `x' i.se_only i.educ3 i.initial_race $controls, fe vce(robust)
+*eststo se_`x'2_fe
 }
 
 restore 
@@ -223,8 +253,9 @@ restore
 <h3>WS to SE vs Unemp to SE</h3>
 ***/
 preserve
-keep if ws_se == 1 | unemp_se == 1
-tab ws_se unemp_se, missing
+
+keep if ws_se_period == 1 | unemp_se_period == 1
+tab ws_se_period unemp_se_period, missing
 
 // modifying tpearn for these folks 
 gen ln_tjb_msum = ln(tjb_msum+1) if tjb_msum != . 
@@ -244,11 +275,12 @@ eststo wsse_`x'1_re
 quietly xtreg `x' i.unemp_se i.educ3 i.initial_race $controls, vce(robust) mle
 eststo wsse_`x'2_re
 
-quietly xtreg `x' i.unemp_se, fe vce(robust) 
+/*quietly xtreg `x' i.unemp_se, fe vce(robust) 
 eststo wsse_`x'1_fe
 
 quietly xtreg `x' i.unemp_se i.educ3 i.initial_race $controls, fe vce(robust)
 eststo wsse_`x'2_fe
+*/
 }
 
 restore 
@@ -265,7 +297,7 @@ restore
 <body>
 <h3>Earnings: WS vs Unemp to WS: FE </h3>
 ***/
-esttab ws_*_fe, legend label collabels(none) varlabels(_cons Constant) title(Earnings WS vs Unemp to WS: FE) aic bic 
+* esttab ws_*_fe, legend label collabels(none) varlabels(_cons Constant) title(Earnings WS vs Unemp to WS: FE) aic bic 
 
 /***
 <html>
@@ -279,7 +311,7 @@ esttab ws_tjb_msum*_re ws_tpearn*_re ws_ln_tpearn*_re , legend label varlabels(_
 <body>
 <h3>Earnings: se vs Unemp to se Fixed Effects </h3>
 ***/
-esttab se_*_fe, legend label collabels(none) varlabels(_cons Constant) title(Earnings se vs Unemp to se Fixed Effects) aic bic 
+*esttab se_*_fe, legend label collabels(none) varlabels(_cons Constant) title(Earnings se vs Unemp to se Fixed Effects) aic bic 
 
 /***
 <html>
@@ -293,7 +325,7 @@ esttab se_tjb_msum*_re se_tpearn*_re se_ln_tpearn*_re , legend label varlabels(_
 <body>
 <h3>Earnings: ws to se vs Unemp to se Fixed Effects </h3>
 ***/
-esttab wsse*fe, legend label collabels(none) varlabels(_cons Constant) title(Earnings ws to se vs Unemp to se Fixed effects) aic bic 
+*esttab wsse*fe, legend label collabels(none) varlabels(_cons Constant) title(Earnings ws to se vs Unemp to se Fixed effects) aic bic 
 
 /***
 <html>
@@ -321,7 +353,26 @@ eststo clear
 frame change profits
 egen unique_yr_tag= tag(ssuid_spanel_pnum_id swave) // creating person-year flag 
 keep if unique_yr_tag // now we're down to one row per person per year an
-list ssuid_spanel_pnum_id status_1 status_2 status_3 months_* tjb_prft tbsjval in 1/50, sepby(ssuid_spanel_pnum_id)
+list ssuid_spanel_pnum_id status_1 status_2 status_3 months_s1-months_s3 tjb_prft tbsjval in 1/50, sepby(ssuid_spanel_pnum_id)
+
+
+/***
+<html>
+<body>
+<h3> creating flags that signal which type of employment change occurred </h4>
+***/
+
+bysort ssuid_spanel_pnum_id (month_over): gen unemp_se = 1 if employment_type1[_n] ==2 & employment_type1[_n-1] == 4 // unemp_se 
+bysort ssuid_spanel_pnum_id (month_over): gen unemp_ws = 1 if employment_type1[_n] ==1 & employment_type1[_n-1] == 4 // unemp_ws
+bysort ssuid_spanel_pnum_id (month_over): gen ws_se = 1 if employment_type1[_n] == 2 & employment_type1[_n-1] == 1 // ws_se 
+bysort ssuid_spanel_pnum_id (month_over): gen se_ws = 1 if employment_type1[_n] == 1 & employment_type1[_n-1] == 2 // se_ws 
+
+list employment_type status_1_lim-status_10_lim tpearn tjb_msum unemp_ws unemp_se ws_se se_ws change if ssuid_spanel_pnum_id== 199553 
+
+// ws_se period 
+bysort ssuid_spanel_pnum_id (month_over): carryforward ws_se, gen(ws_se_period) dynamic_condition(employment_type1[_n] == employment_type1[_n-1])
+// unemp_se period 
+bysort ssuid_spanel_pnum_id (month_over): carryforward unemp_se, gen(unemp_se_period) dynamic_condition(employment_type1[_n] == employment_type1[_n-1])
 
 // flags for our samples of interest 
 gen se_only =1 if status_1 == 2 & status_2 == . 
