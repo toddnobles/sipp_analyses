@@ -324,17 +324,38 @@ drop if employment_type1 == 3
 drop if status_1 == 3 
 drop if mode_status_f12v1 == 3 
 drop if mode_status_f12v2 == 3 
-	
+label variable tpearn "tpearn"
+
 // modifying tpearn for these folks 
 gen ln_tjb_msum = ln(tjb_msum+1) if tjb_msum != . 
 egen min_tpearn = min(tpearn)
 replace min_tpearn = min_tpearn *-1
 gen ln_tpearn = ln(tpearn + min_tpearn+1) if tpearn !=. 
 
+
+hist tpearn 
+webdoc graph, hardcode nokeep
+hist ln_tpearn 
+webdoc graph, hardcode nokeep
+hist tjb_msum 
+webdoc graph, hardcode nokeep
+hist ln_tjb_msum
+webdoc graph, hardcode nokeep
+
+su ln_tjb_msum ln_tpearn, detail
+
+su tpearn tjb_msum
 xtset ssuid_spanel_pnum_id  month_overall
 /* Notes: 
 	1. Leaving in first 12 months of earnings for this first set of models. We test them as a predictor later. 
 */
+ 
+
+
+ /**********************************************************************/
+ /*  SECTION WS/SE Earnings			
+     Notes: */
+ /**********************************************************************/ 
  
 foreach y of varlist tjb_msum ln_tjb_msum tpearn ln_tpearn {
 	foreach x of varlist unempf12_6 mode_status_f12v2 {
@@ -378,6 +399,7 @@ esttab b_tpearn_unemp*re b_tjb_msum_unemp*, legend label varlabels(_cons Constan
 esttab b_ln_*mode*re, legend label varlabels(_cons Constant) title(Modal status ) aic bic 
 esttab b_tpearn_mode*re b_tjb_msum_mode*, legend label varlabels(_cons Constant) title(Modal status All models) aic bic 
 
+ /*------------------------------------ End of SECTION WS/SE Earnings ------------------------------------*/
 
 
 
@@ -401,15 +423,10 @@ foreach y of varlist tjb_msum ln_tjb_msum tpearn ln_tpearn {
 
 		quietly xtreg `y' i.`x' i.educ3 i.initial_race $controls , vce(robust) mle
 		eststo se`y'_`xname'_2re
-
-}
+	}
 }
 
 restore
-/*------------------------------------ End of SECTION  ------------------------------------*/
-
-
-
 
 /***
 <html>
@@ -432,6 +449,7 @@ esttab setpearn_unemp*re setjb_msum_unemp*, legend label varlabels(_cons Constan
 esttab seln_*mode*re, legend label varlabels(_cons Constant) title(Modal Status SE earnings) aic bic 
 esttab setpearn_mode*re setjb_msum_mode*, legend label varlabels(_cons Constant) title(Modal status All models SE earnings ) aic bic 
 
+/*------------------------------------ End of SECTION  ------------------------------------*/
 
 /**********************************************************************/
 /*  SECTION: WS Models  			
@@ -466,7 +484,6 @@ restore
 <h4>Table 5: DV: WS earnings. EV: 6 months unemployment</h4>
 ***/
 
-
 esttab ws_ln_*unemp*re, legend label varlabels(_cons Constant) title(6 month unemployed WS earnings ) aic bic 
 esttab ws_tpearn_unemp*re ws_tjb_msum_unemp*, legend label varlabels(_cons Constant) title(6 month unemployed All models WS Earnings) aic bic 
 
@@ -492,14 +509,14 @@ esttab ws_tpearn_mode*re ws_tjb_msum_mode*, legend label varlabels(_cons Constan
 ***/
 
 /**********************************************************************/
-/*  SECTION number: Using first year earnings as a predictor  			
+/*  SECTION f12 predictor: Using first year earnings as a predictor  			
     Notes: */
 /**********************************************************************/
 
 preserve
-keep if month_individ <=12 
+keep if month_individ <=12
 collapse (mean) tjb_msum_f12 = tjb_msum tpearn_f12 = tpearn tjb_prftb_f12 = tjb_prftb tbsjval_f12 = tbsjval, by(ssuid_spanel_pnum_id spanel)
-save f12_data.dta
+save f12_data.dta, replace 
 restore 
 
 drop _merge 
@@ -508,6 +525,8 @@ merge m:1 ssuid_spanel_pnum_id using f12_data
 // so those records get dropped before this preserve which means they have only rows >= 13 in our working dataset for models
 // above. So, in our preserve collapse restore, there are no rows for months 1-12 in to calculate based on.
 
+frame copy earnings earningsf12
+frame change earningsf12
 drop if month_individ <= 12 
 
 xtset ssuid_spanel_pnum_id month_overall
@@ -520,10 +539,10 @@ foreach y of varlist  ln_tjb_msum  {
 		di "`y'_`xname'"
 
 		quietly xtreg `y' i.`x' tjb_msum_f12 , vce(robust)  mle
-		eststo b_`y'_`xname'_1re
+		eststo b12_`y'_`xname'_1re
 
 		quietly xtreg `y' i.`x' tjb_msum_f12 i.educ3 i.initial_race $controls , vce(robust) mle
-		eststo b_`y'_`xname'_2re
+		eststo b12_`y'_`xname'_2re
 
 }
 }
@@ -537,10 +556,10 @@ foreach y of varlist ln_tpearn  {
 		di "`y'_`xname'"
 
 		quietly xtreg `y' i.`x' tpearn_f12 , vce(robust)  mle
-		eststo b_`y'_`xname'_1re
+		eststo b12_`y'_`xname'_1re
 
 		quietly xtreg `y' i.`x' tpearn_f12 i.educ3 i.initial_race $controls , vce(robust) mle
-		eststo b_`y'_`xname'_2re
+		eststo b12_`y'_`xname'_2re
 
 }
 }
@@ -551,23 +570,20 @@ foreach y of varlist ln_tpearn  {
 <h4>Table 7: DV: WS/SE earnings. EV: 6 months unemployment</h4>
 <p></p>
 ***/
-
-
-esttab b_ln_*unemp*re, legend label varlabels(_cons Constant) title(6 month unemployed) aic bic 
-esttab b_tpearn_unemp*re b_tjb_msum_unemp*, legend label varlabels(_cons Constant) title(6 month unemployed All models) aic bic 
+esttab b12_*unemp* , legend label varlabels(_cons Constant) title(6 month unemployed All models) aic bic 
 
 
 /***
 <html>
 <body>
-<h4>Table 8: DV WS/SE earnings.</h4>
+<h4>Table 8: DV WS/SE earnings. EV: modal status f12</h4>
 <p>/p>
 ***/
-esttab b_ln_*mode*re, legend label varlabels(_cons Constant) title(Modal status ) aic bic 
-esttab b_tpearn_mode*re b_tjb_msum_mode*, legend label varlabels(_cons Constant) title(Modal status All models) aic bic 
+esttab b12_*mode*, legend label varlabels(_cons Constant) title(Modal status All models) aic bic 
 
 
-/*------------------------------------ End of SECTION number ------------------------------------*/
+/*------------------------------------ End of SECTION f12 as predictor ------------------------------------*/
+
 preserve
 keep if pct_se_after_12 == 1
 foreach y of varlist  ln_tjb_msum  {
@@ -578,10 +594,10 @@ foreach y of varlist  ln_tjb_msum  {
 		di "`y'_`xname'"
 
 		quietly xtreg `y' i.`x' tjb_msum_f12 , vce(robust)  mle
-		eststo b_`y'_`xname'_1re
+		eststo se12_`y'_`xname'_1re
 
 		quietly xtreg `y' i.`x' tjb_msum_f12 i.educ3 i.initial_race $controls , vce(robust) mle
-		eststo b_`y'_`xname'_2re
+		eststo se12_`y'_`xname'_2re
 
 }
 }
@@ -595,15 +611,34 @@ foreach y of varlist ln_tpearn  {
 		di "`y'_`xname'"
 
 		quietly xtreg `y' i.`x' tpearn_f12 , vce(robust)  mle
-		eststo b_`y'_`xname'_1re
+		eststo se12_`y'_`xname'_1re
 
 		quietly xtreg `y' i.`x' tpearn_f12 i.educ3 i.initial_race $controls , vce(robust) mle
-		eststo b_`y'_`xname'_2re
+		eststo se12_`y'_`xname'_2re
 
 }
 }
 
 restore 
+
+/***
+<html>
+<body>
+<h4>Table 9: DV: WS/SE earnings. EV: 6 months unemployment</h4>
+<p></p>
+***/
+
+
+esttab se12_*unemp*, legend label varlabels(_cons Constant) title(6 month unemployed) aic bic 
+
+/***
+<html>
+<body>
+<h4>Table 10: DV WS/SE earnings. EV: Modal status f12</h4>
+<p>/p>
+***/
+esttab se12_*mode*, legend label varlabels(_cons Constant) title(Modal status All models) aic bic 
+
 
 /*------------------------------------ End of Earnings Models  ------------------------------------*/
 
@@ -628,7 +663,20 @@ list swave monthcode tjb_prftb tbsjval if ssuid_spanel_pnum_id  ==  198178, sepb
 // now can create unique year tag given that we have prft and bus val  equal for every row per person per wave 
 egen unique_yr_tag= tag(ssuid_spanel_pnum_id swave) // creating person-year flag 
 keep if unique_yr_tag // now we're down to one row per person per year an
-gen year = 
+gen calyear = 2013 if spanel == 2014 & swave == 1
+replace calyear = 2014 if spanel == 2014 & swave == 2 
+replace calyear = 2015 if spanel == 2014 & swave == 3
+replace calyear = 2016 if spanel == 2014 & swave == 4
+replace calyear = 2017 if spanel == 2018 & swave == 1
+replace calyear = 2018 if spanel == 2018 & swave == 2
+replace calyear = 2019 if spanel == 2018 & swave == 3
+replace calyear = 2020 if spanel == 2018 & swave == 4
+replace calyear = 2018 if spanel == 2019 & swave == 1
+replace calyear = 2019 if spanel == 2020 & swave == 1
+replace calyear = 2020 if spanel == 2020 & swave == 2
+replace calyear = 2021 if spanel == 2020 & swave == 3
+
+
 
 // recoding profits 
 gen profposi=tjb_prftb>0 if tjb_prftb<. // 
@@ -636,179 +684,95 @@ tab profpos, missing
 gen prof10k=tjb_prftb>=10000 if tjb_prftb<.
 tab prof10k, missing
 
-foreach x in  tjb_prftb  {
+foreach x in  tjb_prftb tbsjval {
 	egen min_`x' = min(`x')
 	replace min_`x' = min_`x' *-1
 	gen ln_`x' = ln(`x' + min_`x'+1)
 } 
 
-*# Profit: SE vs unemp to SE 
 /***
 <html>
 <body>
 <h3>Profit: SE vs unemp to SE</h3>
 ***/
+list ssuid_spanel_pnum_id calyear profpos prof10k ln_tjb_prftb tjb_prftb tbsjval ln_tbsjval ///
+unempf12_6 mode_status_f12v2 in 1/500 if pct_se_after_12 ==1, sepby(ssuid_spanel_pnum_id) abbrev(10)
+
 
 preserve
 // getting to sample of interest
+
 keep if pct_se_after_12 == 1 
 
 sum tjb_prftb profpos prof10k ln_tjb_prftb
 
 
 
-xtset ssuid_spanel_pnum_id swave 
+xtset ssuid_spanel_pnum_id calyear 
 
-// comparison group here is se_only 
-eststo, title("M1"): quietly xtlogit profpos i.unemp_se, vce(robust)
-eststo, title("M2"): quietly xtlogit profpos i.unemp_se i.educ3 i.initial_race $controls, vce(robust)
-
-eststo, title("M1"): quietly xtlogit prof10k i.unemp_se, vce(robust)
-eststo, title("M2"): quietly xtlogit prof10k i.unemp_se i.educ3 i.initial_race $controls, vce(robust)
-
-eststo, title("M1"): quietly xtreg ln_tjb_prftb i.unemp_se, vce(robust)
-eststo, title("M2"): quietly xtreg ln_tjb_prftb i.unemp_se i.educ3 i.initial_race $controls, vce(robust)
-
-
-
-esttab, legend label collabels(none) varlabels(_cons Constant) title(Profit SE vs Unemp to SE)
-eststo clear
-
-eststo, title("M2 FE"): quietly xtlogit profpos i.unemp_se i.educ3 i.initial_race $controls,  fe
-eststo, title("M2 FE"): quietly xtlogit prof10k i.unemp_se i.educ3 i.initial_race $controls,  fe
-eststo, title("M2 FE"): quietly xtreg ln_tjb_prftb i.unemp_se i.educ3 i.initial_race $controls,  fe
-esttab, legend label  varlabels(_cons Constant) title(Profit SE vs Unemp to SE Fixed Effects)
 eststo clear 
+
+foreach y of varlist profpos prof10k   {
+	foreach x of varlist unempf12_6 mode_status_f12v2  {
+		
+		local xname = substr("`x'",1,5)
+		di "`y'_`xname'"
+
+		quietly xtlogit `y' i.`x', vce(robust)  
+		eststo `y'_`xname'_1re
+
+		quietly xtlogit `y' i.`x' i.educ3 i.initial_race $controls , vce(robust) 
+		eststo `y'_`xname'_2re
+
+
+
+}
+}
+
+foreach y of varlist ln_tjb_prftb ln_tbsjval   {
+	foreach x of varlist unempf12_6 mode_status_f12v2  {
+		
+		local xname = substr("`x'",1,5)
+		di "`y'_`xname'"
+
+		quietly xtreg `y' i.`x', vce(robust)  mle
+		eststo `y'_`xname'_1re
+
+		quietly xtreg `y' i.`x' i.educ3 i.initial_race $controls , vce(robust) mle
+		eststo `y'_`xname'_2re
+
+
+
+}
+}
+
+
+
+/***
+<html>
+<body>
+<h4>Table XX: DV: profit binaries. EV: unemp and modal status</h4>
+<p></p>
+***/
+
+
+esttab prof*unemp* , legend label varlabels(_cons Constant) title(Profit Models: EV Unemp) aic bic 
+esttab prof*mode*, legend label varlabels(_cons Constant) title(Profit Models: EV Modal status) aic bic
+/***
+<html>
+<body>
+<h4>Table XX: DV tbsjval . EV: unemp and modal status</h4>
+<p>/p>
+***/
+esttab *jval*, legend label varlabels(_cons Constant) title(Business Value  Models) aic bic 
 
 restore 
-
-**# Profit: WS to SE vs unemp to SE  
-/***
-<html>
-<body>
-<h3>Profit: WS to SE vs unemp to SE </h3>  
-***/
-preserve
-
-// getting to sample of interest
-keep if ws_se ==1 | unemp_se ==1
-
-sum tjb_prftb profpos prof10k
-
-foreach x in  tjb_prftb  {
-	egen min_`x' = min(`x')
-	replace min_`x' = min_`x' *-1
-	gen ln_`x' = ln(`x' + min_`x'+1)
-} 
-
-sum tjb_prftb profpos prof10k ln_tjb_prftb
-
-
-xtset ssuid_spanel_pnum_id swave 
-
-// comparison group here is ws_se 
-eststo, title("M1"): quietly xtlogit profpos i.unemp_se, vce(robust)
-eststo, title("M2"): quietly xtlogit profpos i.unemp_se i.educ3 i.initial_race $controls, vce(robust)
-
-eststo, title("M1"): quietly xtlogit prof10k i.unemp_se, vce(robust)
-eststo, title("M2"): quietly xtlogit prof10k i.unemp_se i.educ3 i.initial_race $controls, vce(robust)
-
-eststo, title("M1"): quietly xtreg ln_tjb_prftb i.unemp_se, vce(robust)
-eststo, title("M2"): quietly xtreg ln_tjb_prftb i.unemp_se i.educ3 i.initial_race $controls, vce(robust) 
-
-esttab, stats(N) legend label collabels(none) varlabels(_cons Constant) title(Profit: WS to SE vs Unemp to SE)
-eststo clear
-
-eststo, title("M2 FE"): quietly xtlogit profpos i.unemp_se i.educ3 i.initial_race $controls, fe
-eststo, title("M2 FE"): quietly xtlogit prof10k i.unemp_se i.educ3 i.initial_race $controls, fe
-eststo, title("M2 FE"): quietly xtreg ln_tjb_prftb i.unemp_se i.educ3 i.initial_race $controls, fe
-esttab, legend label  varlabels(_cons Constant) title(Profit WS to SE vs Unemp to SE Fixed Effects)
-
-eststo clear
-
-restore
-
-**# Business Value
-/***
-<html>
-<body>
-<h2>Business Value Models</h2>
-***/
-frame change bizvalue
-
-egen unique_yr_tag= tag(ssuid_spanel_pnum_id swave) // creating person-year flag 
-keep if unique_yr_tag // now we're down to one row per person per year an
-
-// flags for our samples of interest 
-gen se_only =1 if status_1 == 2 & status_2 == . 
-replace se_only = 0 if se_only == .
-
-
-
-**# Business Value: SE vs unemp to SE
-/***
-<html>
-<body>
-<h3>Business Value: SE vs unemp to SE</h3>
-***/
-preserve
-keep if se_only ==1 | unemp_se ==1
-keep if tbsjval != . 
-
-gen ln_tbsjval = ln(tbsjval)
-hist tbsjval 
-hist ln_tbsjval
-xtset ssuid_spanel_pnum_id swave
-eststo, title("M1"): quietly xtreg tbsjval i.unemp_se, vce(robust)
-eststo, title("M2"): quietly xtreg tbsjval i.unemp_se i.educ3 i.initial_race  $controls, vce(robust)
-eststo, title("M1"): quietly xtreg ln_tbsjval i.unemp_se, vce(robust)
-eststo, title("M2"): quietly xtreg ln_tbsjval i.unemp_se i.educ3 i.initial_race  $controls, vce(robust)
-
-eststo, title("M2"): quietly xtreg tbsjval i.unemp_se i.educ3 i.initial_race  $controls, fe 
-eststo, title("M2"): quietly xtreg ln_tbsjval i.unemp_se i.educ3 i.initial_race  $controls, fe 
-
-
-esttab, legend label collabels(none) varlabels(_cons Constant) title(Business Value SE vs Unemp to SE)
-
-eststo clear
-restore
-
-
-**# Business Value: WS to SE vs Unemp to SE
-/***
-<html>
-<body>
-<h3>Business Value: WS to SE vs Unemp to SE </h3>
-***/
-preserve
-keep if unemp_se ==1 | ws_se == 1
-keep if tbsjval != . 
-
-gen ln_tbsjval = ln(tbsjval)
-xtset ssuid_spanel_pnum_id swave
-eststo, title("M1"): quietly xtreg tbsjval i.unemp_se, vce(robust) 
-eststo, title("M2"): quietly xtreg tbsjval i.unemp_se i.educ3 i.initial_race $controls, vce(robust) 
-
-eststo, title("M1"): quietly xtreg ln_tbsjval i.unemp_se, vce(robust) 
-eststo, title("M2"): quietly xtreg ln_tbsjval i.unemp_se i.educ3 i.initial_race $controls, vce(robust)
-
- 
-eststo, title("M2"): quietly xtreg tbsjval i.unemp_se i.educ3 i.initial_race $controls,  fe 
-eststo, title("M2"): quietly xtreg ln_tbsjval i.unemp_se i.educ3 i.initial_race $controls,  fe 
-
-esttab, legend label collabels(none) varlabels(_cons Constant) title(Business Value WS to SE vs Unemp to SE)
-
-eststo clear 
-restore
-
-
 
 /*------------------------------------ End of SECTION number ------------------------------------*/
 
 rm f12_data.dta 
 /*------------------------- 
 	To Do:
-		 1. Run earnings models using first year earning as predictor  (do we want logged versions as predictors? )
 		 2. get down to yearly level of data for runing profit models
 		 3. Keep first year flags we have for modal status
 -------------------------*/ 
