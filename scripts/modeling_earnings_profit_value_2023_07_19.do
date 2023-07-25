@@ -387,17 +387,17 @@ foreach y of varlist tjb_msum ln_tjb_msum tpearn ln_tpearn {
 
 
 esttab b_ln_*unemp*re, legend label varlabels(_cons Constant) title(6 month unemployed) aic bic 
-esttab b_tpearn_unemp*re b_tjb_msum_unemp*, legend label varlabels(_cons Constant) title(6 month unemployed All models) aic bic 
+*esttab b_tpearn_unemp*re b_tjb_msum_unemp*, legend label varlabels(_cons Constant) title(6 month unemployed All models) aic bic 
 
 
 /***
 <html>
 <body>
 <h4>Table2: DV WS/SE earnings. EV: modal status </h4>
-<p>/p>
+<p></p>
 ***/
 esttab b_ln_*mode*re, legend label varlabels(_cons Constant) title(Modal status ) aic bic 
-esttab b_tpearn_mode*re b_tjb_msum_mode*, legend label varlabels(_cons Constant) title(Modal status All models) aic bic 
+*esttab b_tpearn_mode*re b_tjb_msum_mode*, legend label varlabels(_cons Constant) title(Modal status All models) aic bic 
 
  /*------------------------------------ End of SECTION WS/SE Earnings ------------------------------------*/
 
@@ -437,17 +437,17 @@ restore
 
 
 esttab seln_*unemp*re, legend label varlabels(_cons Constant) title(6 month unemployed SE earnings ) aic bic 
-esttab setpearn_unemp*re setjb_msum_unemp*, legend label varlabels(_cons Constant) title(6 month unemployed All models SE Earnings) aic bic 
+*esttab setpearn_unemp*re setjb_msum_unemp*, legend label varlabels(_cons Constant) title(6 month unemployed All models SE Earnings) aic bic 
 
 
 /***
 <html>
 <body>
 <h4>Table4: DV SE earnings. EV: modal status </h4>
-<p>/p>
+<p></p>
 ***/
 esttab seln_*mode*re, legend label varlabels(_cons Constant) title(Modal Status SE earnings) aic bic 
-esttab setpearn_mode*re setjb_msum_mode*, legend label varlabels(_cons Constant) title(Modal status All models SE earnings ) aic bic 
+*esttab setpearn_mode*re setjb_msum_mode*, legend label varlabels(_cons Constant) title(Modal status All models SE earnings ) aic bic 
 
 /*------------------------------------ End of SECTION  ------------------------------------*/
 
@@ -485,17 +485,17 @@ restore
 ***/
 
 esttab ws_ln_*unemp*re, legend label varlabels(_cons Constant) title(6 month unemployed WS earnings ) aic bic 
-esttab ws_tpearn_unemp*re ws_tjb_msum_unemp*, legend label varlabels(_cons Constant) title(6 month unemployed All models WS Earnings) aic bic 
+*esttab ws_tpearn_unemp*re ws_tjb_msum_unemp*, legend label varlabels(_cons Constant) title(6 month unemployed All models WS Earnings) aic bic 
 
 
 /***
 <html>
 <body>
 <h4>Table6 : DV WS earnings. EV: modal status </h4>
-<p>/p>
+<p></p>
 ***/
 esttab ws_ln_*mode*re, legend label varlabels(_cons Constant) title(Modal Status WS earnings) aic bic 
-esttab ws_tpearn_mode*re ws_tjb_msum_mode*, legend label varlabels(_cons Constant) title(Modal status All models WS earnings ) aic bic 
+*esttab ws_tpearn_mode*re ws_tjb_msum_mode*, legend label varlabels(_cons Constant) title(Modal status All models WS earnings ) aic bic 
 
 
 /*------------------------------------ End of SECTION WS Models  ------------------------------------*/
@@ -577,7 +577,7 @@ esttab b12_*unemp* , legend label varlabels(_cons Constant) title(6 month unempl
 <html>
 <body>
 <h4>Table 8: DV WS/SE earnings. EV: modal status f12</h4>
-<p>/p>
+<p></p>
 ***/
 esttab b12_*mode*, legend label varlabels(_cons Constant) title(Modal status All models) aic bic 
 
@@ -635,7 +635,7 @@ esttab se12_*unemp*, legend label varlabels(_cons Constant) title(6 month unempl
 <html>
 <body>
 <h4>Table 10: DV WS/SE earnings. EV: Modal status f12</h4>
-<p>/p>
+<p></p>
 ***/
 esttab se12_*mode*, legend label varlabels(_cons Constant) title(Modal status All models) aic bic 
 
@@ -751,7 +751,7 @@ foreach y of varlist ln_tjb_prftb ln_tbsjval   {
 /***
 <html>
 <body>
-<h4>Table XX: DV: profit binaries. EV: unemp and modal status</h4>
+<h4>Table 11: DV: profit binaries. EV: unemp and modal status</h4>
 <p></p>
 ***/
 
@@ -761,8 +761,8 @@ esttab prof*mode*, legend label varlabels(_cons Constant) title(Profit Models: E
 /***
 <html>
 <body>
-<h4>Table XX: DV tbsjval . EV: unemp and modal status</h4>
-<p>/p>
+<h4>Table 12: DV tbsjval . EV: unemp and modal status</h4>
+<p></p>
 ***/
 esttab *jval*, legend label varlabels(_cons Constant) title(Business Value  Models) aic bic 
 
@@ -773,6 +773,7 @@ restore
 rm f12_data.dta 
 /*------------------------- 
 	To Do:
-		 2. get down to yearly level of data for runing profit models
-		 3. Keep first year flags we have for modal status
+		 1. run profit/value models using first year as predictor
+		 2. test out interactions of status/first year earnings and race 
+		 
 -------------------------*/ 
