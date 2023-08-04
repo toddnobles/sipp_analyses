@@ -130,14 +130,25 @@ unique ssuid_spanel_pnum_id if temp == 1
 bysort ssuid_spanel_pnum_id (swave monthcode): gen month_individ = _n 
 
 
-
+gen calyear = 2013 if spanel == 2014 & swave == 1
+replace calyear = 2014 if spanel == 2014 & swave == 2 
+replace calyear = 2015 if spanel == 2014 & swave == 3
+replace calyear = 2016 if spanel == 2014 & swave == 4
+replace calyear = 2017 if spanel == 2018 & swave == 1
+replace calyear = 2018 if spanel == 2018 & swave == 2
+replace calyear = 2019 if spanel == 2018 & swave == 3
+replace calyear = 2020 if spanel == 2018 & swave == 4
+replace calyear = 2018 if spanel == 2019 & swave == 1
+replace calyear = 2019 if spanel == 2020 & swave == 1
+replace calyear = 2020 if spanel == 2020 & swave == 2
+replace calyear = 2021 if spanel == 2020 & swave == 3
 
 frame copy default profits, replace
 frame copy default earnings, replace
 frame copy default bizvalue, replace 
 
 
-global controls= "i.sex i.initial_hisp age age2 immigrant parent industry2"
+global controls= "i.sex i.initial_hisp age age2 immigrant parent industry2 calyear"
 
 
 /***
@@ -367,7 +378,7 @@ foreach y of varlist tjb_msum ln_tjb_msum tpearn ln_tpearn {
 		quietly xtreg `y' i.`x', vce(robust)  mle
 		eststo b_`y'_`xname'_1re
 
-		quietly xtreg `y' i.`x' i.educ3 i.initial_race $controls, vce(robust) mle
+		quietly xtreg `y' i.`x' i.educ3 i.initial_race $controls , vce(robust) mle
 		eststo b_`y'_`xname'_2re
 
 		*quietly xtreg `y' i.se_only, fe vce(robust) 
@@ -381,8 +392,9 @@ foreach y of varlist tjb_msum ln_tjb_msum tpearn ln_tpearn {
 /***
 <html>
 <body>
-<h4>Table1: DV: WS/SE earnings. EV: 6 months unemployment</h4>
-<p>These models include earnings within the first 12 months.  </p>
+<h4>Table1: DV: WS/SE earnings. IV: 6 months unemployment</h4>
+<p> The dependent variable is monthly earnings (from any employment type) during any time we observe them. Put another way, these models include earnings within the first 12 months.
+Independent variable is our indicator for 6 consecutive months of unemployment during the first 12 months in our data.  </p>
 ***/
 
 
@@ -393,8 +405,9 @@ esttab b_ln_*unemp*re, legend label varlabels(_cons Constant) title(6 month unem
 /***
 <html>
 <body>
-<h4>Table2: DV WS/SE earnings. EV: modal status </h4>
-<p></p>
+<h4>Table2: DV WS/SE earnings. IV: modal status </h4>
+<p>The dependent variable is monthly earnings (from any employment type) during any time we observe them. Put another way, these models include earnings within the first 12 months.
+Independent variable is our indicator for their modal employment status during the first 12 months in our data. </p>
 ***/
 esttab b_ln_*mode*re, legend label varlabels(_cons Constant) title(Modal status ) aic bic 
 *esttab b_tpearn_mode*re b_tjb_msum_mode*, legend label varlabels(_cons Constant) title(Modal status All models) aic bic 
@@ -431,8 +444,9 @@ restore
 /***
 <html>
 <body>
-<h4>Table3: DV: SE earnings. EV: 6 months unemployment</h4>
-<p>These models include earnings within the first 12 months.  </p>
+<h4>Table3: DV: SE earnings. IV: 6 months unemployment</h4>
+<p>The dependent variable is monthly earnings from self-employment during any time we observe them. Put another way, these models include earnings within the first 12 months.
+Independent variable is our indicator for 6 consecutive months of unemployment during the first 12 months in our data.  </p>
 ***/
 
 
@@ -443,8 +457,9 @@ esttab seln_*unemp*re, legend label varlabels(_cons Constant) title(6 month unem
 /***
 <html>
 <body>
-<h4>Table4: DV SE earnings. EV: modal status </h4>
-<p></p>
+<h4>Table4: DV SE earnings. IV: modal status </h4>
+<p>The dependent variable is monthly earnings from self-employment during any time we observe them. Put another way, these models include earnings within the first 12 months.
+Independent variable is our indicator for modal employment type during the first 12 months in our data. </p>
 ***/
 esttab seln_*mode*re, legend label varlabels(_cons Constant) title(Modal Status SE earnings) aic bic 
 *esttab setpearn_mode*re setjb_msum_mode*, legend label varlabels(_cons Constant) title(Modal status All models SE earnings ) aic bic 
@@ -481,7 +496,9 @@ restore
 /***
 <html>
 <body>
-<h4>Table 5: DV: WS earnings. EV: 6 months unemployment</h4>
+<h4>Table 5: DV: WS earnings. IV: 6 months unemployment</h4>
+<p> The dependent variable is monthly earnings from wage/salary during any time we observe them. Put another way, these models include earnings within the first 12 months.
+Independent variable is our indicator for 6 consecutive months of unemployment during the first 12 months in our data. </p>
 ***/
 
 esttab ws_ln_*unemp*re, legend label varlabels(_cons Constant) title(6 month unemployed WS earnings ) aic bic 
@@ -491,8 +508,9 @@ esttab ws_ln_*unemp*re, legend label varlabels(_cons Constant) title(6 month une
 /***
 <html>
 <body>
-<h4>Table6 : DV WS earnings. EV: modal status </h4>
-<p></p>
+<h4>Table6 : DV WS earnings. IV: modal status </h4>
+<p>The dependent variable is monthly earnings from wage/salary during any time we observe them. Put another way, these models include earnings within the first 12 months.
+Independent variable is our indicator for modal employment status during the first 12 months in our data. </p>
 ***/
 esttab ws_ln_*mode*re, legend label varlabels(_cons Constant) title(Modal Status WS earnings) aic bic 
 *esttab ws_tpearn_mode*re ws_tjb_msum_mode*, legend label varlabels(_cons Constant) title(Modal status All models WS earnings ) aic bic 
@@ -500,6 +518,31 @@ esttab ws_ln_*mode*re, legend label varlabels(_cons Constant) title(Modal Status
 
 /*------------------------------------ End of SECTION WS Models  ------------------------------------*/
 
+
+/***
+<html>
+<body>
+<h2>Abbreviated Summaries of Earnings models</h2>
+<p></p>
+***/
+
+/***
+<html>
+<body>
+<h3>ln_tjb_msum as DV</h3>
+<p></p>
+***/
+esttab  b_ln_tjb_msum_*unemp*2* b_ln_tjb_msum*mode*2* seln_tjb_msum*unemp*2* seln_tjb_msum*mode*2* ws_ln_tjb_msum*unemp*2* ws_ln_tjb_msum*mode*2*, legend label aic bic drop(*.educ3 age* immigrant parent industry2 calyear _cons) ///
+mtitles("Any earnings" "Any earnings" "SE earnings" "SE earnings" "WS earnings" "WS earnings") 
+
+/***
+<html>
+<body>
+<h3>ln_tpearn as DV</h3>
+<p></p>
+***/
+esttab  b_ln_tpearn_*unemp*2* b_ln_tpearn*mode*2* seln_tpearn*unemp*2* seln_tpearn*mode*2* ws_ln_tpearn*unemp*2* ws_ln_tpearn*mode*2*, legend label aic bic drop(*.educ3 age* immigrant parent industry2 calyear _cons) ///
+mtitles("Any earnings" "Any earnings" "SE earnings" "SE earnings" "WS earnings" "WS earnings") 
 
 /***
 <html>
@@ -567,8 +610,10 @@ foreach y of varlist ln_tpearn  {
 /***
 <html>
 <body>
-<h4>Table 7: DV: WS/SE earnings. EV: 6 months unemployment</h4>
-<p></p>
+<h4>Table 7: DV: WS/SE earnings. IV: 6 months unemployment</h4>
+<p>The dependent variable is monthly earnings from any employment. We've excluded the first 12 months as they're now used as a predictor.  
+Independent variable is our indicator for 6 consecutive months of unemployment during the first 12 months in our data. 
+These now include the average earnings during first 12 months as a predictor. </p>
 ***/
 esttab b12_*unemp* , legend label varlabels(_cons Constant) title(6 month unemployed All models) aic bic 
 
@@ -576,8 +621,10 @@ esttab b12_*unemp* , legend label varlabels(_cons Constant) title(6 month unempl
 /***
 <html>
 <body>
-<h4>Table 8: DV WS/SE earnings. EV: modal status f12</h4>
-<p></p>
+<h4>Table 8: DV WS/SE earnings. IV: modal status f12</h4>
+<p>The dependent variable is monthly earnings from any employment. 
+Independent variable is our modal employment status during the first 12 months in our data. 
+These now include the average earnings during first 12 months as a predictor.</p>
 ***/
 esttab b12_*mode*, legend label varlabels(_cons Constant) title(Modal status All models) aic bic 
 
@@ -624,8 +671,10 @@ restore
 /***
 <html>
 <body>
-<h4>Table 9: DV: WS/SE earnings. EV: 6 months unemployment</h4>
-<p></p>
+<h4>Table 9: DV: SE earnings. IV: 6 months unemployment</h4>
+<p>The dependent variable is monthly earnings from self-employment. 
+Independent variable is our indicator for 6 consecutive months of unemployment during the first 12 months in our data. 
+These now include the average earnings during first 12 months as a predictor.</p>
 ***/
 
 
@@ -634,15 +683,40 @@ esttab se12_*unemp*, legend label varlabels(_cons Constant) title(6 month unempl
 /***
 <html>
 <body>
-<h4>Table 10: DV WS/SE earnings. EV: Modal status f12</h4>
-<p></p>
+<h4>Table 10: DV SE earnings. IV: Modal status f12</h4>
+<p>The dependent variable is monthly earnings from self-employment. 
+Independent variable is our modal employment status during the first 12 months in our data. 
+These now include the average earnings during first 12 months as a predictor.</p>
 ***/
 esttab se12_*mode*, legend label varlabels(_cons Constant) title(Modal status All models) aic bic 
 
 
 /*------------------------------------ End of Earnings Models  ------------------------------------*/
 
+/***
+<html>
+<body>
+<h2>Abbreviated comparisons for models using f12 earnings as predictors</h2>
+<p></p>
+***/
 
+/***
+<html>
+<body>
+<h3>ln_tjb_msum as DV</h3>
+<p></p>
+***/
+esttab  b12_ln_tjb_msum_*unemp*2* b12_ln_tjb_msum*mode*2* se12_ln_tjb_msum*unemp*2* se12_ln_tjb_msum*mode*2*, legend label aic bic drop(*.educ3 age* immigrant parent industry2 calyear _cons) ///
+mtitles("Any earnings" "Any earnings" "SE earnings" "SE earnings") 
+
+/***
+<html>
+<body>
+<h3>ln_tpearn as DV</h3>
+<p></p>
+***/
+esttab  b12_ln_tpearn_*unemp*2* b12_ln_tpearn*mode*2* se12_ln_tpearn*unemp*2* se12_ln_tpearn*mode*2*, legend label aic bic drop(*.educ3 age* immigrant parent industry2 calyear _cons) ///
+mtitles("Any earnings" "Any earnings" "SE earnings" "SE earnings") 
 
 
 /**********************************************************************/
@@ -663,18 +737,7 @@ list swave monthcode tjb_prftb tbsjval if ssuid_spanel_pnum_id  ==  198178, sepb
 // now can create unique year tag given that we have prft and bus val  equal for every row per person per wave 
 egen unique_yr_tag= tag(ssuid_spanel_pnum_id swave) // creating person-year flag 
 keep if unique_yr_tag // now we're down to one row per person per year an
-gen calyear = 2013 if spanel == 2014 & swave == 1
-replace calyear = 2014 if spanel == 2014 & swave == 2 
-replace calyear = 2015 if spanel == 2014 & swave == 3
-replace calyear = 2016 if spanel == 2014 & swave == 4
-replace calyear = 2017 if spanel == 2018 & swave == 1
-replace calyear = 2018 if spanel == 2018 & swave == 2
-replace calyear = 2019 if spanel == 2018 & swave == 3
-replace calyear = 2020 if spanel == 2018 & swave == 4
-replace calyear = 2018 if spanel == 2019 & swave == 1
-replace calyear = 2019 if spanel == 2020 & swave == 1
-replace calyear = 2020 if spanel == 2020 & swave == 2
-replace calyear = 2021 if spanel == 2020 & swave == 3
+
 
 
 
@@ -751,17 +814,17 @@ foreach y of varlist ln_tjb_prftb ln_tbsjval   {
 /***
 <html>
 <body>
-<h4>Table 11: DV: profit binaries. EV: unemp and modal status</h4>
+<h4>Table 11: DV: profit binaries. IV: unemp and modal status</h4>
 <p></p>
 ***/
 
 
-esttab prof*unemp* , legend label varlabels(_cons Constant) title(Profit Models: EV Unemp) aic bic 
-esttab prof*mode*, legend label varlabels(_cons Constant) title(Profit Models: EV Modal status) aic bic
+esttab prof*unemp* , legend label varlabels(_cons Constant) title(Profit Models: IV Unemp) aic bic 
+esttab prof*mode*, legend label varlabels(_cons Constant) title(Profit Models: IV Modal status) aic bic
 /***
 <html>
 <body>
-<h4>Table 12: DV tbsjval . EV: unemp and modal status</h4>
+<h4>Table 12: DV tbsjval . IV: unemp and modal status</h4>
 <p></p>
 ***/
 esttab *jval*, legend label varlabels(_cons Constant) title(Business Value  Models) aic bic 
@@ -771,9 +834,11 @@ restore
 /*------------------------------------ End of SECTION number ------------------------------------*/
 
 rm f12_data.dta 
+
+
 /*------------------------- 
 	To Do:
 		 1. run profit/value models using first year as predictor
 		 2. test out interactions of status/first year earnings and race 
-		 
+
 -------------------------*/ 
