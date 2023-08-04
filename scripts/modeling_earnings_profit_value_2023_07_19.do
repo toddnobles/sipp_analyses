@@ -41,7 +41,103 @@ set linesize 255
 <p> Note: This dataset being read in is created in the middle of the employment_pathway_earnings.do script. For profitability we can operate at yearly level as this value is reported at yearly level. 
 ***/
 **# Data import
-use earnings_by_status, clear  
+//use earnings_by_status, clear  
+use sipp_reshaped_work_comb_imputed, clear  
+
+// bringing in monthly level data 
+merge m:1 ssuid_spanel_pnum_id spanel swave monthcode using sipp_monthly_combined 
+sort ssuid_spanel_pnum_id spanel swave monthcode 
+bysort ssuid_spanel_pnum_id: egen _merge_avg = mean(_merge)
+
+list ssuid_spanel_pnum_id if _merge_avg >2 & _merge_avg <3 in 1/100
+list ssuid_spanel_pnum_id  spanel swave monthcode job ejb_jborse  ejb_startwk ejb_endwk tjb_mwkhrs tpearn  tage enjflag _merge if ssuid_spanel_pnum_id ==5
+// by bringing in the monthly data we get the full 12 months for this person. previously missing months 9 and 10 in the job only data set 
+
+
+/***
+<html>
+<body>
+<p>examining how our job variables overlap with unemployment flag that we brought in reingesting data for sipp_monthly_combined in data. <br>
+ Wave 4 month 7 here we see that you can be marked as a jobless spell even if you get recorded as a job during the month given there can be gaps in <br>
+  start/end weeks that don't stretch a full month-job </p>
+***/
+sort ssuid_spanel_pnum_id spanel swave monthcode ejb_startwk
+list ssuid_spanel_pnum_id  swave monthcode job ejb_jborse ejb_startwk ejb_endwk enjflag  tjb_mwkhrs if ssuid_spanel_pnum_id ==199771 
+
+
+
+// filtering to population of interest
+keep if tage>=18 & tage<=64
+
+codebook ejb_jborse
+
+/***
+<html>
+<body>
+<h3>Creating main job flag</h3>
+***/
+**# main job
+
+gsort ssuid_spanel_pnum_id swave monthcode -tjb_mwkhrs -ejb_jobid  // sort descending by hours, breaking ties by jobid 
+
+duplicates report ssuid_spanel_pnum_id swave monthcode tjb_mwkhrs ejb_jobid  // no ties actually broken 
+qby ssuid_spanel_pnum_id swave monthcode: gen jb_main=_n==1 // 
+
+sort ssuid_spanel_pnum_id swave monthcode 
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode jb_main ejb_jborse enjflag tpearn if ssuid_spanel_pnum_id==5
+list ssuid_spanel_pnum_id ejb_jobid swave monthcode ejb_jobid tjb_mwkhrs jb_main ejb_jborse ejb_startwk ejb_endwk enjflag tpearn if ssuid_spanel_pnum_id==199771
+
+keep if jb_main ==1 // gets us one record for each month with their main job or that they were unemployed 
+recode enjflag (1=1 unemployed) (2=0 no), into(unemployed_flag)
+codebook enjflag 
+codebook unemployed_flag
+
+// dropping those who never worked in our dataset
+bysort ssuid_spanel_pnum_id: egen sum_enjflag = sum(unemployed_flag)
+bysort ssuid_spanel_pnum_id: gen num_records = _N
+drop if sum_enjflag == num_records
+
+/***
+<html>
+<body>
+<h3>creating lenient employment type flag</h3>
+<p> job trumps unemployment flag  (must be unemployed for at least one month to count as unemployed)</p>
+***/
+**# employment type flag 
+
+gen employment_type1 = 1 if ejb_jborse == 1 // W&S
+replace employment_type1 = 2 if ejb_jborse == 2 // SE
+replace employment_type1 = 3 if ejb_jborse == 3 // other 
+replace employment_type1 = 4 if ejb_jborse == . & enjflag == 1
+codebook employment_type1
+
+// looking into odd cases here. These are instances where there's no ejb_jborse data but they have tpearn and don't get flagged as unemployed
+list ssuid_spanel_pnum_id if employment_type1 == . 
+list ssuid_spanel_pnum_id swave monthcode ejb_jobid job jb_main ejb_jborse enjflag tpearn tjb_msum employment_type1 if ssuid_spanel_pnum_id==272
+list ssuid_spanel_pnum_id swave monthcode ejb_jobid job jb_main ejb_jborse enjflag tpearn tjb_msum employment_type1 if ssuid_spanel_pnum_id==937
+list ssuid_spanel_pnum_id swave monthcode ejb_jobid job jb_main ejb_jborse enjflag tpearn tjb_msum employment_type1 if ssuid_spanel_pnum_id==193993 
+
+ // will ignore these few edge cases for now as they just seem to be data entry issues 
+drop if employment_type1 == . 
+unique ssuid_spanel_pnum_id swave monthcode // person month level file here. So we only have one job per month and it's their main job 
+unique ssuid_spanel_pnum_id swave // person years
+isid ssuid_spanel_pnum_id swave monthcode // double checking 
+
+/***
+<html>
+<body>
+<h3>at this point we have a person-month level file with an employment status for them for each period captured in employment_type </h3>
+***/
+
+egen tag = tag(ssuid_spanel_pnum_id employment_type1)
+su tag
+bysort ssuid_spanel_pnum_id: egen tag_sum = sum(tag)
+unique ssuid_spanel_pnum_id
+unique ssuid_spanel_pnum_id if tag_sum >1 // gives us count of people who changed at some point 
+
+label define employment_types 1 "W&S" 2 "SE" 3 "Other" 4 "Unemp"
+label values employment_type1 employment_types
+
 gen age = tage
 gen age2=age^2
 label variable age2 "Age squared"
@@ -87,7 +183,18 @@ label define race_label	 1 "White" 2 "Black" 3 "Asian" 4 "Residual"
 label values erace race_label 
 
 tab hispanic erace 
- 
+
+// check of race variable 
+egen race_tag = tag(ssuid_spanel_pnum_id erace)
+bysort ssuid_spanel_pnum_id: egen race_tag_sum = sum(race_tag)
+unique ssuid_spanel_pnum_id if race_tag_sum > 1
+unique ssuid_spanel_pnum_id
+
+// according to the above, 1109 people changed the race they considered themself sometime in our data 
+
+sort ssuid_spanel_pnum_id swave monthcode
+list ssuid_spanel_pnum_id spanel swave monthcode erace race_tag_sum if race_tag_sum >1 in 1/10000, sepby(ssuid_spanel_pnum_id)
+
 // addressing instances where erace is not constant within individuals 
 * list ssuid_spanel_pnum_id  ssuid spanel pnum shhadid swave monthcode erace initial_race if race_tag_sum >1, sepby(ssuid_spanel_pnum_id)
 bysort ssuid_spanel_pnum_id (swave monthcode): gen initial_race = erace[1]
@@ -122,7 +229,7 @@ replace month_overall = monthcode + 6*12 if (spanel == 2018 & swave == 3) | (spa
 replace month_overall = monthcode + 7*12 if (spanel == 2018 & swave == 4) | (spanel == 2020 & swave == 2) | (spanel == 2021 & swave	== 1) // 85-96 = 2020
 
 
-list ssuid_spanel_pnum_id swave monthcode month_over employment_type1 change  if ssuid_spanel_pnum_id == 204
+list ssuid_spanel_pnum_id swave monthcode month_over employment_type1  if ssuid_spanel_pnum_id == 204
 
 bysort ssuid_spanel_pnum_id (month_over) : gen temp = 1 if month_over[1] > 12 
 unique ssuid_spanel_pnum_id if temp == 1 
@@ -142,6 +249,9 @@ replace calyear = 2018 if spanel == 2019 & swave == 1
 replace calyear = 2019 if spanel == 2020 & swave == 1
 replace calyear = 2020 if spanel == 2020 & swave == 2
 replace calyear = 2021 if spanel == 2020 & swave == 3
+
+
+egen unique_tag = tag(ssuid_spanel_pnum_id) // unique id
 
 frame copy default profits, replace
 frame copy default earnings, replace
@@ -181,13 +291,11 @@ replace max_consec_unempf12 = 0 if max_consec_unempf12 == .
 list month_individ employment_type months_unempf12 unemp_month _s* _end max_*  if ssuid_spanel_pnum_id  ==   199821 
 tsset, clear 
 
-preserve
-keep if unique_tag
-count if max_consec_unempf12 >=1
-count if max_consec_unempf12 >=3 
-count if max_consec_unempf12 >=6
-tab max_consec_unempf12 months_unempf12
-restore  
+count if max_consec_unempf12 >=1 & unique_tag ==1 
+count if max_consec_unempf12 >=3 & unique_tag ==1
+count if max_consec_unempf12 >=6 & unique_tag ==1
+tab max_consec_unempf12 months_unempf12 if unique_tag ==1
+  
 
 gen unempf12_1 = 1 if max_consec_unempf12 >=1
 gen unempf12_3 = 1 if max_consec_unempf12 >=3
@@ -232,7 +340,7 @@ restore
 <h4>making flags for statuses during first 12 months</h4>
 <p></p>
 ***/
-drop first_status second_status-status_12 status_1_lim-unemp_6 change
+
 bysort ssuid_spanel_pnum_id (month_individ): gen change = employment_type1 != employment_type1[_n-1] & _n >1 & month_individ<=12
 bysort ssuid_spanel_pnum_id (month_individ): gen first_status_f12 = employment_type1 if _n==1 
 
@@ -293,7 +401,8 @@ bysort ssuid_spanel_pnum_id (month_individ): carryforward mode_status_f12v2 , re
 <body>
 <h3>Evaluating what we have </h3>
 <p> We now have a dataset with the following flags and measures:<br>
-	- Sample restricted to those who were of working age and their monthly job level records when they were employed at least 15 hours 		when they were unemployed (we may want to drop these at this point for analyses) <br> 
+	- Sample restricted to those who were of working age and their monthly job level records when they were employed at least 15 hours 		
+	when they were unemployed (we may want to drop these at this point for analyses) <br> 
 	- Monthly level earnings from all sources in tpearn and and from their main job in tjb_msum
 	- "*_status_f12" vars capture the *nth status held within the first 12 months (only non-missing for one observation) <br>
 	- "status_*" vars capture the same information as the above vars but carryforward the value to be present for all observations <br> 
@@ -301,15 +410,19 @@ bysort ssuid_spanel_pnum_id (month_individ): carryforward mode_status_f12v2 , re
 	- "last_status" is the last status held during the first 12 months we observe someone <br>
 	- "mode_status_f12v1" is the most common that person held during the first 12 months and breaks ties by taking the min value (prioritizes employment)
 	- "mode_status_f12v2" is the same as above, but takes the max mode so prioritizes unemployment in tie breaking <br>
-	- pct_se_after_12 captures the share of months after the 12 month entry window that someone was self-employed. So if someone is in our data for 36 months, we ignore the first 12 months, then count the number of months their main job that they worked more than 15 hours was self-employment. That value is our numerator. Then we count the total number of months they were present in the data post-12 month window (excluding the months they worked for fewer than 15 hours but including the months they were unemployed) <br>
+	- pct_se_after_12 captures the share of months after the 12 month entry window that someone was self-employed. 
+	So if someone is in our data for 36 months, we ignore the first 12 months, then count the number of months their main job 
+	that they worked more than 15 hours was self-employment. That value is our numerator. Then we count the total number of months they 
+	were present in the data post-12 month window (excluding the months they worked for fewer than 15 hours but including the months they were unemployed) <br>
 <br>
 We also have flags for unemployment during the first 12 months: <br>
 	- months_unempf12 gives us the total number of months unemployed during first 12 months <br>
 	- max_consec_unempf12 gives us the maximum consecutive spell of unemployment a person experienced <br>
-	- unempf12_1, unempf12_3, unempf12_6 are flags indicating whether that person experienced at least 1, 3, or 6 months of consecutive unemployment in the first 12 month window we observe them. 
+	- unempf12_1, unempf12_3, unempf12_6 are flags indicating whether that person experienced at least 1, 3, or 6 months of consecutive unemployment 
+	in the first 12 month window we observe them. 
 </p>
 ***/
-label define employment_types 1 "W&S" 2 "SE" 3 "Other" 4 "Unemp", replace 
+
 foreach var of varlist first_status_f12-status_7_lim last_status_f12 status_* mode* {
 	label values `var' employment_types
 }
@@ -356,6 +469,167 @@ webdoc graph, hardcode nokeep
 su ln_tjb_msum ln_tpearn, detail
 
 su tpearn tjb_msum
+
+
+/***
+<html>
+<body>
+<h2>Descriptive comparisons</h2>
+<p></p>
+***/
+
+/***
+<html>
+<body>
+<h3>WS/SE Earnings</h3>
+<p></p>
+***/
+table initial_race unempf12_6, statistic(mean tpearn) 
+
+/***
+<html>
+<body>
+<h4>Between Race differences</h4>
+<p>/p>
+***/
+pwmean tpearn, over(initial_race) mcompare(dunnett) effects 
+pwmean tpearn if unempf12_6 ==1, over(initial_race) mcompare(dunnett) effects
+pwmean tpearn if unempf12_6 ==0, over(initial_race) mcompare(dunnett) effects
+
+
+/***
+<html>
+<body>
+<h4>Within race differences</h4>
+<p>/p>
+***/
+ttest tpearn if initial_race == 1, by(unempf12_6) 
+ttest tpearn if initial_race == 2, by(unempf12_6) 
+ttest tpearn if initial_race == 3, by(unempf12_6) 
+
+/***
+<html>
+<body>
+<h3>SE Earnings</h3>
+<p></p>
+***/
+table initial_race unempf12_6 if pct_se_after_12 ==1, statistic(mean tpearn) 
+
+/***
+<html>
+<body>
+<h4>Between Race differences</h4>
+<p>/p>
+***/
+pwmean tpearn if pct_se_after_12 ==1 , over(initial_race) mcompare(dunnett) effects 
+pwmean tpearn if unempf12_6 ==1 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects
+pwmean tpearn if unempf12_6 ==0 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects
+pwmean tpearn if mode_status_f12v2 ==1 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects // entering from WS 
+pwmean tpearn if mode_status_f12v2 ==2 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects // entering from SE 
+pwmean tpearn if mode_status_f12v2 == 4 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects // entering from Unemp
+
+
+
+
+/***
+<html>
+<body>
+<h4>Within race differences</h4>
+<p>/p>
+***/
+ttest tpearn if initial_race == 1 & pct_se_after_12 ==1, by(unempf12_6) 
+ttest tpearn if initial_race == 2 & pct_se_after_12 ==1, by(unempf12_6) 
+ttest tpearn if initial_race == 3 & pct_se_after_12 ==1, by(unempf12_6) 
+
+pwmean tpearn if initial_race == 1 & pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects // white
+pwmean tpearn if initial_race == 2 & pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects // black
+pwmean tpearn if initial_race == 3 & pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects // asian
+
+
+
+/***
+<html>
+<body>
+<h2>Descriptive Comparisons using individual averages </h2>
+<p></p>
+***/
+preserve 
+collapse (mean) tjb_msum tpearn ln_tpearn ln_tjb_msum, by(ssuid_spanel_pnum_id pct_se_after_12 unempf12_6 mode_status_f12v2 initial_race)
+list in 1/5
+
+/***
+<html>
+<body>
+<h3>WS/SE Earnings</h3>
+<p></p>
+***/
+table initial_race unempf12_6, statistic(mean tpearn) 
+
+/***
+<html>
+<body>
+<h4>Between Race differences</h4>
+<p>/p>
+***/
+pwmean tpearn, over(initial_race) mcompare(dunnett) effects 
+pwmean tpearn if unempf12_6 ==1, over(initial_race) mcompare(dunnett) effects
+pwmean tpearn if unempf12_6 ==0, over(initial_race) mcompare(dunnett) effects
+
+
+/***
+<html>
+<body>
+<h4>Within race differences</h4>
+<p>/p>
+***/
+ttest tpearn if initial_race == 1, by(unempf12_6) 
+ttest tpearn if initial_race == 2, by(unempf12_6) 
+ttest tpearn if initial_race == 3, by(unempf12_6) 
+
+/***
+<html>
+<body>
+<h3>SE Earnings</h3>
+<p></p>
+***/
+table initial_race unempf12_6 if pct_se_after_12 ==1, statistic(mean tpearn) 
+
+/***
+<html>
+<body>
+<h4>Between Race differences</h4>
+<p>/p>
+***/
+pwmean tpearn if pct_se_after_12 ==1 , over(initial_race) mcompare(dunnett) effects 
+pwmean tpearn if unempf12_6 ==1 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects
+pwmean tpearn if unempf12_6 ==0 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects
+pwmean tpearn if mode_status_f12v2 ==1 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects // entering from WS 
+pwmean tpearn if mode_status_f12v2 ==2 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects // entering from SE 
+pwmean tpearn if mode_status_f12v2 == 4 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects // entering from Unemp
+
+
+
+
+/***
+<html>
+<body>
+<h4>Within race differences</h4>
+<p>/p>
+***/
+ttest tpearn if initial_race == 1 & pct_se_after_12 >=1, by(unempf12_6) 
+ttest tpearn if initial_race == 2 & pct_se_after_12 >=1, by(unempf12_6) 
+ttest tpearn if initial_race == 3 & pct_se_after_12 >=1, by(unempf12_6) 
+
+pwmean tpearn if initial_race == 1 & pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects // white
+pwmean tpearn if initial_race == 2 & pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects // black
+pwmean tpearn if initial_race == 3 & pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects // asian
+
+ttest tpearn if initial_race == 1 & pct_se_after_12 == 1, by(unempf12_6)
+
+
+restore 
+
+
 xtset ssuid_spanel_pnum_id  month_overall
 /* Notes: 
 	1. Leaving in first 12 months of earnings for this first set of models. We test them as a predictor later. 
@@ -368,10 +642,9 @@ xtset ssuid_spanel_pnum_id  month_overall
      Notes: */
  /**********************************************************************/ 
  
-foreach y of varlist tjb_msum ln_tjb_msum tpearn ln_tpearn {
+foreach y of varlist  ln_tjb_msum  ln_tpearn {
 	foreach x of varlist unempf12_6 mode_status_f12v2 {
 		
-		di "`y'_`x'"
 		local xname = substr("`x'",1,5)
 		di "`y'_`xname'"
 
@@ -393,7 +666,8 @@ foreach y of varlist tjb_msum ln_tjb_msum tpearn ln_tpearn {
 <html>
 <body>
 <h4>Table1: DV: WS/SE earnings. IV: 6 months unemployment</h4>
-<p> The dependent variable is monthly earnings (from any employment type) during any time we observe them. Put another way, these models include earnings within the first 12 months.
+<p> The dependent variable is monthly earnings (from any employment type) during any time we observe them. Put another way, 
+these models include earnings within the first 12 months.
 Independent variable is our indicator for 6 consecutive months of unemployment during the first 12 months in our data.  </p>
 ***/
 
@@ -406,7 +680,8 @@ esttab b_ln_*unemp*re, legend label varlabels(_cons Constant) title(6 month unem
 <html>
 <body>
 <h4>Table2: DV WS/SE earnings. IV: modal status </h4>
-<p>The dependent variable is monthly earnings (from any employment type) during any time we observe them. Put another way, these models include earnings within the first 12 months.
+<p>The dependent variable is monthly earnings (from any employment type) during any time we observe them. 
+Put another way, these models include earnings within the first 12 months.
 Independent variable is our indicator for their modal employment status during the first 12 months in our data. </p>
 ***/
 esttab b_ln_*mode*re, legend label varlabels(_cons Constant) title(Modal status ) aic bic 
@@ -424,10 +699,9 @@ esttab b_ln_*mode*re, legend label varlabels(_cons Constant) title(Modal status 
 preserve
 keep if pct_se_after_12 == 1 
 
-foreach y of varlist tjb_msum ln_tjb_msum tpearn ln_tpearn {
+foreach y of varlist  ln_tjb_msum  ln_tpearn {
 	foreach x of varlist unempf12_6 mode_status_f12v2 {
 		
-		di "`y'_`x'"
 		local xname = substr("`x'",1,5)
 		di "`y'_`xname'"
 
@@ -473,10 +747,9 @@ esttab seln_*mode*re, legend label varlabels(_cons Constant) title(Modal Status 
 preserve
 keep if pct_se_after_12 == 0
 
-foreach y of varlist tjb_msum ln_tjb_msum tpearn ln_tpearn {
+foreach y of varlist  ln_tjb_msum  ln_tpearn {
 	foreach x of varlist unempf12_6 mode_status_f12v2 {
 		
-		di "`y'_`x'"
 		local xname = substr("`x'",1,5)
 		di "`y'_`xname'"
 
@@ -577,7 +850,6 @@ xtset ssuid_spanel_pnum_id month_overall
 foreach y of varlist  ln_tjb_msum  {
 	foreach x of varlist unempf12_6 mode_status_f12v2  {
 		
-		di "`y'_`x'"
 		local xname = substr("`x'",1,5)
 		di "`y'_`xname'"
 
@@ -594,7 +866,6 @@ foreach y of varlist  ln_tjb_msum  {
 foreach y of varlist ln_tpearn  {
 	foreach x of varlist unempf12_6 mode_status_f12v2  {
 		
-		di "`y'_`x'"
 		local xname = substr("`x'",1,5)
 		di "`y'_`xname'"
 
@@ -636,7 +907,6 @@ keep if pct_se_after_12 == 1
 foreach y of varlist  ln_tjb_msum  {
 	foreach x of varlist unempf12_6 mode_status_f12v2  {
 		
-		di "`y'_`x'"
 		local xname = substr("`x'",1,5)
 		di "`y'_`xname'"
 
@@ -653,7 +923,6 @@ foreach y of varlist  ln_tjb_msum  {
 foreach y of varlist ln_tpearn  {
 	foreach x of varlist unempf12_6 mode_status_f12v2  {
 		
-		di "`y'_`x'"
 		local xname = substr("`x'",1,5)
 		di "`y'_`xname'"
 
