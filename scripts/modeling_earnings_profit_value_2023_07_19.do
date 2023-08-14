@@ -3,16 +3,24 @@ webdoc toc 5
 
 /***
 <html>
-<title>Preliminary models of earnings, profit and business value </title>
+<title>Descriptive analyses and preliminary multivariate models of earnings, profit and business value </title>
 
-<p> Goals of analysis: <br>
-Models (Earnings): Run models 1 and 2 for each comparison groups: <br>
-(1) those who started as wage and salary versus those who entered wage and salary from unemployment, <br>
-(2) those who started as self employed versus those who entered self employment from unemployed, <br>
-(3) those who entered self employment from being unemployed versus those who entered self employment from a wage and salary job<br>
- <br>
+<p> Overview of this script: <br>
+<br>
+	- This script begins from the initial compiled files we create from the raw SIPP data. We then perform some formatting and 
+tidying to get the data cleaned for analyses. <br>
+
+
+Descriptive analyses: <br>
+The first set of descriptive comparisons uses the dataset at the person-month level. 
+Later in the script there is a similar analysis done using person level averages for their
+average monthly earnings.
+
+
+
+Models (Earnings):<br>
 M1:<br>
-Earnings = those who started as wage and salary versus those who entered wage and salary from unemployment (base model)<br>
+Earnings = those who were unemployed versus those who were not or those who entered SE from WS vs Unemployment (base model)<br>
  <br>
 M2:<br>
 M1+ controls (demographic characteristics + industry + year)<br>
@@ -475,37 +483,116 @@ su tpearn tjb_msum
 <html>
 <body>
 <h2>Descriptive comparisons</h2>
-<p></p>
+<p>This first set of descriptive comparisons uses the dataset at the person-month level. 
+Later in the script there is a similar analysis done using person level averages for their
+average monthly earnings.</p>
 ***/
 
 /***
 <html>
 <body>
 <h3>WS/SE Earnings</h3>
+***/
+
+/***
+<html>
+<body>
+<h4>Full Sample</h4>
 <p></p>
 ***/
-table initial_race unempf12_6, statistic(mean tpearn) 
+ttest tpearn, by(unempf12_6)
+ttest tjb_msum, by(unempf12_6)
+pwmean tpearn, over(mode_status_f12v2) mcompare(dunnett) effects 
+pwmean tjb_msum, over(mode_status_f12v2) mcompare(dunnett) effects
 
 /***
 <html>
 <body>
 <h4>Between Race differences</h4>
-<p>/p>
+<p> Here we see that earnings for whites are on average, greater than earnings for other groups except for Asians. 
+These relationships hold looking at the subsample that experienced unemployment and the subsample that did 
+not experience unemployment in their first 12 months. Likewise, these relationships hold within the subsamples of those who 
+started as wage and salary, those who started as self-employed, and those who started as unemployed. The relationships are generally 
+the same using either tjb_msum or tpearn. One instance the earnings measures matters is in comparing asian vs white earnings for those
+who started as self-employed. Using tpearn this is a statistically significant difference, using tjb_msum they are indistinguishable. </p>
 ***/
-pwmean tpearn, over(initial_race) mcompare(dunnett) effects 
-pwmean tpearn if unempf12_6 ==1, over(initial_race) mcompare(dunnett) effects
-pwmean tpearn if unempf12_6 ==0, over(initial_race) mcompare(dunnett) effects
+
+foreach var of varlist tpearn tjb_msum {
+	display _newline(2)
+	display "basic table below of earnings using `var' by race"
+	table initial_race unempf12_6, statistic(mean `var') 
+
+	display _newline(2)
+	display "table below comparing earnings between racial groups using `var'"
+	pwmean `var', over(initial_race) mcompare(dunnett) effects 
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who were unemployed"
+	pwmean `var' if unempf12_6 ==1, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who were NOT unemployed "
+	pwmean `var' if unempf12_6 ==0, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as wage and salary"
+	pwmean `var' if mode_status_f12v2 == 1, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as self-employed"
+	pwmean `var' if mode_status_f12v2 == 2, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as unemployed"
+	pwmean `var' if mode_status_f12v2 == 4, over(initial_race) mcompare(dunnett) effects
+}
 
 
 /***
 <html>
 <body>
 <h4>Within race differences</h4>
-<p>/p>
+<p> Here we see that unemployment is associated with lower average earnings. This relationship holds within all racial groups 
+and for both measures of earnings. Using tpearn, we see that starting out unemployed is associated with lower earnings than starting 
+out as wage and salary within all racial groups. For white, asian, and 'residual' group respondents, starting as self-employed is associated with 
+higher earnings than starting as W&S. This does not hold for black respondents, where thsoe starting as SE earn less on average
+than those starting as W&S. Using tjb_msum, those starting as W&S earn more on average than those starting as SE or unemployed within all racial groups. 
+</p>
 ***/
-ttest tpearn if initial_race == 1, by(unempf12_6) 
-ttest tpearn if initial_race == 2, by(unempf12_6) 
-ttest tpearn if initial_race == 3, by(unempf12_6) 
+foreach var of varlist tpearn tjb_msum {
+	display _newline(2)
+	display "`var' earnings within white subsample by unemployment"
+	ttest `var' if initial_race == 1, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within black subsample by unemployment"
+	ttest `var' if initial_race == 2, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within asian subsample by unemployment" 
+	ttest `var' if initial_race == 3, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within 'residual' subsample by unemployment"  
+	ttest `var' if initial_race == 4, by(unempf12_6)
+
+
+	display _newline(2)
+	display "comparing `var' within white subsample by initial employment status"
+	pwmean `var' if initial_race == 1, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within black subsample by initial employment status"
+	pwmean `var' if initial_race == 2, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within asian subsample by initial employment status"
+	pwmean `var' if initial_race == 3, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within 'residual' subsample by initial employment status"
+	pwmean `var' if initial_race == 4, over(mode_status_f12v2) mcompare(dunnett) effects
+}
 
 /***
 <html>
@@ -513,47 +600,284 @@ ttest tpearn if initial_race == 3, by(unempf12_6)
 <h3>SE Earnings</h3>
 <p></p>
 ***/
-table initial_race unempf12_6 if pct_se_after_12 ==1, statistic(mean tpearn) 
+
+/***
+<html>
+<body>
+<h4>Overall SE sample</h4>
+<p> Unemployment associated with lower earnings. Holds whether we measure unemployment as 6 consecutive months or as modal status in first year. 
+Using tpearn we see that those starting as SE earn more than those starting as W&S. Using tjb_msum, SE and WS starting groups are indistinguisable.</p>
+***/
+
+unique ssuid_spanel_pnum_id if pct_se_after_12==1, by(mode_status_f12v2)
+
+table initial_race unempf12_6 if pct_se_after_12 ==1, statistic(mean tpearn tjb_msum) 
+
+
+ttest tpearn if pct_se_after_12 ==1, by(unempf12_6)
+ttest tjb_msum if pct_se_after_12 ==1, by(unempf12_6)
+pwmean tpearn if pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects 
+pwmean tjb_msum if pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects
+
+
+
+/***
+<html>
+<body>
+<h4>Between Race differences SE </h4>
+<p>Among our self-employed sample, we see that there are statistically significant differences in earnings between 
+black vs white, residual vs white, but not asian vs white. This holds for both tbj_msum and tpearn as our earnings measure. 
+
+Using tpearn: <br>
+Among those who entered SE from unemployment, we see that asian respondents earned more on average
+than white respondents while black and those falling in our residual racial group earned less on average than white respondents. <br>
+For those who didn't enter from unemployment, the differences remain significant for black vs white and residual vs white but there is no disernible difference 
+between asian and white respondents in terms of earnings.<br>
+<br>
+Among those who enter SE from WS, there are statistically significant differences between white and black earnings, 
+and white and our residual racial category earnings, with white respondents earning more on average than 
+respondents from those two groups. <br>
+Among those who enter SE from SE, the differences are the same as for those who enter from WS. <br>
+Among those who enter SE from unemployment, white respondents earn more on average than black and "residual" respondents.
+Meanwhile, Asian respondents earn more on average than white respondents. <br>
+<br>
+
+
+Using tjb_msum: <br>
+Looking at those unemployed in first 12 months, the only significant difference is asian respondents earning more than white white respondents. 
+The differences between black and white and 'residual' and white are not significant. For those who did not experience unemployment, 
+asian and white earnings are not significantly different, but black vs white and 'residual' vs white are significant with white earnings higher than either group. 
+<br>
+Comparing entrance conditions: <br>
+- within those who enter SE from W&S, white respondents' earnings were greater than black and 'residual' respondents' earnings. 
+Asian respondents' earnings are greater than white respondents' earnings at .1 level but not .05 level. <br>
+- The above  relationships hold for those who enter from SE. <br>
+- For those who start as unemployed as their modal status, earnings for whites are indistinguishable from those for blacks or members of our 'residual' group.
+Asian respondents earn more than whites on average in this comparison. 
+</p>
+***/
+
+preserve 
+keep if pct_se_after_12 == 1 
+foreach var of varlist tpearn tjb_msum  {
+	display _newline(2)
+	display "basic table below of earnings using `var' by race"
+	table initial_race unempf12_6, statistic(mean `var') 
+
+	display _newline(2)
+	display "table below comparing earnings between racial groups using `var'"
+	pwmean `var', over(initial_race) mcompare(dunnett) effects 
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who were unemployed"
+	pwmean `var' if unempf12_6 ==1, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who were NOT unemployed "
+	pwmean `var' if unempf12_6 ==0, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as wage and salary"
+	pwmean `var' if mode_status_f12v2 == 1, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as self-employed"
+	pwmean `var' if mode_status_f12v2 == 2, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as unemployed"
+	pwmean `var' if mode_status_f12v2 == 4, over(initial_race) mcompare(dunnett) effects
+}
+
+restore 
+
+/***
+<html>
+<body>
+<h4>Within race differences SE </h4>
+<p>Within all of our racial groups, those who were unemployed before entering SE earn less than those who did not, 
+except for the asian subsample when we measure earnings with tjb_msum.  <br>
+
+Within white subsample and using tpearn, those entering SE from unemployment had lower earnings and those entering from SE had higher earnings 
+than those entering from WS. Using tjb_msum, the SE vs W&S difference is no longer significant. <br>
+Within black subsample, those entering from SE or unemp earn less on avearge than those entering from W&S. This holds when using tjb_msum. <br>
+Within asian submsample and using tpearn, those entering from SE earn more on average and those entering from unemp earn less on average than those 
+entering from W&S.  Our "residual" subsample has the same relationships as the asian subsample. 
+Using tjb_msum, in the asian subsample, earnings for those who 
+enter SE from W&S are no longer statistically different than those who enter from SE. Likewise for the 'residual' group.    </p>
+***/
+preserve
+keep if pct_se_after_12 == 1
+
+foreach var of varlist tpearn tjb_msum  {
+	display _newline(2)
+	display "`var' earnings within white subsample by unemployment"
+	ttest `var' if initial_race == 1, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within black subsample by unemployment"
+	ttest `var' if initial_race == 2, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within asian subsample by unemployment" 
+	ttest `var' if initial_race == 3, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within 'residual' subsample by unemployment"  
+	ttest `var' if initial_race == 4, by(unempf12_6)	
+
+	display _newline(2)
+	display "comparing `var' within white subsample by initial employment status"
+	pwmean `var' if initial_race == 1, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within black subsample by initial employment status"
+	pwmean `var' if initial_race == 2, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within asian subsample by initial employment status"
+	pwmean `var' if initial_race == 3, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within 'residual' subsample by initial employment status"
+	pwmean `var' if initial_race == 4, over(mode_status_f12v2) mcompare(dunnett) effects
+}
+
+restore 
+
+
+/***
+<html>
+<body>
+<h3>Wage and Salary Earnings</h3>
+***/
+
+/***
+<html>
+<body>
+<h4>Wage and Salary overall </h4>
+<p>Those who experienced unemployment earn less regardless of earnings measure. Those entering W&S from SE earn more than those who
+start as SE if we use tpearn but less if tjb_msum. </p>
+***/
+preserve
+keep if pct_se_after_12 == 0 
+unique ssuid_spanel_pnum_id, by(mode_status_f12v2)
+ttest tpearn, by(unempf12_6)
+ttest tjb_msum, by(unempf12_6)
+pwmean tpearn, over(mode_status_f12v2) mcompare(dunnett) effects 
+pwmean tjb_msum, over(mode_status_f12v2) mcompare(dunnett) effects
 
 /***
 <html>
 <body>
 <h4>Between Race differences</h4>
-<p>/p>
+<p> Using tpearn or tjb_msum, for the total W&S subsample as well as within those who experienced unemployment and those who did not, 
+asian respondents earned more than white respondents who in turn earned more than black or 'residual' group respondents. <br>
+<br>
+For those who started as wage and salary and remained wage and salary, using either earnings measure the relationships remain the same with 
+asians earning more than whites who in turn earned more than black or 'residual' group respondents. <br>
+<br>
+For those who started as SE and entered WS using tjb_msum the difference between blacks and whites is not significant, while those in the 'residual'
+category and asians earned more than whites. Using tpearn, asian and white earnings are similar. Black respondents earned less
+than white respondents. <br>
+<br>
+For those who entered WS from unemployment, using either earnings measure, white respondents earned more than black and 
+'residual' group members but less than asian respondents.
+</p>
 ***/
-pwmean tpearn if pct_se_after_12 ==1 , over(initial_race) mcompare(dunnett) effects 
-pwmean tpearn if unempf12_6 ==1 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects
-pwmean tpearn if unempf12_6 ==0 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects
-pwmean tpearn if mode_status_f12v2 ==1 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects // entering from WS 
-pwmean tpearn if mode_status_f12v2 ==2 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects // entering from SE 
-pwmean tpearn if mode_status_f12v2 == 4 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects // entering from Unemp
 
+foreach var of varlist tpearn tjb_msum {
+	display _newline(2)
+	display "basic table below of earnings using `var' by race"
+	table initial_race unempf12_6, statistic(mean `var') 
 
+	display _newline(2)
+	display "table below comparing earnings between racial groups using `var'"
+	pwmean `var', over(initial_race) mcompare(dunnett) effects 
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who were unemployed"
+	pwmean `var' if unempf12_6 ==1, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who were NOT unemployed "
+	pwmean `var' if unempf12_6 ==0, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as wage and salary"
+	pwmean `var' if mode_status_f12v2 == 1, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as self-employed"
+	pwmean `var' if mode_status_f12v2 == 2, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as unemployed"
+	pwmean `var' if mode_status_f12v2 == 4, over(initial_race) mcompare(dunnett) effects
+}
 
 
 /***
 <html>
 <body>
 <h4>Within race differences</h4>
-<p>/p>
+<p> examining impact of unemployment on earnings within each racial group. Here we see that those who experienced unemployment
+have on average lower earnings during our full period of observation than those who did not, regardless of racial group and using either earnings measure. <br>
+<br>
+Using tpearn, within black, white, and our 'residual' group, those entering W&S from SE earn more on average than those starting 
+as W&S. This difference is not significant within the asian subsample. Within all groups, those who were unemployed at first earned less than those who started as W&S. <br>
+<br>
+Using tjb_msum, within white and asian subsamples, those entering W&S from SE or unemployment earned less than those who started as W&S.
+Within the black subsample, those who entered W&S from unemployment earned less than those who started WS. Earnings for those entering WS from SE vs those who started as WS are not significantly different. 
+Within the 'residual' subsample, those entering W&S from SE earn more than those who started as SE. 
+ </p>
 ***/
-ttest tpearn if initial_race == 1 & pct_se_after_12 ==1, by(unempf12_6) 
-ttest tpearn if initial_race == 2 & pct_se_after_12 ==1, by(unempf12_6) 
-ttest tpearn if initial_race == 3 & pct_se_after_12 ==1, by(unempf12_6) 
+foreach var of varlist tpearn tjb_msum {
+	display _newline(2)
+	display "`var' earnings within white subsample by unemployment"
+	ttest `var' if initial_race == 1, by(unempf12_6)
 
-pwmean tpearn if initial_race == 1 & pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects // white
-pwmean tpearn if initial_race == 2 & pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects // black
-pwmean tpearn if initial_race == 3 & pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects // asian
+	display _newline(2)
+	display "`var' earnings within black subsample by unemployment"
+	ttest `var' if initial_race == 2, by(unempf12_6)
 
+	display _newline(2)
+	display "`var' earnings within asian subsample by unemployment" 
+	ttest `var' if initial_race == 3, by(unempf12_6)
 
+	display _newline(2)
+	display "`var' earnings within 'residual' subsample by unemployment"  
+	ttest `var' if initial_race == 4, by(unempf12_6)
+
+	display _newline(2)
+	display "comparing `var' within white subsample by initial employment status"
+	pwmean `var' if initial_race == 1, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within black subsample by initial employment status"
+	pwmean `var' if initial_race == 2, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within asian subsample by initial employment status"
+	pwmean `var' if initial_race == 3, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within 'residual' subsample by initial employment status"
+	pwmean `var' if initial_race == 4, over(mode_status_f12v2) mcompare(dunnett) effects
+}
+
+restore 
 
 /***
 <html>
 <body>
-<h2>Descriptive Comparisons using individual averages </h2>
+<h2>Descriptive Comparisons using individual respondent averages </h2>
 <p></p>
 ***/
-preserve 
+
+frame copy earnings collapsed_earnings
+frame change collapsed_earnings
+
 collapse (mean) tjb_msum tpearn ln_tpearn ln_tjb_msum, by(ssuid_spanel_pnum_id pct_se_after_12 unempf12_6 mode_status_f12v2 initial_race)
 list in 1/5
 
@@ -561,30 +885,112 @@ list in 1/5
 <html>
 <body>
 <h3>WS/SE Earnings</h3>
-<p></p>
 ***/
-table initial_race unempf12_6, statistic(mean tpearn) 
+
+/***
+<html>
+<body>
+<h4>Full Sample</h4>
+<p>Interestingly, we get different results for avg earnings for
+ those who start as SE vs WS depending on if we use tbj_msum or tpearn.</p>
+***/
+ttest tpearn, by(unempf12_6)
+ttest tjb_msum, by(unempf12_6)
+pwmean tpearn, over(mode_status_f12v2) mcompare(dunnett) effects 
+pwmean tjb_msum, over(mode_status_f12v2) mcompare(dunnett) effects
 
 /***
 <html>
 <body>
 <h4>Between Race differences</h4>
-<p>/p>
+<p>Here we see that earnings for whites are on average, greater than earnings for other groups except for Asians. 
+These relationships hold looking at the subsample that experienced unemployment and the subsample that did 
+not experience unemployment in their first 12 months. These hold using either earnings measure.
+Likewise, these relationships hold within the subsamples of those who  started as wage and salary and the subsample of those who started as unemployed.
+
+Among those who start as self-employed, using tjb_msum  or tpearn the only significant difference is white respondents earning more than black respondents.
+</p>
 ***/
-pwmean tpearn, over(initial_race) mcompare(dunnett) effects 
-pwmean tpearn if unempf12_6 ==1, over(initial_race) mcompare(dunnett) effects
-pwmean tpearn if unempf12_6 ==0, over(initial_race) mcompare(dunnett) effects
+
+foreach var of varlist tpearn tjb_msum {
+	display _newline(2)
+	display "basic table below of earnings using `var' by race"
+	table initial_race unempf12_6, statistic(mean `var') 
+
+	display _newline(2)
+	display "table below comparing earnings between racial groups using `var'"
+	pwmean `var', over(initial_race) mcompare(dunnett) effects 
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who were unemployed"
+	pwmean `var' if unempf12_6 ==1, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who were NOT unemployed "
+	pwmean `var' if unempf12_6 ==0, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as wage and salary"
+	pwmean `var' if mode_status_f12v2 == 1, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as self-employed"
+	pwmean `var' if mode_status_f12v2 == 2, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as unemployed"
+	pwmean `var' if mode_status_f12v2 == 4, over(initial_race) mcompare(dunnett) effects
+}
 
 
 /***
 <html>
 <body>
 <h4>Within race differences</h4>
-<p>/p>
+<p> Here we see that unemployment is associated with lower average earnings. This relationship holds within all racial groups 
+and for both measures of earnings. 
+
+Using tpearn, we see that starting out unemployed is associated with lower earnings than starting 
+out as wage and salary within all racial groups. For white and 'residual' group respondents, starting as self-employed is associated with 
+higher earnings than starting as W&S. This does not hold for black respondents, where thsoe starting as SE earn less on average
+than those starting as W&S. Using tjb_msum, those starting as W&S earn more on average than those starting as SE or unemployed within all racial groups 
+with the exception of the comparison between 'residual' SE vs 'residual' WS which is not significant.  
+</p>
 ***/
-ttest tpearn if initial_race == 1, by(unempf12_6) 
-ttest tpearn if initial_race == 2, by(unempf12_6) 
-ttest tpearn if initial_race == 3, by(unempf12_6) 
+foreach var of varlist tpearn tjb_msum {
+display _newline(2)
+	display "`var' earnings within white subsample by unemployment"
+	ttest `var' if initial_race == 1, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within black subsample by unemployment"
+	ttest `var' if initial_race == 2, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within asian subsample by unemployment" 
+	ttest `var' if initial_race == 3, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within 'residual' subsample by unemployment"  
+	ttest `var' if initial_race == 4, by(unempf12_6)
+
+
+	display _newline(2)
+	display "comparing `var' within white subsample by initial employment status"
+	pwmean `var' if initial_race == 1, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within black subsample by initial employment status"
+	pwmean `var' if initial_race == 2, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within asian subsample by initial employment status"
+	pwmean `var' if initial_race == 3, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within 'residual' subsample by initial employment status"
+	pwmean `var' if initial_race == 4, over(mode_status_f12v2) mcompare(dunnett) effects
+}
 
 /***
 <html>
@@ -592,49 +998,287 @@ ttest tpearn if initial_race == 3, by(unempf12_6)
 <h3>SE Earnings</h3>
 <p></p>
 ***/
-table initial_race unempf12_6 if pct_se_after_12 ==1, statistic(mean tpearn) 
 
 /***
 <html>
 <body>
-<h4>Between Race differences</h4>
-<p>/p>
+<h4>Overall SE sample</h4>
+<p> Unemployment associated with lower earnings. Holds whether we measure unemployment as 6 consecutive months or as modal status in first year. 
+ Using tjb_msum or tpearn, SE and WS starting groups are indistinguisable.
+</p>
 ***/
-pwmean tpearn if pct_se_after_12 ==1 , over(initial_race) mcompare(dunnett) effects 
-pwmean tpearn if unempf12_6 ==1 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects
-pwmean tpearn if unempf12_6 ==0 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects
-pwmean tpearn if mode_status_f12v2 ==1 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects // entering from WS 
-pwmean tpearn if mode_status_f12v2 ==2 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects // entering from SE 
-pwmean tpearn if mode_status_f12v2 == 4 & pct_se_after_12 ==1, over(initial_race) mcompare(dunnett) effects // entering from Unemp
 
+unique ssuid_spanel_pnum_id if pct_se_after_12 ==1, by(mode_status_f12v2)
+
+table initial_race unempf12_6 if pct_se_after_12 ==1, statistic(mean tpearn tjb_msum) 
+
+
+ttest tpearn if pct_se_after_12 ==1, by(unempf12_6)
+ttest tjb_msum if pct_se_after_12 ==1, by(unempf12_6)
+pwmean tpearn if pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects 
+pwmean tjb_msum if pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects
 
 
 
 /***
 <html>
 <body>
-<h4>Within race differences</h4>
-<p>/p>
+<h4>Between Race differences SE</h4>
+<p>
+Among our self-employed sample, we see that there are statistically significant differences in earnings between 
+black vs white, residual vs white, but not asian vs white. This holds for both tbj_msum and tpearn as our earnings measure. 
+
+Using tpearn: <br>
+We see that black respondents earn less on average than white respondents. <br>
+Among those who entered SE from unemployment, those falling in our residual racial group earned less on average than white respondents. Neither other comparison was significant. <br>
+For those who didn't enter from unemployment, blacks earned less than whites, neither of the other two comparisons was significant. <br>
+<br>
+Among those who enter SE from WS, the earnings between groups are not statistically different. <br>
+Among those who enter SE from SE, the only significant difference is white respondents earning more than black respondents on average <br>
+Among those who enter SE from unemployment, white respondents earn more on average than "residual" respondents. <br>
+<br>
+
+
+Using tjb_msum: <br>
+We see that black respondents earn less on average than white respondents. <br>
+Looking at those unemployed in first 12 months, the only significant difference is asian respondents earning more than white white respondents. 
+The differences between black and white and 'residual' and white are not significant. For those who did not experience unemployment, 
+asian and white and 'residual' and white earnings are not significantly different, but black vs white are significant with white earnings higher than either group. 
+<br>
+Comparing entrance conditions: <br>
+- Among those who enter SE from WS, the earnings between groups are not statistically different. <br>
+- Among those who enter SE from SE, the only significant difference is white respondents earning more than black respondents on average <br>
+- For those who start as unemployed as their modal status, the earnings between groups are not statistically different. 
+</p>
 ***/
-ttest tpearn if initial_race == 1 & pct_se_after_12 >=1, by(unempf12_6) 
-ttest tpearn if initial_race == 2 & pct_se_after_12 >=1, by(unempf12_6) 
-ttest tpearn if initial_race == 3 & pct_se_after_12 >=1, by(unempf12_6) 
 
-pwmean tpearn if initial_race == 1 & pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects // white
-pwmean tpearn if initial_race == 2 & pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects // black
-pwmean tpearn if initial_race == 3 & pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett) effects // asian
+preserve 
+keep if pct_se_after_12 == 1 
+foreach var of varlist tpearn tjb_msum  {
+	display _newline(2)
+	display "basic table below of earnings using `var' by race"
+	table initial_race unempf12_6, statistic(mean `var') 
 
-ttest tpearn if initial_race == 1 & pct_se_after_12 == 1, by(unempf12_6)
+	display _newline(2)
+	display "table below comparing earnings between racial groups using `var'"
+	pwmean `var', over(initial_race) mcompare(dunnett) effects 
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who were unemployed"
+	pwmean `var' if unempf12_6 ==1, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who were NOT unemployed "
+	pwmean `var' if unempf12_6 ==0, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as wage and salary"
+	pwmean `var' if mode_status_f12v2 == 1, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as self-employed"
+	pwmean `var' if mode_status_f12v2 == 2, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as unemployed"
+	pwmean `var' if mode_status_f12v2 == 4, over(initial_race) mcompare(dunnett) effects
+}
+
+restore 
+
+/***
+<html>
+<body>
+<h4>Within race differences SE</h4>
+<p> Using tpearn: <br> 
+- Within white and 'residual' groups, those who were unemployed for 6-months had lower earnings on average than those who were not. 
+The differences between unemployed vs not unemployed were not significant with black or asian subsamples. <br>
+- Entering SE from W&S vs starting as SE not associated with different earnings for any groups. <br>
+- Entering SE from unemployment associated with lower earnings for black and white subsamples (asian and 'residual' have small n's) 
+<br>
+<br>
+Using tjb_msum: <br>
+- Within white subsample, those unemployed for 60months has lower earnings than those who were not unemployed. Difference for other
+groups is not significant (black subsample significant at .1 level). <br>
+- Entering SE from W&S vs starting as SE not associated with different earnings for any groups. <br>
+- Entering SE from unemployment associated with lower earnings for black and white subsamples (asian and 'residual' have small n's) 
+<br>
+
+ </p>
+***/
+preserve
+keep if pct_se_after_12 == 1
+
+foreach var of varlist tpearn tjb_msum  {
+	display _newline(2)
+	display "`var' earnings within white subsample by unemployment"
+	ttest `var' if initial_race == 1, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within black subsample by unemployment"
+	ttest `var' if initial_race == 2, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within asian subsample by unemployment" 
+	ttest `var' if initial_race == 3, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within 'residual' subsample by unemployment"  
+	ttest `var' if initial_race == 4, by(unempf12_6)	
+
+	display _newline(2)
+	display "comparing `var' within white subsample by initial employment status"
+	pwmean `var' if initial_race == 1, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within black subsample by initial employment status"
+	pwmean `var' if initial_race == 2, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within asian subsample by initial employment status"
+	pwmean `var' if initial_race == 3, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within 'residual' subsample by initial employment status"
+	pwmean `var' if initial_race == 4, over(mode_status_f12v2) mcompare(dunnett) effects
+}
+
+restore 
+
+
+/***
+<html>
+<body>
+<h3>Wage and Salary Earnings</h3>
+***/
+
+/***
+<html>
+<body>
+<h4>Wage and Salary overall </h4>
+<p>Unemployment associated with lower earnings. Holds whether we measure unemployment as 6 consecutive months or as modal status in first year. 
+Using tjb_msum we see that those starting as SE earn less than those starting as W&S. Using tpearn, SE and WS starting groups are indistinguisable. </p>
+***/
+preserve
+keep if pct_se_after_12 == 0 
+
+ttest tpearn, by(unempf12_6)
+ttest tjb_msum, by(unempf12_6)
+pwmean tpearn, over(mode_status_f12v2) mcompare(dunnett) effects 
+pwmean tjb_msum, over(mode_status_f12v2) mcompare(dunnett) effects
+
+/***
+<html>
+<body>
+<h4>Between Race differences WS </h4>
+<p>Using tpearn or tjb_msum, for the total W&S subsample as well as within subsamples of those who experienced unemployment and those who did not, 
+asian respondents earned more than white respondents who in turn earned more than black or 'residual' group respondents. <br>
+<br>
+For those who started as wage and salary and remained wage and salary, using either earnings measure the relationships remain the same with 
+asians earning more than whites who in turn earned more than black or 'residual' group respondents. <br>
+<br>
+For those who started as SE and entered WS using tjb_msum the difference between blacks and whites as well as 'residual' and whites are
+ not significant, while asians earned more than whites. Using tpearn, none of the between group differences for the SE to WS subsample are significant. <br>
+<br>
+For those who entered WS from unemployment, using either earnings measure, white respondents earned more than black and 
+'residual' group members but less than asian respondents. </p>
+***/
+
+foreach var of varlist tpearn tjb_msum {
+	display _newline(2)
+	display "basic table below of earnings using `var' by race"
+	table initial_race unempf12_6, statistic(mean `var') 
+
+	display _newline(2)
+	display "table below comparing earnings between racial groups using `var'"
+	pwmean `var', over(initial_race) mcompare(dunnett) effects 
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who were unemployed"
+	pwmean `var' if unempf12_6 ==1, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who were NOT unemployed "
+	pwmean `var' if unempf12_6 ==0, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as wage and salary"
+	pwmean `var' if mode_status_f12v2 == 1, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as self-employed"
+	pwmean `var' if mode_status_f12v2 == 2, over(initial_race) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "table below comparing earnings using `var' by race for those who started as unemployed"
+	pwmean `var' if mode_status_f12v2 == 4, over(initial_race) mcompare(dunnett) effects
+}
+
+
+/***
+<html>
+<body>
+<h4>Within race differences WS </h4>
+<p> Examining impact of unemployment on earnings within each racial group. Here we see that those who experienced unemployment
+have on average lower earnings during our full period of observation than those who did not, regardless of racial group and using either earnings measure. <br>
+<br>
+Using tpearn, those in our 'residual' group entering W&S from SE earn more on average than those starting 
+as W&S. The differences between those starting in SE vs WS were not significant for other racial groups.
+ Within all groups, those who were unemployed at first earned less than those who started as W&S. <br>
+<br>
+Using tjb_msum, Within all groups, those who were unemployed at first earned less than those who started as W&S.
+Within the white subsample, those entering W&S from SE or unemployment earned less than those who started as W&S.
+Within the black, asian, and 'residual' subsamples, those entering W&S from SE did not have statistically significant different earnings than their counterparts who were 
+always W&S.</p>
+***/
+foreach var of varlist tpearn tjb_msum {
+	display _newline(2)
+	display "`var' earnings within white subsample by unemployment"
+	ttest `var' if initial_race == 1, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within black subsample by unemployment"
+	ttest `var' if initial_race == 2, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within asian subsample by unemployment" 
+	ttest `var' if initial_race == 3, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within 'residual' subsample by unemployment"  
+	ttest `var' if initial_race == 4, by(unempf12_6)
+
+	display _newline(2)
+	display "comparing `var' within white subsample by initial employment status"
+	pwmean `var' if initial_race == 1, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within black subsample by initial employment status"
+	pwmean `var' if initial_race == 2, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within asian subsample by initial employment status"
+	pwmean `var' if initial_race == 3, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within 'residual' subsample by initial employment status"
+	pwmean `var' if initial_race == 4, over(mode_status_f12v2) mcompare(dunnett) effects
+}
 
 
 restore 
 
 
+/***
+<html>
+<body>
+<h1>Beginning of modeling</h1>
+<p></p>
+***/
+
+
+frame change earnings
 xtset ssuid_spanel_pnum_id  month_overall
-/* Notes: 
-	1. Leaving in first 12 months of earnings for this first set of models. We test them as a predictor later. 
-*/
- 
 
 
  /**********************************************************************/
@@ -988,6 +1632,13 @@ esttab  b12_ln_tpearn_*unemp*2* b12_ln_tpearn*mode*2* se12_ln_tpearn*unemp*2* se
 mtitles("Any earnings" "Any earnings" "SE earnings" "SE earnings") 
 
 
+
+/***
+<html>
+<body>
+<h1>Profit models</h1>
+<p></p>
+***/
 /**********************************************************************/
 /*  SECTION Profit models 		
     Notes: */
@@ -1031,15 +1682,121 @@ list ssuid_spanel_pnum_id calyear profpos prof10k ln_tjb_prftb tjb_prftb tbsjval
 unempf12_6 mode_status_f12v2 in 1/500 if pct_se_after_12 ==1, sepby(ssuid_spanel_pnum_id) abbrev(10)
 
 
-preserve
+
 // getting to sample of interest
 
 keep if pct_se_after_12 == 1 
 
 sum tjb_prftb profpos prof10k ln_tjb_prftb
 
+bysort ssuid_spanel_pnum_id: egen mean_tjb_prftb = mean(tjb_prftb) 
+bysort ssuid_spanel_pnum_id: egen mean_ln_tjb_prftb = mean(ln_tjb_prftb)
 
 
+unique ssuid_spanel_pnum_id, by(mode_status_f12v2 initial_race)
+
+/***
+<html>
+<body>
+<h4>Descriptive Stats: Profit</h4>
+<p>Using our 6-month unemployment measure, those who were unemployed have less profitable business on average than those 
+who were not. No difference in entering SE from unemp vs W&S. </p>
+***/
+
+ttest tjb_prftb, by(unempf12_6)
+pwmean tjb_prftb, over(mode_status_f12v2) mcompare(tukey) effects 
+
+
+/***
+<html>
+<body>
+<h5>Between group differences: profit</h5>
+<p>Overall, black respondents reported lower profits than white and asian respondents. Among those who were unemployed, no significant difference in avg profit. 
+Among thos who were NOT unemployed, black respondents reported lower profits than white and asian respondents. </p>
+***/
+
+foreach var of varlist tjb_prftb {
+	display _newline(2)
+	display "basic table below of profit using `var' by race"
+	table initial_race unempf12_6, statistic(mean `var') 
+
+	display _newline(2)
+	display "table below comparing profit between racial groups using `var'"
+	pwmean `var', over(initial_race) mcompare(tukey) groups 
+
+	display _newline(2)
+	display "table below comparing profit using `var' by race for those who were unemployed"
+	pwmean `var' if unempf12_6 ==1, over(initial_race) mcompare(tukey) groups
+
+	display _newline(2)
+	display "table below comparing profit using `var' by race for those who were NOT unemployed "
+	pwmean `var' if unempf12_6 ==0, over(initial_race) mcompare(tukey) groups
+
+	display _newline(2)
+	display "table below comparing profit using `var' by race for those who started as wage and salary"
+	pwmean `var' if mode_status_f12v2 == 1, over(initial_race) mcompare(tukey) groups
+
+	display _newline(2)
+	display "table below comparing profit using `var' by race for those who started as self-employed"
+	pwmean `var' if mode_status_f12v2 == 2, over(initial_race) mcompare(tukey) groups
+
+	display _newline(2)
+	display "table below comparing profit using `var' by race for those who started as unemployed"
+	pwmean `var' if mode_status_f12v2 == 4, over(initial_race) mcompare(tukey) groups
+}
+
+
+/***
+<html>
+<body>
+<h5>Within group differences: profit</h5>
+<p>Only within the white subsample do those who were unemployed have statistically significantly lower earnings. 
+Within the white subsample   </p>
+***/
+
+
+foreach var of varlist tjb_prftb {
+	display _newline(2)
+	display "`var' profit within white subsample by unemployment"
+	ttest `var' if initial_race == 1, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' profit within black subsample by unemployment"
+	ttest `var' if initial_race == 2, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' profit within asian subsample by unemployment" 
+	ttest `var' if initial_race == 3, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' profit within 'residual' subsample by unemployment"  
+	ttest `var' if initial_race == 4, by(unempf12_6)
+
+	display _newline(2)
+	display "comparing `var' within white subsample by initial employment status"
+	pwmean `var' if initial_race == 1, over(mode_status_f12v2) mcompare(tukey) effects
+
+	display _newline(2)
+	display "comparing `var' within black subsample by initial employment status"
+	pwmean `var' if initial_race == 2, over(mode_status_f12v2) mcompare(tukey) effects
+
+	display _newline(2)
+	display "comparing `var' within asian subsample by initial employment status"
+	pwmean `var' if initial_race == 3, over(mode_status_f12v2) mcompare(tukey) effects
+
+	display _newline(2)
+	display "comparing `var' within 'residual' subsample by initial employment status"
+	pwmean `var' if initial_race == 4, over(mode_status_f12v2) mcompare(tukey) effects
+}
+
+
+
+/***
+<html>
+<body>
+<h3>Beginning profit models</h3>
+<p></p>
+***/
 xtset ssuid_spanel_pnum_id calyear 
 
 eststo clear 
@@ -1098,7 +1855,6 @@ esttab prof*mode*, legend label varlabels(_cons Constant) title(Profit Models: I
 ***/
 esttab *jval*, legend label varlabels(_cons Constant) title(Business Value  Models) aic bic 
 
-restore 
 
 /*------------------------------------ End of SECTION number ------------------------------------*/
 
