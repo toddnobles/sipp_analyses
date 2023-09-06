@@ -220,6 +220,20 @@ label variable initial_hisp "Hispanic"
 
 
 
+gen combine_race_eth = 1  if initial_race == 1 // white
+replace combine_race_eth = 2 if initial_race == 2 // black
+replace combine_race_eth = 3 if initial_race == 3 // asian
+replace combine_race_eth = 4 if initial_hisp == 1 & combine_race_eth == .  // hispanic
+replace combine_race_eth = 5 if initial_race == 4 & initial_hisp == 0 & combine_race_eth == . // other (non-hispanic residual)
+label define combine_race_eth_label 1 "White" 2 "Black" 3 "Asian" 4 "Hispanic" 5 "Other"
+label values combine_race_eth combine_race_eth_label
+
+tab combine_race_eth initial_race, missing
+tab combine_race_eth initial_hisp, missing
+table (initial_hisp initial_race) combine_race_eth, missing
+
+
+
 /***
 <html>
 <body>
