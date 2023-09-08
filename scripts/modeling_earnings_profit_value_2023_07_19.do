@@ -587,8 +587,12 @@ foreach var of varlist tpearn tjb_msum {
 	ttest `var' if combine_race_eth == 3, by(unempf12_6)
 
 	display _newline(2)
-	display "`var' earnings within 'hispanic' subsample by unemployment"  
+	display "`var' earnings within hispanic subsample by unemployment"  
 	ttest `var' if combine_race_eth == 4, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within 'other' subsample by unemployment"  
+	ttest `var' if combine_race_eth == 5, by(unempf12_6)
 
 
 	display _newline(2)
@@ -604,8 +608,12 @@ foreach var of varlist tpearn tjb_msum {
 	pwmean `var' if combine_race_eth == 3, over(mode_status_f12v2) mcompare(dunnett) effects
 
 	display _newline(2)
-	display "comparing `var' within 'hispanic' subsample by initial employment status"
+	display "comparing `var' within hispanic subsample by initial employment status"
 	pwmean `var' if combine_race_eth == 4, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within 'other' subsample by initial employment status"
+	pwmean `var' if combine_race_eth == 5, over(mode_status_f12v2) mcompare(dunnett) effects
 }
 
 /***
@@ -737,8 +745,12 @@ foreach var of varlist tpearn tjb_msum  {
 	ttest `var' if combine_race_eth == 3, by(unempf12_6)
 
 	display _newline(2)
-	display "`var' earnings within 'hispanic' subsample by unemployment"  
+	display "`var' earnings within hispanic subsample by unemployment"  
 	ttest `var' if combine_race_eth == 4, by(unempf12_6)	
+
+	display _newline(2)
+	display "`var' earnings within 'other' subsample by unemployment"  
+	ttest `var' if combine_race_eth == 5, by(unempf12_6)	
 
 	display _newline(2)
 	display "comparing `var' within white subsample by initial employment status"
@@ -753,8 +765,12 @@ foreach var of varlist tpearn tjb_msum  {
 	pwmean `var' if combine_race_eth == 3, over(mode_status_f12v2) mcompare(dunnett) effects
 
 	display _newline(2)
-	display "comparing `var' within 'hispanic' subsample by initial employment status"
+	display "comparing `var' within hispanic subsample by initial employment status"
 	pwmean `var' if combine_race_eth == 4, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within 'other' subsample by initial employment status"
+	pwmean `var' if combine_race_eth == 5, over(mode_status_f12v2) mcompare(dunnett) effects
 }
 
 restore 
@@ -860,8 +876,12 @@ foreach var of varlist tpearn tjb_msum {
 	ttest `var' if combine_race_eth == 3, by(unempf12_6)
 
 	display _newline(2)
-	display "`var' earnings within 'hispanic' subsample by unemployment"  
+	display "`var' earnings within hispanic subsample by unemployment"  
 	ttest `var' if combine_race_eth == 4, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within 'other' subsample by unemployment"  
+	ttest `var' if combine_race_eth == 5, by(unempf12_6)
 
 	display _newline(2)
 	display "comparing `var' within white subsample by initial employment status"
@@ -876,8 +896,13 @@ foreach var of varlist tpearn tjb_msum {
 	pwmean `var' if combine_race_eth == 3, over(mode_status_f12v2) mcompare(dunnett) effects
 
 	display _newline(2)
-	display "comparing `var' within 'hispanic' subsample by initial employment status"
+	display "comparing `var' within hispanic subsample by initial employment status"
 	pwmean `var' if combine_race_eth == 4, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within 'other' subsample by initial employment status"
+	pwmean `var' if combine_race_eth == 5, over(mode_status_f12v2) mcompare(dunnett) effects
+
 }
 
 restore 
@@ -985,8 +1010,12 @@ display _newline(2)
 	ttest `var' if combine_race_eth == 3, by(unempf12_6)
 
 	display _newline(2)
-	display "`var' earnings within 'hispanic' subsample by unemployment"  
+	display "`var' earnings within hispanic subsample by unemployment"  
 	ttest `var' if combine_race_eth == 4, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within 'other' subsample by unemployment"  
+	ttest `var' if combine_race_eth == 5, by(unempf12_6)
 
 
 	display _newline(2)
@@ -1002,8 +1031,12 @@ display _newline(2)
 	pwmean `var' if combine_race_eth == 3, over(mode_status_f12v2) mcompare(dunnett) effects
 
 	display _newline(2)
-	display "comparing `var' within 'hispanic' subsample by initial employment status"
+	display "comparing `var' within hispanic subsample by initial employment status"
 	pwmean `var' if combine_race_eth == 4, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within 'other' subsample by initial employment status"
+	pwmean `var' if combine_race_eth == 5, over(mode_status_f12v2) mcompare(dunnett) effects
 }
 
 /***
@@ -1137,8 +1170,12 @@ foreach var of varlist tpearn tjb_msum  {
 	ttest `var' if combine_race_eth == 3, by(unempf12_6)
 
 	display _newline(2)
-	display "`var' earnings within 'hispanic' subsample by unemployment"  
+	display "`var' earnings within hispanic subsample by unemployment"  
 	ttest `var' if combine_race_eth == 4, by(unempf12_6)	
+
+	display _newline(2)
+	display "`var' earnings within 'other' subsample by unemployment"  
+	ttest `var' if combine_race_eth == 5, by(unempf12_6)	
 
 	display _newline(2)
 	display "comparing `var' within white subsample by initial employment status"
@@ -1153,8 +1190,12 @@ foreach var of varlist tpearn tjb_msum  {
 	pwmean `var' if combine_race_eth == 3, over(mode_status_f12v2) mcompare(dunnett) effects
 
 	display _newline(2)
-	display "comparing `var' within 'hispanic' subsample by initial employment status"
+	display "comparing `var' within hispanic subsample by initial employment status"
 	pwmean `var' if combine_race_eth == 4, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within 'other' subsample by initial employment status"
+	pwmean `var' if combine_race_eth == 5, over(mode_status_f12v2) mcompare(dunnett) effects
 }
 
 restore 
@@ -1259,8 +1300,12 @@ foreach var of varlist tpearn tjb_msum {
 	ttest `var' if combine_race_eth == 3, by(unempf12_6)
 
 	display _newline(2)
-	display "`var' earnings within 'hispanic' subsample by unemployment"  
+	display "`var' earnings within hispanic subsample by unemployment"  
 	ttest `var' if combine_race_eth == 4, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' earnings within 'other' subsample by unemployment"  
+	ttest `var' if combine_race_eth == 5, by(unempf12_6)	
 
 	display _newline(2)
 	display "comparing `var' within white subsample by initial employment status"
@@ -1275,8 +1320,12 @@ foreach var of varlist tpearn tjb_msum {
 	pwmean `var' if combine_race_eth == 3, over(mode_status_f12v2) mcompare(dunnett) effects
 
 	display _newline(2)
-	display "comparing `var' within 'hispanic' subsample by initial employment status"
+	display "comparing `var' within hispanic subsample by initial employment status"
 	pwmean `var' if combine_race_eth == 4, over(mode_status_f12v2) mcompare(dunnett) effects
+
+	display _newline(2)
+	display "comparing `var' within 'other' subsample by initial employment status"
+	pwmean `var' if combine_race_eth == 5, over(mode_status_f12v2) mcompare(dunnett) effects
 }
 
 
@@ -1783,8 +1832,12 @@ foreach var of varlist tjb_prftb {
 	ttest `var' if combine_race_eth == 3, by(unempf12_6)
 
 	display _newline(2)
-	display "`var' profit within 'residual' subsample by unemployment"  
+	display "`var' profit within hispanic subsample by unemployment"  
 	ttest `var' if combine_race_eth == 4, by(unempf12_6)
+
+	display _newline(2)
+	display "`var' profit within 'other' subsample by unemployment"  
+	ttest `var' if combine_race_eth == 5, by(unempf12_6)
 
 	display _newline(2)
 	display "comparing `var' within white subsample by initial employment status"
@@ -1799,8 +1852,12 @@ foreach var of varlist tjb_prftb {
 	pwmean `var' if combine_race_eth == 3, over(mode_status_f12v2) mcompare(tukey) effects
 
 	display _newline(2)
-	display "comparing `var' within 'residual' subsample by initial employment status"
+	display "comparing `var' within hispanic subsample by initial employment status"
 	pwmean `var' if combine_race_eth == 4, over(mode_status_f12v2) mcompare(tukey) effects
+
+	display _newline(2)
+	display "comparing `var' within 'other' subsample by initial employment status"
+	pwmean `var' if combine_race_eth == 5, over(mode_status_f12v2) mcompare(tukey) effects
 }
 
 
