@@ -267,160 +267,245 @@ egen unique_tag = tag(ssuid_spanel_pnum_id) // unique id
 // To be reworked using TSSPELL command for clarity ---------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-
-
-
 /***
 <html>
 <body>
 <h3>at this point we have a person-month level file with an employment status for them for each period captured in employment_type </h3>
 ***/
 
-drop if tjb_mwkhrs < 15
-**# marking when their job status changes
-bysort ssuid_spanel_pnum_id (spanel swave monthcode): gen change = employment_type1 != employment_type1[_n-1] & _n >1 
-list ssuid_spanel_pnum_id spanel swave monthcode employment_type1  change if ssuid_spanel_pnum_id == 28558, sepby(swave) 
+list ssuid_spanel_pnum_id month_individ employment_type1 tjb_msum tpearn tjb_prftb in 1/50
 
-bysort ssuid_spanel_pnum_id (spanel swave monthcode): gen first_status = employment_type1 if _n==1
+/***
+<html>
+<body>
+<h3>Quick investigation of some data oddities</h3>
+***/
 
-by ssuid_spanel_pnum_id: egen ever_changed = total(change)
-table ever_changed
-unique ssuid_spanel_pnum_id, by(ever_changed)  // counts of people falling into each job change category. 
+// How many people do we have who report working but no income in any of our variables
+count if tjb_mwkhrs >0 & tjb_mwkhrs != . & tjb_msum <=0 & tpearn <= 0 & tjb_prftb <=0 & tptotinc <=0 // number of records 
+distinct ssuid_spanel_pnum_id if tjb_mwkhrs >0 & tjb_mwkhrs != . & tjb_msum <=0 & tpearn <= 0 & tjb_prftb <=0 & tptotinc <=0 // 2200 or so people 
 
-gsort ssuid_spanel_pnum_id -change spanel swave monthcode
+list ssuid_spanel_pnum_id month_individ employment_type tjb_mwkhrs  tjb_msum tpearn tjb_prftb tptotinc teq_bus if tjb_mwkhrs >0 & tjb_mwkhrs != . & tjb_msum == 0 & tpearn == 0 in 1/10000, sepby(ssuid_spanel_pnum_id)
 
-list ssuid_spanel_pnum_id spanel swave monthcode employment_type1 change *status if ssuid_spanel_pnum_id == 199771
-by ssuid_spanel_pnum_id: gen second_status = employment_type1 if change ==1 & _n ==1
-by ssuid_spanel_pnum_id: gen third_status = employment_type1 if change ==1 & _n ==2
-by ssuid_spanel_pnum_id: gen fourth_status = employment_type1 if change ==1 & _n ==3
-by ssuid_spanel_pnum_id: gen fifth_status = employment_type1 if change ==1 & _n ==4
-by ssuid_spanel_pnum_id: gen sixth_status = employment_type1 if change ==1 & _n ==5
-by ssuid_spanel_pnum_id: gen seventh_status = employment_type1 if change ==1 & _n ==6
-by ssuid_spanel_pnum_id: gen eighth_status = employment_type1 if change ==1 & _n ==7
-by ssuid_spanel_pnum_id: gen ninth_status = employment_type1 if change ==1 & _n ==8
-by ssuid_spanel_pnum_id: gen tenth_status = employment_type1 if change ==1 & _n ==9
-by ssuid_spanel_pnum_id: gen eleventh_status = employment_type1 if change ==1 & _n ==10
-by ssuid_spanel_pnum_id: gen twelfth_status = employment_type1 if change ==1 & _n ==11
+// some records here just loook like data entry issues (see person 15 who has one hour worked for each month of their third wave of data and no income)
+//  we have people who don't get filtered in our working 15 hours or more such as id = 123 who report no incomes for multiple waves) Looks like they have a small business that maybe truly didn't earn anything. 
+// more concerningly, we have peopple like id 340 who have large total personal incomes but this income isn't captured in any of our income variables 
+// how many records follow the pattern of id 340? 
+distinct ssuid_spanel_pnum_id if tjb_mwkhrs >0 & tjb_mwkhrs !=. & tjb_msum <= 0 & tpearn <= 0 & tptotinc >0 & tptotinc != . & tjb_prftb == 0 
+
+list ssuid_spanel_pnum_id month_individ employment_type tjb_mwkhrs  tjb_msum tpearn tjb_prftb tptotinc teq_bus if tjb_mwkhrs >0 & tjb_mwkhrs !=. & tjb_msum <= 0 & tpearn <= 0 & tptotinc >0 & tptotinc != . & tjb_prftb == 0 in 1/100000, sepby(ssuid_spanel_pnum_id) 
 
 
-foreach x in first_status second_status third_status fourth_status fifth_status sixth_status seventh_status eighth_status ninth_status tenth_status eleventh_status twelfth_status {
-	label values `x' employment_types
-	//bysort ssuid_spanel_pnum_id (`x'): carryforward `x', replace 
+// how many that have notable incomes and are reportedly working but we don't capture incomes in their earnings variables? 
+distinct ssuid_spanel_pnum_id if tjb_mwkhrs >0 & tjb_mwkhrs !=. & tjb_msum <= 0 & tpearn <= 0 & tptotinc >1000 & tptotinc != . & tjb_prftb == 0 
 
+// will decide how to address these folks later
+
+/***
+<html>
+<body>
+<h3>Marking spells different employment statuses</h3>
+***/
+
+// marking spells of employment/unemployment 
+tsset ssuid_spanel_pnum_id month_individ
+tsspell employment_type1
+
+// this gives us indicator for when an employment status changes, how long that spell of a status was and when it ended. 
+list ssuid_spanel_pnum_id month_individ employment_type tjb_mwkhrs  _s* _end in 1/50, sepby(ssuid_spanel_pnum_id)
+
+drop if tjb_mwkhrs < 15 // drop employment records that we aren't interested in counting 
+
+
+// this creates a flag to capture a w&S period immediately after an SE period 
+bysort ssuid_spanel_pnum_id (month_individ): gen ws_after_se_immed = 1 if employment_type1[_n] == 1 & employment_type1[_n-1] == 2
+bysort ssuid_spanel_pnum_id _spell (ws_after_se_immed): carryforward ws_after_se_immed, replace 
+
+// this creates a flag for a W&S period that falls after an SE period. So we look at each row, see if it is for a W&S period then we look to all previous spells for that person and see if they had any SE spells. 
+bysort ssuid_spanel_pnum_id (month_individ): gen ws_after_se_ever =1 if employment_type1[_n] == 1 & employment_type[_n-1] ==2 
+forval x = 2/47 {
+	bysort ssuid_spanel_pnum_id (month_individ): replace ws_after_se_ever = 1 if employment_type1[_n] ==1 & employment_type[_n-`x'] == 2
 }
 
-sort ssuid_spanel_pnum_id spanel swave monthcode 
-list ssuid_spanel_pnum_id spanel swave monthcode employment_type1  change *status if ssuid_spanel_pnum_id == 199771
-
-list ssuid_spanel_pnum_id spanel swave monthcode employment_type1  change *status if ssuid_spanel_pnum_id == 28558	
 
 
-local i = 0
-foreach x in first_status second_status third_status fourth_status fifth_status sixth_status seventh_status eighth_status ninth_status tenth_status eleventh_status twelfth_status  {
-	gsort ssuid_spanel_pnum_id -`x' 
-	local i = `i' + 1
-	by ssuid_spanel_pnum_id: carryforward `x', gen(status_`i') 
-	
+// creating flag for a SE period right before a W&S period 
+bysort ssuid_spanel_pnum_id (month_individ): gen se_before_ws_immed = 1 if employment_type1[_n] == 2 & employment_type1[_n+1] == 1
+bysort ssuid_spanel_pnum_id _spell (se_before_ws_immed): carryforward se_before_ws_immed, replace 
+
+
+// creating flag for a SE period that falls before any WS period. This won't capture the final period for someone who goes (SE to UNEMP to WS to SE ). In that instance it will capture the first SE spell.  
+bysort ssuid_spanel_pnum_id (month_individ): gen se_before_ws_ever =1 if employment_type1[_n] == 2 & employment_type[_n+1] ==1 
+forval x = 2/47 {
+	bysort ssuid_spanel_pnum_id (month_individ): replace se_before_ws_ever = 1 if employment_type1[_n] ==2 & employment_type[_n+`x'] == 1
+}
+
+
+
+list ssuid_spanel_pnum_id month_individ employment_type  _s* _end ws_after*  se_before* if ssuid_spanel_pnum_id  == 169475
+list ssuid_spanel_pnum_id month_individ employment_type  _s* _end ws_after* se_before*  if ssuid_spanel_pnum_id  == 170435
+
+
+/***
+<html>
+<body>
+<h3>Comparing earnings within individual for SE premium in WS earnings </h3>
+<p> Do we see a SE premium in W&S salaries of those who were previously self employed? Here for N-size considerations we take the broadest possible slice of folks. IF we observe someone being self employed at some point and a subsequent WS employed period then they get captured here. The periods do not need to be consecutive. </p>
+***/
+
+// collapse down to get average earnings for each individual during the SE before WS period and the WS after SE period. This leaves us with two rows per person. 
+preserve
+
+collapse (mean) tpearn (mean) tjb_msum (max) _seq, by(ssuid_spanel_pnum_id combine_race_eth se_before_ws_ever ws_after_se_ever)
+
+list in 1/10
+
+drop if ws_after_se_ever == . & se_before_ws_ever ==. 
+gen period = "WS" if ws_after_se_ever == 1
+replace period = "SE" if se_before_ws_ever == 1 
+
+
+/***
+<html>
+<body>
+<h4> Overall comparison  </h4>
+***/
+ttest tpearn, by(period)
+ttest tjb_msum, by(period)
+
+egen unique_tag = tag(ssuid_spanel_pnum_id)
+table combine_race_eth if unique_tag ==1 
+
+
+
+/***
+<html>
+<body>
+<h4> Comparison within race/ethnicity </h4>
+***/
+table  period combine_race_eth, statistic(mean tpearn)
+
+
+ttest tpearn if combine_race_eth ==1 , by(period) // white
+ttest tpearn if combine_race_eth ==2 , by(period) // black
+ttest tpearn if combine_race_eth ==3, by(period) // asian 
+
+
+// I think these differences are primarily due to issues with reporting for self-employed income in the tjb_msum variable 
+table  period combine_race_eth, statistic(mean tpearn)
+
+ttest tjb_msum if combine_race_eth ==1 , by(period) // white
+ttest tjb_msum if combine_race_eth ==2 , by(period) // black
+ttest tjb_msum if combine_race_eth ==3, by(period) // asian 
+
+restore 
+
+
+/***
+<html>
+<body>
+<h4> more restrictive: Overall comparison  </h4>
+<p> what about if we take only those WS periods that fall right after an SE period? </p>
+***/
+
+
+preserve
+
+
+collapse (mean) tpearn (mean) tjb_msum (max) _seq, by(ssuid_spanel_pnum_id combine_race_eth se_before_ws_ever ws_after_se_ever)
+
+list in 1/10
+
+drop if ws_after_se_ever == . & se_before_ws_ever ==. 
+gen period = "WS" if ws_after_se_ever == 1
+replace period = "SE" if se_before_ws_ever == 1 
+
+
+/***
+<html>
+<body>
+<h4> Overall comparison  </h4>
+***/
+ttest tpearn, by(period)
+ttest tjb_msum, by(period)
+
+egen unique_tag = tag(ssuid_spanel_pnum_id)
+table combine_race_eth if unique_tag ==1 
+
+
+
+
+
+
+
+
+
+collapse (mean) tpearn (mean) tjb_msum (max) _seq, by(ssuid_spanel_pnum_id combine_race_eth employment_type1 _spell) 
+
+sort ssuid_spanel_pnum_id _spell
+
+list if ssuid_spanel_pnum_id ==  178409 
+list if ssuid_spanel_pnum_id ==  199771 
+list if ssuid_spanel_pnum_id ==  28558 
+
+
+egen unique_tag = tag(ssuid_spanel_pnum_id) // unique id
+
+
+// manually creating some wide versions of our status variable 
+forval x = 1/13 {
+	by ssuid_spanel_pnum_id: gen s`x' = employment_type1 if `x' == _spell
+	label values s`x' employment_types
+	by ssuid_spanel_pnum_id: carryforward s`x', replace 
+}
+
+// filling in values for all records 
+gsort ssuid_spanel_pnum_id -_spell 
+forval x = 1/13 {
+	by ssuid_spanel_pnum_id: carryforward s`x', replace 
 }
 
 
 preserve
 keep if unique_tag
-contract status_1 status_2 status_3 
+contract s1 s2 s3 
 gsort -_freq
 list
 restore 
 
 
 
-sort ssuid_spanel_pnum_id swave monthcode employment_type1
-
-local i = 0
-
-foreach x in first_status second_status third_status fourth_status fifth_status sixth_status seventh_status eighth_status ninth_status tenth_status eleventh_status twelfth_status {
-	local i = `i' + 1
-	bysort ssuid_spanel_pnum_id (swave monthcode) employment_type1: carryforward `x', gen(status_`i'_lim)  dynamic_condition(employment_type1[_n-1]==employment_type1[_n])
-
-}
-
-list ssuid_spanel_pnum_id swave monthcode employment_type1 status_*_lim if ssuid_spanel_pnum_id ==  178409 
-list ssuid_spanel_pnum_id swave monthcode employment_type1 status_*_lim if ssuid_spanel_pnum_id ==  199771 
-list ssuid_spanel_pnum_id swave monthcode employment_type1 status_*_lim if ssuid_spanel_pnum_id ==  28558 
-
-// calculating average tpearns for each employment status by person 
-bysort ssuid_spanel_pnum_id status_1_lim: egen tpearn_s1 = mean(tpearn) if status_1_lim == employment_type1
-bysort ssuid_spanel_pnum_id: carryforward tpearn_s1, replace 
-bysort ssuid_spanel_pnum_id status_2_lim: egen tpearn_s2 = mean(tpearn) if status_2_lim == employment_type1
-bysort ssuid_spanel_pnum_id: carryforward tpearn_s2, replace 
-bysort ssuid_spanel_pnum_id status_3_lim: egen tpearn_s3 = mean(tpearn) if status_3_lim == employment_type1
-bysort ssuid_spanel_pnum_id: carryforward tpearn_s3, replace 
-
-
-// calculating average tjb_msums for each employment status by person 
-bysort ssuid_spanel_pnum_id status_1_lim: egen tjb_msum_s1 = mean(tjb_msum) if status_1_lim == employment_type1
-bysort ssuid_spanel_pnum_id: carryforward tjb_msum_s1, replace 
-bysort ssuid_spanel_pnum_id status_2_lim: egen tjb_msum_s2 = mean(tjb_msum) if status_2_lim == employment_type1
-bysort ssuid_spanel_pnum_id: carryforward tjb_msum_s2, replace 
-bysort ssuid_spanel_pnum_id status_3_lim: egen tjb_msum_s3 = mean(tjb_msum) if status_3_lim == employment_type1
-bysort ssuid_spanel_pnum_id: carryforward tjb_msum_s3, replace 
-
-
-
-
-
-// use this method and a reshape if we decide to track more statuses 
-// collapse (mean) tpearn, by(ssuid_spanel_pnum_id status_1 status_2 status_3 status_1_lim status_2_lim status_3_lim erace) cw
-
 
 /***
 <html>
 <body>
-<h3> Multi-month unemployment flag</h3>
-<p> Here we create a measure of how long people held each employment status. So we can now create a person-level flag for if someone experienced unemployment for 3 months or 6 months. </p>
+<h1> Assessing what we have.</h1>
+<p>At this point we have a dataset that is one row per person-spell. Meaning we have the mean earnings for each person during each spell of employment type.  </p>
 ***/
-sort ssuid_spanel_pnum_id swave monthcode 
-list ssuid_spanel_pnum_id swave monthcode status_1 status_2 status_3 status_4 status_5  status_1_lim status_2_lim status_3_lim status_4_lim status_5_lim if ssuid_spanel_pnum_id== 704 
-
-forval x = 1/12 {
-	by ssuid_spanel_pnum_id: egen months_s`x' = count(status_`x'_lim)
-	
-}
-/*
-by ssuid_spanel_pnum_id: egen months_s1 = count(status_1_lim)
-by ssuid_spanel_pnum_id: egen months_s2 = count(status_2_lim)
-by ssuid_spanel_pnum_id: egen months_s3 = count(status_3_lim)
-*/
-
-list ssuid_spanel_pnum_id swave monthcode status_1 status_2 status_3 status_1_lim status_2_lim status_3_lim months_* if ssuid_spanel_pnum_id== 704 
-
-/*
-bysort ssuid_spanel_pnum_id: gen unemp_3 = 1 if (status_1 == 4 & months_s1 >=3) | (status_2 == 4 & months_s2 >=3) | (status_3 ==4 & months_s3 >=3)
-replace unemp_3 = 0 if unemp_3 == . 
-
-bysort ssuid_spanel_pnum_id: gen unemp_6 = 1 if (status_1 == 4 & months_s1 >=6) | (status_2 == 4 & months_s2 >=6) | (status_3 ==4 & months_s3 >=6)
-replace unemp_6 = 0 if unemp_6 == . 
-
-list ssuid_spanel_pnum_id swave monthcode status_1 status_2 status_3 status_1_lim status_2_lim status_3_lim months_*  unemp_* in 1/200, sepby(ssuid_spanel_pnum_id)
-*/
-
-
+list if ssuid_spanel_pnum_id == 199771
 
 /***
 <html>
 <body>
-<h1> Assessing what we have</h1>
-<p> At this point, we've created status_* variables that capture each unique employment status and the order someone experiences them. For those variables, unemployed is simply that we had no ejb data for that month and the enjflag signalled unemployed. We also have the month_* vars that tell us how long people held each status. Next we have the tpearn_* vars that capture the average monthly earnings for each status. Finally, we have the two unemployment flags signalling if someone was unemployed for 3 or more months or 6 or more months.</p>
+<h1>Earnings Comparisons for those who were ever self-employed before becoming W&S</h1>
+<p> What do their earnings look like during W&S versus their previous SE period(s)
 ***/
 
-list ssuid_spanel_pnum_id status_1 status_2 status_3 months_s1-months_s3 tpearn tpearn_* tjb_msum*   in 1/100, sepby(ssuid_spanel_pnum_id)
+// this creates a flag to capture a w&S period immediately after an SE period 
+bysort ssuid_spanel_pnum_id (_spell): gen ws_after_se_immed = 1 if employment_type1[_n] == 1 & employment_type1[_n-1] == 2
+
+// this creates a flag for a W&S period that falls after an SE period. So we look at each row, see if it is for a W&S period then we look to all previous spells for that person and see if they had any SE spells. 
+bysort ssuid_spanel_pnum_id (_spell): gen  ws_after_se_ever = 1 if employment_type1[_n] == 1 & (employment_type1[_n-1] == 2 | employment_type1[_n-2] == 2 |employment_type1[_n-3] == 2 | employment_type1[_n-4] == 2 | employment_type1[_n-5] == 2 | employment_type1[_n-6] == 2 | employment_type1[_n-7] == 2 | employment_type1[_n-8] == 2 | employment_type1[_n-9] == 2 | employment_type1[_n-10] == 2 | employment_type1[_n-11] == 2 | employment_type1[_n-12] == 2)
 
 
 
-/***
-<html>
-<body>
-<h1>Earnings Comparisons for those who move from SE to W&S</h1>
-***/
+list ssuid_spanel_pnum_id-_seq se* if ssuid_spanel_pnum_id == 169475
+list ssuid_spanel_pnum_id-_seq se*  if ssuid_spanel_pnum_id == 170435
+
+
+
+mean tpearn if se_to_ws_ever == 1 
+
 table status_1 status_2 if unique_tag ==1 
 
 mean tpearn_s1  if unique_tag ==1 & status_1 == 2 & status_2 == 1
@@ -441,6 +526,18 @@ table combine_race_eth if unique_tag ==1 & status_1 == 2 & status_2 == 1, statis
 
 
 
+
+// what about comparing direct transitions? 
+
+
+
+
+
+
+// what about comparing those who had SE then went to W&S (our first group) versus those who were never SE 
+
+
+// Do we need to account for inflation in our wage values? 
 
 
 
