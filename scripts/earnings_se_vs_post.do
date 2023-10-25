@@ -9,17 +9,17 @@ webdoc toc 5
 <br>
 	- This script begins from the initial compiled files we create from the raw SIPP data. We then perform some formatting and 
 tidying to get the data cleaned for analyses. Then, we run descriptive analyses to examine the earnings of those who exit SE. 
-The goal is to investigate if there is a wage premium that the formerly self-employed receive. <br>
+The goal is to investigate if the formerly self-employed receive a wage premium in the wage and salary labor market. <br>
 
- 1. Within individuals, how do earnings during SE compare with W&S employment earnings after exiting SE.  <br>
+ 1. Within individuals, how do earnings during SE compare with W&S employment earnings after exiting SE?  <br>
 	1a. A sub question of this is: for those who start as W&S, then enter SE, then return to W&S, do we observe an earnings change? 
  2. Comparing the earnings of individuals who were SE and left with those who've never entered SE.<br>
- 3. 
-
-
-
-
+ 3. Comparing the earnings of individuals who were SE and left for WS with those who've only ever been WS. 
 ***/
+
+
+
+
 clear all 
 eststo clear 
 local homepath "/Volumes/Extreme SSD/SIPP Data Files/"
@@ -392,7 +392,7 @@ ttest tpearn if combine_race_eth ==3, by(period) // asian
 
 
 // I think these differences are primarily due to issues with reporting for self-employed income in the tjb_msum variable 
-table  period combine_race_eth, statistic(mean tpearn)
+table  period combine_race_eth, statistic(mean tjb_msum)
 
 ttest tjb_msum if combine_race_eth ==1 , by(period) // white
 ttest tjb_msum if combine_race_eth ==2 , by(period) // black
@@ -408,17 +408,14 @@ restore
 <p> what about if we take only those WS periods that fall right after an SE period? </p>
 ***/
 
-
 preserve
+collapse (mean) tpearn (mean) tjb_msum (max) _seq, by(ssuid_spanel_pnum_id combine_race_eth se_before_ws_immed ws_after_se_immed)
 
-
-collapse (mean) tpearn (mean) tjb_msum (max) _seq, by(ssuid_spanel_pnum_id combine_race_eth se_before_ws_ever ws_after_se_ever)
+keep if se_before_ws_immed ==1 | ws_after_se_immed == 1
+gen period = "WS" if ws_after_se_immed == 1
+replace period = "SE" if se_before_ws_immed == 1 
 
 list in 1/10
-
-drop if ws_after_se_ever == . & se_before_ws_ever ==. 
-gen period = "WS" if ws_after_se_ever == 1
-replace period = "SE" if se_before_ws_ever == 1 
 
 
 /***
@@ -434,44 +431,26 @@ table combine_race_eth if unique_tag ==1
 
 
 
+/***
+<html>
+<body>
+<h4> Comparison within race/ethnicity </h4>
+***/
+table  period combine_race_eth, statistic(mean tpearn)
 
 
+ttest tpearn if combine_race_eth ==1 , by(period) // white
+ttest tpearn if combine_race_eth ==2 , by(period) // black
+ttest tpearn if combine_race_eth ==3, by(period) // asian 
 
 
+table  period combine_race_eth, statistic(mean tjb_msum)
 
+ttest tjb_msum if combine_race_eth ==1 , by(period) // white
+ttest tjb_msum if combine_race_eth ==2 , by(period) // black
+ttest tjb_msum if combine_race_eth ==3, by(period) // asian 
 
-collapse (mean) tpearn (mean) tjb_msum (max) _seq, by(ssuid_spanel_pnum_id combine_race_eth employment_type1 _spell) 
-
-sort ssuid_spanel_pnum_id _spell
-
-list if ssuid_spanel_pnum_id ==  178409 
-list if ssuid_spanel_pnum_id ==  199771 
-list if ssuid_spanel_pnum_id ==  28558 
-
-
-egen unique_tag = tag(ssuid_spanel_pnum_id) // unique id
-
-
-// manually creating some wide versions of our status variable 
-forval x = 1/13 {
-	by ssuid_spanel_pnum_id: gen s`x' = employment_type1 if `x' == _spell
-	label values s`x' employment_types
-	by ssuid_spanel_pnum_id: carryforward s`x', replace 
-}
-
-// filling in values for all records 
-gsort ssuid_spanel_pnum_id -_spell 
-forval x = 1/13 {
-	by ssuid_spanel_pnum_id: carryforward s`x', replace 
-}
-
-
-preserve
-keep if unique_tag
-contract s1 s2 s3 
-gsort -_freq
-list
-restore 
+restore
 
 
 
@@ -479,100 +458,75 @@ restore
 /***
 <html>
 <body>
-<h1> Assessing what we have.</h1>
-<p>At this point we have a dataset that is one row per person-spell. Meaning we have the mean earnings for each person during each spell of employment type.  </p>
+<h3>Comparing those who switched to those who remained </h3>
 ***/
-list if ssuid_spanel_pnum_id == 199771
+
+bysort ssuid_spanel_pnum_id: egen max_spell = max(_spell)
+
+keep if (max_spell == 1 & employment_type1 == 1) | (max_spell == 1 & employment_type1 == 2) | (se_before_ws_ever == 1) | (ws_after_se_ever == 1 )
+
+gen period = "WS Only" if employment_type1 == 1 & max_spell ==1 
+replace period = "SE only" if employment_type1 == 2 & max_spell ==1 
+replace period = "WS_post_se" if ws_after_se_ever == 1 
+replace period = "SE_pre_WS" if se_before_ws_ever == 1
+
+list ssuid_spanel_pnum_id month_individ employment_type  _s* _end ws_after* se_before* max_spell period in 1/100, compress
+
+collapse (mean) tpearn (mean) tjb_msum (max) _seq, by(ssuid_spanel_pnum_id combine_race_eth period)
+
+list in 1/50 // now have one row for everyone who was WS only or SE only and two rows for people who had both se then WS
+
 
 /***
 <html>
 <body>
-<h1>Earnings Comparisons for those who were ever self-employed before becoming W&S</h1>
-<p> What do their earnings look like during W&S versus their previous SE period(s)
+<h4>SE vs SE_pre_WS</h4>
 ***/
 
-// this creates a flag to capture a w&S period immediately after an SE period 
-bysort ssuid_spanel_pnum_id (_spell): gen ws_after_se_immed = 1 if employment_type1[_n] == 1 & employment_type1[_n-1] == 2
-
-// this creates a flag for a W&S period that falls after an SE period. So we look at each row, see if it is for a W&S period then we look to all previous spells for that person and see if they had any SE spells. 
-bysort ssuid_spanel_pnum_id (_spell): gen  ws_after_se_ever = 1 if employment_type1[_n] == 1 & (employment_type1[_n-1] == 2 | employment_type1[_n-2] == 2 |employment_type1[_n-3] == 2 | employment_type1[_n-4] == 2 | employment_type1[_n-5] == 2 | employment_type1[_n-6] == 2 | employment_type1[_n-7] == 2 | employment_type1[_n-8] == 2 | employment_type1[_n-9] == 2 | employment_type1[_n-10] == 2 | employment_type1[_n-11] == 2 | employment_type1[_n-12] == 2)
-
-
-
-list ssuid_spanel_pnum_id-_seq se* if ssuid_spanel_pnum_id == 169475
-list ssuid_spanel_pnum_id-_seq se*  if ssuid_spanel_pnum_id == 170435
-
-
-
-mean tpearn if se_to_ws_ever == 1 
-
-table status_1 status_2 if unique_tag ==1 
-
-mean tpearn_s1  if unique_tag ==1 & status_1 == 2 & status_2 == 1
-mean tpearn_s2  if unique_tag ==1 & status_1 ==2 & status_2 ==1 
-
-
-mean tjb_msum_s1  if unique_tag ==1 & status_1 == 2 & status_2 == 1
-mean tjb_msum_s2  if unique_tag ==1 & status_1 ==2 & status_2 ==1 
-
-
-
-// what if we broaden to other transitions from SE to W&SE
-table combine_race_eth if unique_tag ==1 & ((status_1 == 2 & status_2 ==1) | (status_2 == 2 & status_3 == 1))
-
-table combine_race_eth if unique_tag ==1 & status_1 == 2 & status_2 == 1
-table combine_race_eth if unique_tag ==1 & status_1 == 2 & status_2 == 1, statistic( mean tpearn_s1 tpearn_s2)
-table combine_race_eth if unique_tag ==1 & status_1 == 2 & status_2 == 1, statistic( sd tpearn_s1 tpearn_s2)
-
-
-
-
-// what about comparing direct transitions? 
-
-
-
-
-
-
-// what about comparing those who had SE then went to W&S (our first group) versus those who were never SE 
-
-
-// Do we need to account for inflation in our wage values? 
-
-
-
+// do they earn more during SE period than their counterparts who never switch? 
+ttest tpearn if (period == "SE only" | period == "SE_pre_WS"), by(period)
+ttest tjb_msum if (period == "SE only" | period == "SE_pre_WS"), by(period)
 
 
 
 /***
 <html>
 <body>
-<h3>Effect of unemployment on subsequent earnings</h3>
-<p> Here we see that those entering SE from unemployment earn more on average than those entering W&S from unemployment. However, this difference only holds for white respondents, not black respondents. </p>
+<h4>WS vs WS_post_se</h4>
 ***/
-
-table erace if unique_tag ==1 
-table erace status_2 if unique_tag ==1 & status_1 == 4 
-table erace status_2 if unique_tag ==1 & status_1 == 4, statistic(mean tpearn_s2)
-ttest tpearn_s2 if unique_tag ==1 & status_1 == 4 & (status_2 == 1 | status_2 == 2), by(status_2) // those who start as unemployed and enter W&S or SE
-ttest tpearn_s2 if unique_tag ==1 & status_1 == 4 & (status_2 == 1 | status_2 == 2) & erace ==1 , by(status_2) // white, start as unemp and enter W&S or SE
-ttest tpearn_s2 if unique_tag ==1 & status_1 == 4 & (status_2 == 1 | status_2 == 2) & erace ==2 , by(status_2) // black, start as unemp and enter W&S and SE
+// do they earn more after switching than those who were always WS_post_se
+ttest tpearn if (period == "WS Only" | period == "WS_post_se"), by(period)
+ttest tjb_msum if (period == "WS Only" | period == "WS_post_se"), by(period)
 
 
 /***
 <html>
 <body>
-<h4>Those who started as W&S versus those who entered from unemployment</h4>
-<p> As expected, those who enter W&S from unemployment earn less during their employed period than those who never experienced unemployment. Holds for both white and black respondents  </p>
+<h5>WS vs WS_post_se: within race</h5>
 ***/
-tabstat tpearn_s1 if unique_tag ==1 & status_1 == 1 & status_2 == ., statistic(n mean sd) 
-tabstat tpearn_s2 if unique_tag == 1 & status_1 == 4 & status_2 == 1 , statistic(n mean sd)
-ttesti 58372 4810 4772 13168 2246 3143
+// what about within race for WS vs WS post SE 
+ttest tpearn if (period == "WS Only" | period == "WS_post_se") & combine_race_eth ==1 , by(period)
+ttest tpearn if (period == "WS Only" | period == "WS_post_se") & combine_race_eth ==2 , by(period)
+ttest tpearn if (period == "WS Only" | period == "WS_post_se") & combine_race_eth ==3 , by(period)
 
-tabstat tpearn_s1 if unique_tag ==1 & status_1 == 1 & status_2 == ., statistic(n mean sd) by(erace) 
-tabstat tpearn_s2 if unique_tag == 1 & status_1 == 4 & status_2 == 1 , statistic(n mean sd) by(erace)
-ttesti 46226 4898 4826 9678 2269 3305 // white respondents
-ttesti 6034 3800 3538 20178 2000 2264 // black respondents 
+ttest tjb_msum if (period == "WS Only" | period == "WS_post_se") & combine_race_eth ==1 , by(period)
+ttest tjb_msum if (period == "WS Only" | period == "WS_post_se") & combine_race_eth ==2 , by(period)
+ttest tjb_msum if (period == "WS Only" | period == "WS_post_se") & combine_race_eth ==3 , by(period)
+
+
+/***
+<html>
+<body>
+<h5>SE vs SE_pre_WS</h5>
+***/
+// what about within race for SE vs SE comparisons
+ttest tpearn if (period == "SE only" | period == "SE_pre_WS") & combine_race_eth ==1 , by(period)
+ttest tpearn if (period == "SE only" | period == "SE_pre_WS") & combine_race_eth ==2 , by(period)
+ttest tpearn if (period == "SE only" | period == "SE_pre_WS") & combine_race_eth ==3 , by(period)
+
+ttest tjb_msum if (period == "SE only" | period == "SE_pre_WS") & combine_race_eth ==1 , by(period)
+ttest tjb_msum if (period == "SE only" | period == "SE_pre_WS") & combine_race_eth ==2 , by(period)
+ttest tjb_msum if (period == "SE only" | period == "SE_pre_WS") & combine_race_eth ==3 , by(period)
 
 
 
