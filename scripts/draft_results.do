@@ -853,7 +853,6 @@ restore
 
 
 
-putdocx save draft_outputs_`logdate'_collects, replace 
 
 frame change earnings
 xtset ssuid_spanel_pnum_id month_overall
@@ -1009,8 +1008,8 @@ dtable i.sex i.combine_race_eth i.educ3 immigrant parent i.industry2 tjb_prftb t
 	sformat("(N=%s)" frequency) ///
 	column(by(hide)) ///
 	nformat(%5.1f mean sd) ///
-	title(Table 11. Descriptive Statistics for Self-Employed Sample)
-	note(To be added ) 
+	title(Table 11. Descriptive Statistics for Self-Employed Sample and Profitability) /// 
+	note(Self-employed refers to those who from the 13th month of observation onwards were never unemployed and reported being self-employed for each month. Mean profits are calculated as a grand mean of person level average annual profits as reported in the tjb_prftb variable. Unemployed are defined as those who experienced unemployment for at least 6 consecutive months during first 12 months in data versus those who experienced fewer than 6 consecutive months unemployment during first 12 months in data.) 
 	
 	
 **# Table 13: Profit by Race/Ethnicity using mode_statu
@@ -1188,6 +1187,9 @@ putdocx collect
 
 putdocx pagebreak
 
+putdocx save draft_outputs_`logdate'_collects, replace 
+
+
 
 *------------------------------------------------------------------------------|
 ** Profit Modeling
@@ -1195,8 +1197,6 @@ putdocx pagebreak
 
 frame change profits 
 xtset ssuid_spanel_pnum_id calyear 
-
-eststo clear 
 
 foreach y of varlist profpos prof10k   {
 	foreach x of varlist unempf12_6 mode_status_f12v2  {
@@ -1230,7 +1230,7 @@ foreach y of varlist ln_tjb_prftb ln_tbsjval   {
 
 
 **# Regressions for Profits 
-esttab prof*unemp using draft_outputs_`logdate'.rtf, ///
+esttab prof*unemp* using draft_outputs_`logdate'.rtf, ///
 	legend label ///
 	title(Table 17. Logistic Regressions Profit on Unemployment) ///
 	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
@@ -1238,7 +1238,7 @@ esttab prof*unemp using draft_outputs_`logdate'.rtf, ///
 	nonumbers mtitles("Positive Profit" "Positive Profit" "Profit >= 10k" ///
 	"Profit >= 10k") ///
 	addnote("Source: SIPP Data.") ///
-	compress onecell replace  
+	compress onecell append  
 
 	
 esttab prof*mode* using draft_outputs_`logdate'.rtf, ///
@@ -1249,7 +1249,7 @@ esttab prof*mode* using draft_outputs_`logdate'.rtf, ///
 	nonumbers mtitles("Positive Profit" "Positive Profit" "Profit >= 10k" ///
 	"Profit >= 10k") ///
 	addnote("Source: SIPP Data.") ///
-	compress onecell replace  
+	compress onecell append  
 
 esttab ln_tjb_prftb_unemp* using draft_outputs_`logdate'.rtf, ///
 	legend label ///
@@ -1258,7 +1258,7 @@ esttab ln_tjb_prftb_unemp* using draft_outputs_`logdate'.rtf, ///
 	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
 	nonumbers mtitles("Log Profit" "Log Profit") ///
 	addnote("Source: SIPP Data.") ///
-	compress onecell replace  
+	compress onecell append  
 	
 esttab ln_tjb_prftb_mode* using draft_outputs_`logdate'.rtf, ///
 	legend label ///
@@ -1267,7 +1267,7 @@ esttab ln_tjb_prftb_mode* using draft_outputs_`logdate'.rtf, ///
 	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
 	nonumbers mtitles("Log Profit" "Log Profit") ///
 	addnote("Source: SIPP Data.") ///
-	compress onecell replace  
+	compress onecell append  
 
 **# Regressions for business value 
 esttab *jval*, legend label varlabels(_cons Constant) title(Business Value  Models) aic bic 
@@ -1279,7 +1279,7 @@ esttab ln_tbsjval_unemp_* using draft_outputs_`logdate'.rtf, ///
 	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
 	nonumbers mtitles("Log Business Value" "Log Business Value") ///
 	addnote("Source: SIPP Data.") ///
-	compress onecell replace  
+	compress onecell append  
 
 esttab ln_tbsjval_mode_* using draft_outputs_`logdate'.rtf, ///
 	legend label ///
@@ -1288,4 +1288,4 @@ esttab ln_tbsjval_mode_* using draft_outputs_`logdate'.rtf, ///
 	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
 	nonumbers mtitles("Log Business Value" "Log Business Value") ///
 	addnote("Source: SIPP Data.") ///
-	compress onecell replace  
+	compress onecell append  
