@@ -241,6 +241,8 @@ replace calyear = 2018 if spanel == 2019 & swave == 1
 replace calyear = 2019 if spanel == 2020 & swave == 1
 replace calyear = 2020 if spanel == 2020 & swave == 2
 replace calyear = 2021 if spanel == 2020 & swave == 3
+replace calyear = 2022 if spanel == 2020 & swave == 4
+replace calyear = 2020 if spanel == 2021 & swave == 1
 
 
 egen unique_tag = tag(ssuid_spanel_pnum_id) // unique id
@@ -832,7 +834,7 @@ foreach name of local names {
 }
 
 collect create Full_Sample, replace 
-quietly: pwmean tpearn if pct_se_after_12 == 1, over(mode_status_f12v2) mcompare(dunnett) 
+quietly: pwmean tpearn, over(mode_status_f12v2) mcompare(dunnett) 
 collect get r(table) 
 collect remap rowname[b] = values[lev1], ///
 	fortags(colname[1.mode_status_f12v2 2.mode_status_f12v2 4.mode_status_f12v2])
