@@ -2,4 +2,6 @@
 *.png
 *.docx
 *.rtf
+._*.do
 *.DS_Store
+*.dta 

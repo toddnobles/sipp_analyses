@@ -1099,11 +1099,9 @@ putdocx save draft_annual_outputs_`logdate'_collects, replace
 
 
 **# Regressions for earnings 
-
 frame change earnings 
 
 keep if pct_se_after_12 == 1 | pct_ws_after_12 == 1
-
 
 collapse (sum) tpearn tjb_msum (max) educ3 (first) industry2 parent age (count) n_months = tpearn, by(ssuid_spanel_pnum_id mode_status_f12v2 combine_race_eth immigrant sex pct_se_after_12 unempf12_6 pct_ws_after_12 calyear)
 
