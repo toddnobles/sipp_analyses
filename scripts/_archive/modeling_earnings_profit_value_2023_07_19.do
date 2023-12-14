@@ -472,6 +472,13 @@ drop if mode_status_f12v1 == 3
 drop if mode_status_f12v2 == 3 
 label variable tpearn "tpearn"
 
+
+foreach var of varlist unempf12_6 mode_status_f12v2 educ3 combine_race_eth sex age immigrant parent industry2 calyear{
+
+	drop if `var' == . 
+}
+
+
 // modifying tpearn for these folks 
 gen ln_tjb_msum = ln(tjb_msum+1) if tjb_msum != . 
 egen min_tpearn = min(tpearn)
@@ -568,7 +575,7 @@ foreach var of varlist tpearn tjb_msum {
 <h4>Within race differences</h4>
 <p> Here we see that unemployment is associated with lower average earnings. This relationship holds within all racial groups 
 and for both measures of earnings. Using tpearn, we see that starting out unemployed is associated with lower earnings than starting 
-out as wage and salary within all racial groups. For white, asian, and 'residual' group respondents, starting as self-employed is associated with 
+out as wage and salary within all racial groups. For white, asian, hispanic, and 'other' group respondents, starting as self-employed is associated with 
 higher earnings than starting as W&S. This does not hold for black respondents, where thsoe starting as SE earn less on average
 than those starting as W&S. Using tjb_msum, those starting as W&S earn more on average than those starting as SE or unemployed within all racial groups. 
 </p>
@@ -648,34 +655,34 @@ pwmean tjb_msum if pct_se_after_12 ==1, over(mode_status_f12v2) mcompare(dunnett
 <body>
 <h4>Between Race differences SE </h4>
 <p>Among our self-employed sample, we see that there are statistically significant differences in earnings between 
-black vs white, residual vs white, but not asian vs white. This holds for both tbj_msum and tpearn as our earnings measure. 
+black vs white, hispanic vs white, and 'other' vs white, but not asian vs white. This holds for both tbj_msum and tpearn as our earnings measure. 
 
 Using tpearn: <br>
 Among those who entered SE from unemployment, we see that asian respondents earned more on average
-than white respondents while black and those falling in our residual racial group earned less on average than white respondents. <br>
-For those who didn't enter from unemployment, the differences remain significant for black vs white and residual vs white but there is no disernible difference 
-between asian and white respondents in terms of earnings.<br>
+than white respondents while black and those falling in our 'other' racial group earned less on average than white respondents. The difference for hispanic vs white is not significant. <br>
+For those who didn't enter from unemployment, the differences remain significant for black vs white and hispanic vs white but there is no disernible difference 
+between asian and white respondents  or 'other' and white in terms of earnings.<br>
 <br>
 Among those who enter SE from WS, there are statistically significant differences between white and black earnings, 
-and white and our residual racial category earnings, with white respondents earning more on average than 
+and white and our hispanic racial category earnings, with white respondents earning more on average than 
 respondents from those two groups. <br>
 Among those who enter SE from SE, the differences are the same as for those who enter from WS. <br>
-Among those who enter SE from unemployment, white respondents earn more on average than black and "residual" respondents.
+Among those who enter SE from unemployment, white respondents earn more on average than black and "other" respondents.
 Meanwhile, Asian respondents earn more on average than white respondents. <br>
 <br>
 
 
 Using tjb_msum: <br>
-Looking at those unemployed in first 12 months, the only significant difference is asian respondents earning more than white white respondents. 
-The differences between black and white and 'residual' and white are not significant. For those who did not experience unemployment, 
-asian and white earnings are not significantly different, but black vs white and 'residual' vs white are significant with white earnings higher than either group. 
+Looking at those unemployed in first 12 months, the only significant differences are asian and hispnaic respondents earning more than white respondents. 
+The differences between black and white and 'other' and white are not significant. For those who did not experience unemployment, 
+asian and white earnings are not significantly different, nor are 'other' vs white, but black vs white and hispanic vs white are significant with white earnings higher than either group. 
 <br>
 Comparing entrance conditions: <br>
-- within those who enter SE from W&S, white respondents' earnings were greater than black and 'residual' respondents' earnings. 
+- within those who enter SE from W&S, white respondents' earnings were greater than black and hispanic respondents' earnings. 
 Asian respondents' earnings are greater than white respondents' earnings at .1 level but not .05 level. <br>
-- The above  relationships hold for those who enter from SE. <br>
-- For those who start as unemployed as their modal status, earnings for whites are indistinguishable from those for blacks or members of our 'residual' group.
-Asian respondents earn more than whites on average in this comparison. 
+- for those who enter from SE, white respondents earned more than black or hispanic respondents. Differences between white and asian or 'other' are not significant. <br>
+- For those who start as unemployed as their modal status, earnings for whites are indistinguishable from those for blacks or members of our 'other' group.
+Asian respondents earn more than whites on average in this comparison, as do hispanic respondents. 
 </p>
 ***/
 
@@ -717,16 +724,16 @@ restore
 <html>
 <body>
 <h4>Within race differences SE </h4>
-<p>Within all of our racial groups, those who were unemployed before entering SE earn less than those who did not, 
-except for the asian subsample when we measure earnings with tjb_msum.  <br>
+<p>Within all of our racial groups, those who were unemployed before entering SE earn less than those who did not 
+except for the asian subsample when we measure earnings with tjb_msum and hispanic sample using tpearn.  <br>
 
 Within white subsample and using tpearn, those entering SE from unemployment had lower earnings and those entering from SE had higher earnings 
 than those entering from WS. Using tjb_msum, the SE vs W&S difference is no longer significant. <br>
 Within black subsample, those entering from SE or unemp earn less on avearge than those entering from W&S. This holds when using tjb_msum. <br>
-Within asian submsample and using tpearn, those entering from SE earn more on average and those entering from unemp earn less on average than those 
-entering from W&S.  Our "residual" subsample has the same relationships as the asian subsample. 
-Using tjb_msum, in the asian subsample, earnings for those who 
-enter SE from W&S are no longer statistically different than those who enter from SE. Likewise for the 'residual' group.    </p>
+Within asian subsample and using tpearn, those entering from SE earn more on average than those entering from WS. This difference is no longer significant when using tjb_msum. 
+Using tjb_msum, those entering form unemployment earn less than those entering from WS.
+Within hispanic subsample using tpearn, those entering from SE earn more on average than those entering from WS. This is not significant with the tjb_msum measure. 
+Those entering from unemployment earn more on average than those entering form WS for the hispanic sample.  </p>
 ***/
 preserve
 keep if pct_se_after_12 == 1
@@ -802,17 +809,17 @@ pwmean tjb_msum, over(mode_status_f12v2) mcompare(dunnett) effects
 <body>
 <h4>Between Race differences</h4>
 <p> Using tpearn or tjb_msum, for the total W&S subsample as well as within those who experienced unemployment and those who did not, 
-asian respondents earned more than white respondents who in turn earned more than black or 'residual' group respondents. <br>
+asian respondents earned more than white respondents who in turn earned more than black, hispanic, or 'other' group respondents. <br>
 <br>
 For those who started as wage and salary and remained wage and salary, using either earnings measure the relationships remain the same with 
-asians earning more than whites who in turn earned more than black or 'residual' group respondents. <br>
+asians earning more than whites who in turn earned more than black, hispanic, or 'other' group respondents. <br>
 <br>
-For those who started as SE and entered WS using tjb_msum the difference between blacks and whites is not significant, while those in the 'residual'
-category and asians earned more than whites. Using tpearn, asian and white earnings are similar. Black respondents earned less
+For those who started as SE and entered WS using tjb_msum the difference between blacks and whites or hispanic and white is not significant, while those in the 'other'
+category and asians earned more than whites. Using tpearn, asian and white earnings are similar. As are hispanic and white earnings. Black respondents earned less
 than white respondents. <br>
 <br>
-For those who entered WS from unemployment, using either earnings measure, white respondents earned more than black and 
-'residual' group members but less than asian respondents.
+For those who entered WS from unemployment, using either earnings measure, white respondents earned more than black, hispanic, and 
+'other' group members but less than asian respondents.
 </p>
 ***/
 
@@ -855,11 +862,11 @@ foreach var of varlist tpearn tjb_msum {
 have on average lower earnings during our full period of observation than those who did not, regardless of racial group and using either earnings measure. <br>
 <br>
 Using tpearn, within black, white, and our 'residual' group, those entering W&S from SE earn more on average than those starting 
-as W&S. This difference is not significant within the asian subsample. Within all groups, those who were unemployed at first earned less than those who started as W&S. <br>
+as W&S. This difference is not significant within the asian or hispanic subsamples. Within all groups, those who were unemployed at first earned less than those who started as W&S. <br>
 <br>
-Using tjb_msum, within white and asian subsamples, those entering W&S from SE or unemployment earned less than those who started as W&S.
+Using tjb_msum, within white, asian, and hispanic subsamples, those entering W&S from SE or unemployment earned less than those who started as W&S.
 Within the black subsample, those who entered W&S from unemployment earned less than those who started WS. Earnings for those entering WS from SE vs those who started as WS are not significantly different. 
-Within the 'residual' subsample, those entering W&S from SE earn more than those who started as SE. 
+Within the 'residual' subsample, those entering W&S from SE earn more than those who started as WS. 
  </p>
 ***/
 foreach var of varlist tpearn tjb_msum {
