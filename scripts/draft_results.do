@@ -577,7 +577,7 @@ dtable i.sex i.combine_race_eth i.educ3 immigrant parent i.industry2 tpearn tpea
 	sample(, statistics(freq) place(seplabels)) ///
 	continuous(tpearn_med tjb_msum_med, statistics(median)) /// 
 	sformat("(N=%s)" frequency) ///
-	note(Average earnings are grand means of individuals' average monthly earnings for any type of employment. Median earnings are the median of individual average monthly earings. Initial employment status determined by individuals' most common employment status during first 12 months observed in data. Excluded from sample are those who dropped out of the SIPP sample after only one year of participation, months where individuals worked fewer than 15 hours, and "Other" employment types besides self-employed or wage and salaried.) ///
+	note(Average earnings are grand means of individuals' average monthly earnings for any type of employment. Median earnings are the median of individual average monthly earnings. Initial employment status determined by individuals' most common employment status during first 12 months observed in data. Excluded from sample are those who dropped out of the SIPP sample after only one year of participation, months where individuals worked fewer than 15 hours, and "Other" employment types besides self-employed or wage and salaried.) ///
 	column(by(hide)) ///
 	nformat(%7.2f mean sd) ///
 	title(Table 1. Descriptive Statistics by Initial Employment Status) 
@@ -599,7 +599,7 @@ sample(, statistics(freq) place(seplabels)) ///
 	sformat("(N=%s)" frequency) ///	nformat(%7.2f mean sd) ///
 	column(by(hide)) ///
 	title(Table 2. Descriptive Statistics for Self-Employed Only and Wage and Salary Only Samples) ///
-	note(Here, "Self-Employed" refers to those who from the 13th month of observation onwards were never unemployed and reported being self-employed for each month. Similarly, "Wage and Salary" refers to thoe who from the 13th month of observation onwards were never unemployed and reported being employed in a waged/salaried position for each month. Average earnings are grand means of individuals' average monthly earnings for any type of employment. Median earnings are the median of individual average monthly earings. Excluded from sample are those who dropped out of the SIPP sample after only one year of participation, months where individuals worked fewer than 15 hours, and "Other" employment types besides self-employed or wage and salaried.)
+	note(Here, "Self-Employed" refers to those who from the 13th month of observation onwards were never unemployed and reported being self-employed for each month. Similarly, "Wage and Salary" refers to thoe who from the 13th month of observation onwards were never unemployed and reported being employed in a waged/salaried position for each month. Average earnings are grand means of individuals' average monthly earnings for any type of employment. Median earnings are the median of individual average monthly earnings. Excluded from sample are those who dropped out of the SIPP sample after only one year of participation, months where individuals worked fewer than 15 hours, and "Other" employment types besides self-employed or wage and salaried.)
 	
 putdocx collect 
 putdocx pagebreak
@@ -1171,10 +1171,14 @@ restore
 
 
 
+**# Earnings Models 
 
 
 frame change earnings
 xtset ssuid_spanel_pnum_id month_overall
+
+keep if pct_se_after_12 == 1 | pct_ws_after_12 == 1
+
 
 
 quietly xtreg ln_tpearn i.unempf12_6, vce(robust) 

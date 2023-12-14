@@ -494,12 +494,12 @@ label variable tjb_msum_med "Median Annual Earnings (tjb_msum)"
 
 **# Table 1
 
-dtable i.sex i.combine_race_eth i.educ3 immigrant parent i.industry2 tpearn tpearn_med   tjb_msum tjb_msum_med , ///
+dtable tpearn tpearn_med   tjb_msum tjb_msum_med  i.sex i.combine_race_eth i.educ3 immigrant parent i.industry2 , ///
 	by(mode_status_f12v2) ///
 	sample(, statistics(freq) place(seplabels)) ///
 	continuous(tpearn_med tjb_msum_med, statistics(median)) /// 
 	sformat("(N=%s)" frequency) ///
-	note(Average earnings are grand means of individuals' average annual earnings for any type of employment. Median earnings are the median of individual average annual earings. Initial employment status determined by individuals' most common employment status during first 12 months observed in data. Excluded from sample are those who dropped out of the SIPP sample after only one year of participation, months where individuals worked fewer than 15 hours, and "Other" employment types besides self-employed or wage and salaried. Sample is also restricted to those who were continuously employed in either self-employment or wage and salaried employment after the firt 12-months observed in the data. ) ///
+	note(Average earnings are grand means of individuals' average annual earnings for any type of employment. Median earnings are the median of individual average annual earnings. Initial employment status determined by individuals' most common employment status during first 12 months observed in data. Excluded from sample are those who dropped out of the SIPP sample after only one year of participation, months where individuals worked fewer than 15 hours, and "Other" employment types besides self-employed or wage and salaried. Sample is also restricted to those who were continuously employed in either self-employment or wage and salaried employment after the first 12-months observed in the data. ) ///
 	column(by(hide) total("Full Sample")) ///
 	nformat(%7.2f mean sd) ///
 	title(Table 1. Descriptive Statistics by Initial Employment Status) 
@@ -515,13 +515,13 @@ putdocx pagebreak
 gen status_after_12 = "Self-Employed" if pct_se_after_12 == 1
 replace  status_after_12 = "Wage-Salaried" if pct_ws_after_12 == 1
 
-dtable i.sex i.combine_race_eth i.educ3 immigrant parent i.industry2 tpearn tpearn_med tjb_msum tjb_msum_med , by(status_after_12) ///
+dtable tpearn tpearn_med tjb_msum tjb_msum_med i.sex i.combine_race_eth i.educ3 immigrant parent i.industry2  , by(status_after_12) ///
 sample(, statistics(freq) place(seplabels)) ///
 	continuous(tpearn_med tjb_msum_med, statistics(median)) /// 
 	sformat("(N=%s)" frequency) ///	nformat(%7.2f mean sd) ///
 	column(by(hide) total("Full Sample")) ///
 	title(Table 2. Descriptive Statistics for Self-Employed Only and Wage and Salary Only Samples) ///
-	note(Here, "Self-Employed" refers to those who from the 13th month of observation onwards were never unemployed and reported being self-employed for each month. Similarly, "Wage and Salary" refers to thoe who from the 13th month of observation onwards were never unemployed and reported being employed in a waged/salaried position for each month. Average earnings are grand means of individuals' average annual earnings for any type of employment. Median earnings are the median of individual average annual earings. Excluded from sample are those who dropped out of the SIPP sample after only one year of participation, months where individuals worked fewer than 15 hours, and "Other" employment types besides self-employed or wage and salaried. Sample is also restricted to those who were continuously employed in either self-employment or wage and salaried employment after the firt 12-months observed in the data.)
+	note(Here, "Self-Employed" refers to those who from the 13th month of observation onwards were never unemployed and reported being self-employed for each month. Similarly, "Wage and Salary" refers to thoe who from the 13th month of observation onwards were never unemployed and reported being employed in a waged/salaried position for each month. Average earnings are grand means of individuals' average annual earnings for any type of employment. Median earnings are the median of individual average annual earnings. Excluded from sample are those who dropped out of the SIPP sample after only one year of participation, months where individuals worked fewer than 15 hours, and "Other" employment types besides self-employed or wage and salaried. Sample is also restricted to those who were continuously employed in either self-employment or wage and salaried employment after the first 12-months observed in the data.)
 	
 putdocx collect 
 putdocx pagebreak
@@ -585,9 +585,10 @@ collect style header Employed Unemployed Difference Significant, title(name)
 collect layout (cmdset) (Employed Unemployed result Significant )
 collect label levels Employed N_1 "N" mu_1 "Mean Earnings"
 collect label levels Unemployed N_2 "N" mu_2 "Mean Earnings"
-collect style column, dups(center) width(equal)
+collect style column, dups(center) 
 collect style cell, halign(center)
-collect style cell Employed[mu_1] Unemployed[mu_2] Significant[p] result, nformat(%5.2f)
+collect style cell, nformat(%8.0f)
+collect style cell  Significant[p], nformat(%5.2f)
 collect title "Table 4. Annual Earnings Comparisons by Unemployment Experience within Race/Ethnicity (Full Sample)"
 collect notes "Mean earnings are calculated as a grand mean of person level average annual earnings as reported in the tpearn variable. T-tests run comparing average annual earnings of those who experienced unemployment for 6-months during first 12 months in data versus those who experienced fewer than 6 months unemployment during first 12 months in data."
 collect preview
@@ -729,8 +730,9 @@ collect label levels Employed N_1 "N" mu_1 "Mean Earnings"
 collect label levels Unemployed N_2 "N" mu_2 "Mean Earnings"
 collect style column, dups(center) width(equal)
 collect style cell, halign(center)
-collect style cell Employed[mu_1] Unemployed[mu_2] Significant[p] result, nformat(%5.2f)
-collect title "Table 7. Salaried Sample Annual Earnings Comparisons by Unemployment Experience within Race/Ethnicity"
+collect style cell, nformat(%8.0f)
+collect style cell  Significant[p], nformat(%5.2f)
+collect title "Table 7. Salaried Sample, Annual Earnings Comparisons by Unemployment Experience within Race/Ethnicity"
 collect notes "This table is restricted to respondents who from the 13th month of observation onwards were never unemployed and reported being employed in a waged/salaried position for each month. Mean earnings are calculated as a grand mean of person level average annual earnings as reported in the tpearn variable. T-tests run comparing average annual earnings of those who experienced unemployment for 6-months during first 12 months in data versus those who experienced fewer than 6 months unemployment during first 12 months in data."
 collect preview
 
@@ -919,7 +921,8 @@ collect label levels Employed N_1 "N" mu_1 "Mean Earnings"
 collect label levels Unemployed N_2 "N" mu_2 "Mean Earnings"
 collect style column, dups(center) width(equal)
 collect style cell, halign(center)
-collect style cell Employed[mu_1] Unemployed[mu_2] Significant[p] result, nformat(%5.2f)
+collect style cell, nformat(%8.0f)
+collect style cell  Significant[p], nformat(%5.2f)
 collect title "Table 11. Self-Employed Sample Annual Earnings Comparisons by Unemployment Experience within Race/Ethnicity"
 collect notes "Self-employed refers to those who from the 13th month of observation onwards were never unemployed and reported being self-employed for each month. Mean earnings are calculated as a grand mean of person level average annual earnings as reported in the tpearn variable. T-tests run comparing average annual earnings of those who experienced unemployment for 6-months during first 12 months in data versus those who experienced fewer than 6 months unemployment during first 12 months in data."
 collect preview
