@@ -559,6 +559,13 @@ label variable tpearn "Mean Monthly Earnings (tpearn)"
 label variable ln_tpearn "Mean Log Monthly Earnings (tpearn)"
 label variable tjb_msum "Mean Monthly Earnings (tjb_msum)"
 label variable ln_tjb_msum "Mean Log Monthly Earnings (tjb_msum)"
+ 
+label define parent_labels 1 "Parent" 0 "Not Parent"
+label values parent parent_labels
+
+
+label define immigrant_labels 1 "Immigrant" 0 "Native Born"
+label  values immigrant immigrant_labels
 
 
 gen tpearn_med = tpearn 
@@ -572,7 +579,7 @@ keep if pct_se_after_12 == 1 | pct_ws_after_12 == 1
 
 **# Table 1
 
-dtable i.sex i.combine_race_eth i.educ3 immigrant parent i.industry2 tpearn tpearn_med ln_tpearn  tjb_msum tjb_msum_med ln_tjb_msum, ///
+dtable i.sex i.combine_race_eth i.educ3 i.immigrant i.parent i.industry2 tpearn tpearn_med ln_tpearn  tjb_msum tjb_msum_med ln_tjb_msum, ///
 	by(mode_status_f12v2) ///
 	sample(, statistics(freq) place(seplabels)) ///
 	continuous(tpearn_med tjb_msum_med, statistics(median)) /// 
@@ -593,7 +600,7 @@ putdocx pagebreak
 gen status_after_12 = "Self-Employed" if pct_se_after_12 == 1
 replace  status_after_12 = "Wage-Salaried" if pct_ws_after_12 == 1
 
-dtable i.sex i.combine_race_eth i.educ3 immigrant parent i.industry2 tpearn tpearn_med ln_tpearn tjb_msum tjb_msum_med ln_tjb_msum, by(status_after_12) ///
+dtable i.sex i.combine_race_eth i.educ3 i.immigrant i.parent i.industry2 tpearn tpearn_med ln_tpearn tjb_msum tjb_msum_med ln_tjb_msum, by(status_after_12) ///
 sample(, statistics(freq) place(seplabels)) ///
 	continuous(tpearn_med tjb_msum_med, statistics(median)) /// 
 	sformat("(N=%s)" frequency) ///	nformat(%7.2f mean sd) ///
