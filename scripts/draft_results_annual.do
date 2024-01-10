@@ -413,6 +413,7 @@ drop if employment_type1 == 3
 drop if status_1 == 3 
 drop if mode_status_f12v1 == 3 
 drop if mode_status_f12v2 == 3 
+drop if industry2 == 15 // dropping military members as can't have self-employed military 
 label variable tpearn "tpearn"
 
 
@@ -553,7 +554,8 @@ foreach name of local names {
 	collect remap rowname[b] = values[lev2], ///
 		fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
 	collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
-
+collect remap rowname[pvalue] = star_me, fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+collect stars  star_me 0.01 "***" 0.05 "**" 0.1 "*", attach(values[lev2])
 	collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
 }
 
@@ -565,12 +567,20 @@ collect remap rowname[b] = values[lev1], ///
 collect remap rowname[b] = values[lev2], ///
 	fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
 collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+collect remap rowname[pvalue] = star_me, fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+collect stars  star_me 0.01 "***" 0.05 "**" 0.1 "*", attach(values[lev2])
+collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+
+
 
 collect combine newc = Full_Sample White Black Asian Hispanic Other, replace
  
-collect layout (mode_status_f12v2) (collection#values) (), name(newc)
-collect style column, dups(center) width(equal)
-collect style cell, halign(center)
+collect layout  (collection#values) (mode_status_f12v2), name(newc)
+// collect style column, dups(center) width(equal)
+// collect style cell, halign(center)
+
+collect label levels mode_status_f12v2 1 "Wage/Salary" 2 "Self-Employed" 4 "Unemployed", replace
+collect style row split, dups(first)
 collect title "Table 3. Annual Earnings Within Race/Ethnicity by Initial Employment Status (Full Sample)"
 collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Mean earnings are calculated as a grand mean of person level average annual earnings as reported in the tpearn variable. T-tests run comparing average annual earnings using Dunnett multiple comparison correction."
 collect style cell values, nformat(%5.1f)
@@ -706,6 +716,8 @@ collect layout (combine_race_eth) (values)
 
 // combine them into one 
 collect combine newc = Full_Sample salaried self_employed unemployed_start, replace 
+collect label levels collection Full_Sample "Full Sample" salaried "Wage & Salary" ///
+self_employed "Self-Employed" unemployed_start "Unemployed"
 collect layout (combine_race_eth) (collection#values) (), name(newc)
 collect style column, dups(center) width(equal)
 collect style cell, halign(center)
@@ -776,9 +788,9 @@ collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2
 
 collect combine newc = Full_Sample White Black Asian Hispanic Other, replace
  
-collect layout (mode_status_f12v2) (collection#values) (), name(newc)
-collect style column, dups(center) width(equal)
-collect style cell, halign(center)
+collect layout  (collection#values) (mode_status_f12v2) (), name(newc)
+collect label levels mode_status_f12v2 1 "Wage/Salary" 2 "Self-Employed" 4 "Unemployed", replace
+collect style row split, dups(first)
 collect title "Table 8. Annual Earnings Within Race/Ethnicity by Initial Employment Status (Salaried Sample)"
 collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Mean earnings are calculated as a grand mean of person level average annual earnings as reported in the tpearn variable. T-tests run comparing average annual earnings using Dunnett multiple comparison correction. Salaried sample is defined as those who reported continous wage or salary employment from month 13-onwards."
 collect style cell values, nformat(%5.1f)
@@ -887,6 +899,7 @@ collect layout (combine_race_eth) (values)
 
 // combine them into one 
 collect combine newc = Full_Sample salaried self_employed unemployed_start, replace 
+collect label levels collection Full_Sample "Full Sample" salaried "Wage & Salary" self_employed "Self-Employed" unemployed_start "Unemployed"
 collect layout (combine_race_eth) (collection#values) (), name(newc)
 collect style column, dups(center) width(equal)
 collect style cell, halign(center)
@@ -969,9 +982,9 @@ collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2
 
 collect combine newc = Full_Sample White Black Asian Hispanic Other, replace
  
-collect layout (mode_status_f12v2) (collection#values) (), name(newc)
-collect style column, dups(center) width(equal)
-collect style cell, halign(center)
+collect layout  (collection#values) (mode_status_f12v2), name(newc)
+collect label levels mode_status_f12v2 1 "Wage/Salary" 2 "Self-Employed" 4 "Unemployed", replace
+collect style row split, dups(first)
 collect title "Table 12. Annual Earnings Within Race/Ethnicity by Initial Employment Status (Self-Employed Sample)"
 collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Mean earnings are calculated as a grand mean of person level average annual earnings as reported in the tpearn variable. T-tests run comparing average annual earnings using Dunnett multiple comparison correction. Self-Employed sample is defined as those who were continously self-emplyed from month 13-onwards."
 collect style cell values, nformat(%5.1f)
@@ -1081,6 +1094,7 @@ collect layout (combine_race_eth) (values)
 
 // combine them into one 
 collect combine newc = Full_Sample salaried self_employed unemployed_start, replace 
+collect label levels collection Full_Sample "Full Sample" salaried "Wage & Salary" self_employed "Self-Employed" unemployed_start "Unemployed"
 collect layout (combine_race_eth) (collection#values) (), name(newc)
 collect style column, dups(center) width(equal)
 collect style cell, halign(center)
