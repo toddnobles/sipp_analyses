@@ -454,6 +454,7 @@ drop if employment_type1 == 3
 drop if status_1 == 3 
 drop if mode_status_f12v1 == 3 
 drop if mode_status_f12v2 == 3 
+drop if industry2 == 15 // dropping military members as we can't have SE military so no comparison group 
 label variable tpearn "tpearn"
 
 
@@ -645,9 +646,9 @@ collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2
 
 collect combine newc = Full_Sample White Black Asian Hispanic Other, replace
  
-collect layout (mode_status_f12v2) (collection#values) (), name(newc)
-collect style column, dups(center) width(equal)
-collect style cell, halign(center)
+collect layout (collection#values) (mode_status_f12v2)  (), name(newc)
+collect label levels mode_status_f12v2 1 "Wage/Salary" 2 "Self-Employed" 4 "Unemployed", replace
+collect style row split, dups(first)
 collect title "Table 3. Monthly Earnings Within Race/Ethnicity by Initial Employment Status (Full Sample)"
 collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Mean earnings are calculated as a grand mean of person level average monthly earnings as reported in the tpearn variable. T-tests run comparing average monthly earnings using Dunnett multiple comparison correction."
 collect style cell values, nformat(%5.1f)
@@ -782,6 +783,8 @@ collect layout (combine_race_eth) (values)
 
 // combine them into one 
 collect combine newc = Full_Sample salaried self_employed unemployed_start, replace 
+collect label levels collection Full_Sample "Full Sample" salaried "Wage & Salary" ///
+self_employed "Self-Employed" unemployed_start "Unemployed"
 collect layout (combine_race_eth) (collection#values) (), name(newc)
 collect style column, dups(center) width(equal)
 collect style cell, halign(center)
@@ -851,9 +854,9 @@ collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2
 
 collect combine newc = Full_Sample White Black Asian Hispanic Other, replace
  
-collect layout (mode_status_f12v2) (collection#values) (), name(newc)
-collect style column, dups(center) width(equal)
-collect style cell, halign(center)
+collect layout  (collection#values) (mode_status_f12v2) (), name(newc)
+collect label levels mode_status_f12v2 1 "Wage/Salary" 2 "Self-Employed" 4 "Unemployed", replace
+collect style row split, dups(first)
 collect title "Table 8. Monthly Earnings Within Race/Ethnicity by Initial Employment Status (Salaried Sample)"
 collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Mean earnings are calculated as a grand mean of person level average monthly earnings as reported in the tpearn variable. T-tests run comparing average monthly earnings using Dunnett multiple comparison correction. Salaried sample is defined as those who reported continous wage or salary employment from month 13-onwards."
 collect style cell values, nformat(%5.1f)
@@ -962,6 +965,7 @@ collect layout (combine_race_eth) (values)
 
 // combine them into one 
 collect combine newc = Full_Sample salaried self_employed unemployed_start, replace 
+collect label levels collection Full_Sample "Full Sample" salaried "Wage & Salary" self_employed "Self-Employed" unemployed_start "Unemployed"
 collect layout (combine_race_eth) (collection#values) (), name(newc)
 collect style column, dups(center) width(equal)
 collect style cell, halign(center)
@@ -1043,9 +1047,10 @@ collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2
 
 collect combine newc = Full_Sample White Black Asian Hispanic Other, replace
  
-collect layout (mode_status_f12v2) (collection#values) (), name(newc)
-collect style column, dups(center) width(equal)
-collect style cell, halign(center)
+collect layout  (collection#values) (mode_status_f12v2), name(newc)
+collect label levels mode_status_f12v2 1 "Wage/Salary" 2 "Self-Employed" 4 "Unemployed", replace
+collect style row split, dups(first)
+
 collect title "Table 12. Monthly Earnings Within Race/Ethnicity by Initial Employment Status (Self-Employed Sample)"
 collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Mean earnings are calculated as a grand mean of person level average monthly earnings as reported in the tpearn variable. T-tests run comparing average monthly earnings using Dunnett multiple comparison correction. Self-Employed sample is defined as those who were continously self-emplyed from month 13-onwards."
 collect style cell values, nformat(%5.1f)
@@ -1155,6 +1160,7 @@ collect layout (combine_race_eth) (values)
 
 // combine them into one 
 collect combine newc = Full_Sample salaried self_employed unemployed_start, replace 
+collect label levels collection Full_Sample "Full Sample" salaried "Wage & Salary" self_employed "Self-Employed" unemployed_start "Unemployed"
 collect layout (combine_race_eth) (collection#values) (), name(newc)
 collect style column, dups(center) width(equal)
 collect style cell, halign(center)
@@ -1371,9 +1377,9 @@ collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2
 
 collect combine newc = Full_Sample White Black Asian Hispanic Other, replace
  
-collect layout (mode_status_f12v2) (collection#values) (), name(newc)
-collect style column, dups(center) width(equal)
-collect style cell, halign(center)
+collect layout  (collection#values) (mode_status_f12v2), name(newc)
+collect label levels mode_status_f12v2 1 "Wage/Salary" 2 "Self-Employed" 4 "Unemployed", replace
+collect style row split, dups(first)
 collect title "Table 18. Profit within Race/Ethnicity by Initial Employment Status"
 collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Mean profit is calculated as a grand mean of person level average annual profit as reported in the tjb_msum variable. T-tests run comparing average profit using Dunnett multiple comparison correction."
 collect style cell values, nformat(%5.1f)
@@ -1501,6 +1507,7 @@ collect layout (combine_race_eth) (values)
 
 // combine them into one 
 collect combine newc = Full_Sample salaried self_employed unemployed_start, replace 
+collect label levels collection Full_Sample "Full Sample" salaried "Wage & Salary" self_employed "Self-Employed" unemployed_start "Unemployed"
 collect layout (combine_race_eth) (collection#values) (), name(newc)
 collect style column, dups(center) width(equal)
 collect style cell, halign(center)
@@ -1619,3 +1626,55 @@ esttab ln_tbsjval_mode_* using draft_outputs_`logdate'.rtf, ///
 	nonumbers mtitles("Log Business Value" "Log Business Value") ///
 	addnote("Source: SIPP Data.") ///
 	compress onecell append  
+	
+	
+**# Plots for unemployment 
+label define unemp_labels 0 "Not Unemployed" 1 "Unemployed"
+label values unempf12_6 unemp_labels
+cd "/Users/toddnobles/Documents/sipp_analyses/"
+local logdate : di %tdCYND daily("$S_DATE", "DMY")
+display `logdate'
+
+putdocx begin 
+xtlogit prof10k i.unempf12_6 i.educ3 i.combine_race_eth $controls , vce(robust) 
+margins unempf12_6#combine_race_eth
+
+marginsplot, recast(scatter) xdimension(combine_race_eth) /// 
+title("Predicted Probability of Profit >= $10,000 by Unemployment and Race/Ethnicity") ///
+xtitle("Race/Ethnicity") ytitle("Probability of Profit >= 10k")
+graph export temp.png, replace
+putdocx paragraph, halign(center)
+putdocx image temp.png
+
+xtlogit profpos i.unempf12_6 i.educ3 i.combine_race_eth $controls , vce(robust) 
+margins unempf12_6#combine_race_eth
+marginsplot, recast(scatter) xdimension(combine_race_eth) /// 
+title("Predicted Probability of Positive Profit by Unemployment and Race/Ethnicity") ///
+xtitle("Race/Ethnicity") ytitle("Probability of Positive Profit")
+graph export temp.png, replace
+putdocx paragraph, halign(center)
+putdocx image temp.png
+
+
+
+**# Plots for modal status
+xtlogit prof10k i.mode_status_f12v2 i.educ3 i.combine_race_eth $controls , vce(robust) 
+margins mode_status_f12v2#combine_race_eth
+mplotoffset, offset(0.1) recast(scatter) xdimension(combine_race_eth) ///
+title("Predicted Probability of Profit >= $10,0000 Profit by Initial Employment Status") ///
+xtitle("Race/Ethnicity") ytitle("Probability of Profit >=10k")
+graph export temp.png, replace
+putdocx paragraph, halign(center)
+putdocx image temp.png
+
+xtlogit profpos i.mode_status_f12v2 i.educ3 i.combine_race_eth $controls , vce(robust) 
+margins mode_status_f12v2#combine_race_eth
+mplotoffset, offset(0.1) recast(scatter) xdimension(combine_race_eth) /// 
+title("Predicted Probability of Positive Profit by Initial Employment Status") ///
+xtitle("Race/Ethnicity") ytitle("Probability of Positive Profit")
+graph export temp.png, replace
+putdocx paragraph, halign(center)
+putdocx image temp.png
+
+putdocx save draft_graphs`logdate', replace 
+
