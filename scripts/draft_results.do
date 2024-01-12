@@ -1637,44 +1637,245 @@ display `logdate'
 
 putdocx begin 
 xtlogit prof10k i.unempf12_6 i.educ3 i.combine_race_eth $controls , vce(robust) 
-margins unempf12_6#combine_race_eth
+/*
+margins unempf12_6, at(combine_race_eth =(1 2 3 4) ) at((asobserved) _all)  post
+est sto m1
+coefplot (m1, keep(5*) asequation(Full Sample) \m1, ///
+keep(1*) asequation(White) \m1, ///
+keep(2*) asequation(Black) \m1, ///
+keep(3*) asequation(Asian) \m1, ///
+keep(4*) asequation(Hispanic)), vert xlabel(, angle(45) labsize(tiny)) 
+*/
+**# Unemployment Profit 10k scatter
+margins unempf12_6, saving(tempmargins, replace)
+preserve
+clear
+use tempmargins
+twoway (rcap _ci_lb _ci_ub _m1, sort colorvar(_m1) colordiscrete colorcuts(0 1) colorlist(stc1 stc2) clegend(off)) ///
+(scatter _margin _m1 if _m1==0, sort mc("stc1") ) ///
+(scatter _margin _m1 if _m1==1, sort mc("stc2")), ///
+legend(off) title("Overall Sample") xlabel(0 "Not Unemployed" 1 "Unemployed") xtitle("") ///
+ytitle("Probability of Profit >= 10k") saving(g1, replace) fxsize(50) ylabel(0(.1).6)
+restore
 
-marginsplot, recast(scatter) xdimension(combine_race_eth) /// 
-title("Predicted Probability of Profit >= $10,000 by Unemployment and Race/Ethnicity") ///
-xtitle("Race/Ethnicity") ytitle("Probability of Profit >= 10k")
+
+margins unempf12_6, at(combine_race_eth =(1 2 3 4) ) 
+marginsplot, recast(scatter) xdimension(combine_race_eth) title("Race/Ethnicity") ///
+xtitle("Race/Ethnicity") ytitle("") ylabel(0(.1).6) saving(g2, replace ) 
+
+grc1leg  g1.gph g2.gph , ycommon legend(g2.gph) title("Predicted Probability of Profit >= $10,000")  ///
+subtitle("by Unemployment") 
+
 graph export temp.png, replace
 putdocx paragraph, halign(center)
 putdocx image temp.png
 
+**# Unemployment Profit 10k bar
+margins unempf12_6, saving(tempmargins, replace)
+preserve
+clear
+use tempmargins
+twoway (bar _margin _term, sort colorvar(_m1) colordiscrete colorcuts(0 1) colorlist(stc1 stc2) clegend(off))  ///
+(rcap _ci_lb _ci_ub _term, lcolor(black)) ///
+(scatter _margin _term if _m1==0, sort mc("black") ) ///
+(scatter _margin _term if _m1==1, sort mc("black")), ///
+title("Overall Sample") xlabel(1 "Overall") xtitle("") ///
+ytitle("Probability of Profit >= 10k") saving(g1, replace) fxsize(50) ylabel(0(.1).6)
+restore
+
+
+margins unempf12_6, at(combine_race_eth =(1 2 3 4) ) 
+marginsplot, recast(bar) xdimension(combine_race_eth) title("Race/Ethnicity") ///
+xtitle("") ytitle("") ylabel(0(.1).6) saving(g2, replace ) 
+
+grc1leg2  g1.gph g2.gph , ycommon legendfrom(g2.gph) legend title("Predicted Probability of Profit >= $10,000")  ///
+subtitle("by Unemployment") 
+graph export temp.png, replace
+putdocx paragraph, halign(center)
+putdocx image temp.png
+
+
+
+
+**# Unemployment Positive Profit Scatter
 xtlogit profpos i.unempf12_6 i.educ3 i.combine_race_eth $controls , vce(robust) 
-margins unempf12_6#combine_race_eth
-marginsplot, recast(scatter) xdimension(combine_race_eth) /// 
-title("Predicted Probability of Positive Profit by Unemployment and Race/Ethnicity") ///
-xtitle("Race/Ethnicity") ytitle("Probability of Positive Profit")
+
+margins unempf12_6, saving(tempmargins, replace)
+preserve
+clear
+use tempmargins
+twoway (rcap _ci_lb _ci_ub _m1, sort colorvar(_m1) colordiscrete colorcuts(0 1) colorlist(stc1 stc2) clegend(off)) ///
+(scatter _margin _m1 if _m1==0, sort mc("stc1") ) ///
+(scatter _margin _m1 if _m1==1, sort mc("stc2")), ///
+legend(off) title("Overall Sample") xlabel(0 "Not Unemployed" 1 "Unemployed") xtitle("") ///
+ytitle("Probability of Positive Profit") saving(g1, replace) fxsize(50) ylabel(0(.1).6)
+restore
+
+
+margins unempf12_6, at(combine_race_eth =(1 2 3 4) ) 
+marginsplot, recast(scatter) xdimension(combine_race_eth) title("Race/Ethnicity") ///
+xtitle("Race/Ethnicity") ytitle("") ylabel(0(.1).6) saving(g2, replace ) 
+
+grc1leg  g1.gph g2.gph , ycommon legend(g2.gph) title("Predicted Probability of Positive Profit")  ///
+subtitle("by Unemployment") 
+
 graph export temp.png, replace
 putdocx paragraph, halign(center)
 putdocx image temp.png
+
+
+
+**# Unemployment Positve Profit Bar
+margins unempf12_6, saving(tempmargins, replace)
+preserve
+clear
+use tempmargins
+twoway (bar _margin _term, sort colorvar(_m1) colordiscrete colorcuts(0 1) colorlist(stc1 stc2) clegend(off))  ///
+(rcap _ci_lb _ci_ub _term, lcolor(black)) ///
+(scatter _margin _term if _m1==0, sort mc("black") ) ///
+(scatter _margin _term if _m1==1, sort mc("black")), ///
+title("Overall Sample") xlabel(1 "Overall") xtitle("") ///
+ytitle("Probability of Positive Profit") saving(g1, replace) fxsize(50) ylabel(0(.1).6)
+restore
+
+
+margins unempf12_6, at(combine_race_eth =(1 2 3 4) ) 
+marginsplot, recast(bar) xdimension(combine_race_eth) title("Race/Ethnicity") ///
+xtitle("") ytitle("") ylabel(0(.1).6) saving(g2, replace ) 
+
+grc1leg2  g1.gph g2.gph , ycommon legendfrom(g2.gph) legend title("Predicted Probability of Positive Profit")  ///
+subtitle("by Unemployment") 
+graph export temp.png, replace
+putdocx paragraph, halign(center)
+putdocx image temp.png
+
+
 
 
 
 **# Plots for modal status
-xtlogit prof10k i.mode_status_f12v2 i.educ3 i.combine_race_eth $controls , vce(robust) 
-margins mode_status_f12v2#combine_race_eth
-mplotoffset, offset(0.1) recast(scatter) xdimension(combine_race_eth) ///
-title("Predicted Probability of Profit >= $10,0000 Profit by Initial Employment Status") ///
-xtitle("Race/Ethnicity") ytitle("Probability of Profit >=10k")
+
+**# Modal status Profit 10k scatter
+recode mode_status_f12v2 (1=1) (2=2) (4=3), generate(rescaled_mode_status)
+label define status_labs 1 "Wage/Salary" 2 "Self-Employed" 3 "Unemployed"
+label values rescaled_mode_status status_labs
+
+xtlogit prof10k i.rescaled_mode_status i.educ3 i.combine_race_eth $controls , vce(robust) 
+
+margins rescaled_mode_status, saving(tempmargins, replace)
+preserve
+clear
+use tempmargins
+twoway (rcap _ci_lb _ci_ub _m1, sort colorvar(_m1) colordiscrete colorcuts(1 2 3) colorlist(stc1 stc2 stc3) clegend(off)) ///
+(scatter _margin _m1 if _m1==1, sort mc("stc1") ) ///
+(scatter _margin _m1 if _m1==2, sort mc("stc2")) ///
+(scatter _margin _m1 if _m1==3, sort mc("stc3")), ///
+legend(off) title("Overall Sample") xlabel(1 "Wage/Salary" 2 "Self-Employed" 3 "Unemployed") xtitle("") ///
+ytitle("Probability of Profit >= $10,000") saving(g1, replace) fxsize(50) ylabel(0(.1).6)
+restore
+
+
+margins rescaled_mode_status, at(combine_race_eth =(1 2 3 4) ) 
+mplotoffset, recast(scatter) offset(.1)  xdimension(combine_race_eth) title("Race/Ethnicity") ///
+ytitle("") ylabel(0(.1).6) saving(g2, replace ) legend(cols(3)) xtitle("")
+
+
+grc1leg  g1.gph g2.gph , ycommon legend(g2.gph) title("Predicted Probability of Profit >= $10,000")  ///
+subtitle("by Initial Employment Status") 
+
 graph export temp.png, replace
 putdocx paragraph, halign(center)
 putdocx image temp.png
 
-xtlogit profpos i.mode_status_f12v2 i.educ3 i.combine_race_eth $controls , vce(robust) 
-margins mode_status_f12v2#combine_race_eth
-mplotoffset, offset(0.1) recast(scatter) xdimension(combine_race_eth) /// 
-title("Predicted Probability of Positive Profit by Initial Employment Status") ///
-xtitle("Race/Ethnicity") ytitle("Probability of Positive Profit")
+
+
+
+**# Modal status Profit 10k bar
+margins rescaled_mode_status, saving(tempmargins, replace)
+preserve
+clear
+use tempmargins
+twoway (bar _margin _m1, sort colorvar(_m1) colordiscrete colorcuts(1 2 3) colorlist(stc1 stc2 stc3) clegend(off))  ///
+(rcap _ci_lb _ci_ub _m1, lcolor(black)) ///
+(scatter _margin _m1 if _m1==1, sort mc("black") ) ///
+(scatter _margin _m1 if _m1==2, sort mc("black")) ///
+(scatter _margin _m1 if _m1==3, sort mc("black")), ///
+title("Overall Sample") xlabel(2 "Overall") xtitle("") ///
+ytitle("Probability of Profit >= $10,000") saving(g1, replace) fxsize(50) ylabel(0(.1).6)
+restore
+
+
+margins rescaled_mode_status, at(combine_race_eth =(1 2 3 4) ) 
+mplotoffset, offset(.25) recast(bar) xdimension(combine_race_eth) title("Race/Ethnicity") ///
+xtitle("") ytitle("") ylabel(0(.1).6) saving(g2, replace )  plotopts(barw(.25)) legend(cols(3))
+
+grc1leg  g1.gph g2.gph , ycommon legend(g2.gph) title("Predicted Probability of Profit >= $10,000")  ///
+subtitle("by Initial Employment Status") 
+
 graph export temp.png, replace
 putdocx paragraph, halign(center)
 putdocx image temp.png
+
+
+**# Modal status Positive Profit scatter
+xtlogit profpos i.rescaled_mode_status i.educ3 i.combine_race_eth $controls , vce(robust) 
+
+
+margins rescaled_mode_status, saving(tempmargins, replace)
+preserve
+clear
+use tempmargins
+twoway (rcap _ci_lb _ci_ub _m1, sort colorvar(_m1) colordiscrete colorcuts(1 2 3) colorlist(stc1 stc2 stc3) clegend(off)) ///
+(scatter _margin _m1 if _m1==1, sort mc("stc1") ) ///
+(scatter _margin _m1 if _m1==2, sort mc("stc2")) ///
+(scatter _margin _m1 if _m1==3, sort mc("stc3")), ///
+legend(off) title("Overall Sample") xlabel(1 "Wage/Salary" 2 "Self-Employed" 3 "Unemployed") xtitle("") ///
+ytitle("Probability of Positive Profit") saving(g1, replace) fxsize(50) ylabel(0(.1).6)
+restore
+
+
+margins rescaled_mode_status, at(combine_race_eth =(1 2 3 4) ) 
+mplotoffset, offset(0.1) recast(scatter) xdimension(combine_race_eth) /// 
+title("Race/Ethnicity") ///
+ytitle("") ylabel(0(.1).6) saving(g2, replace ) legend(cols(3)) xtitle("")
+
+
+grc1leg  g1.gph g2.gph , ycommon legend(g2.gph) title("Predicted Probability of Positive Profit")  ///
+subtitle("by Initial Employment Status") 
+
+graph export temp.png, replace
+putdocx paragraph, halign(center)
+putdocx image temp.png
+
+**# Modal Status Positive Profit Bar
+
+margins rescaled_mode_status, saving(tempmargins, replace)
+preserve
+clear
+use tempmargins
+twoway (bar _margin _m1, sort colorvar(_m1) colordiscrete colorcuts(1 2 3) colorlist(stc1 stc2 stc3) clegend(off))  ///
+(rcap _ci_lb _ci_ub _m1, lcolor(black)) ///
+(scatter _margin _m1 if _m1==1, sort mc("black") ) ///
+(scatter _margin _m1 if _m1==2, sort mc("black")) ///
+(scatter _margin _m1 if _m1==3, sort mc("black")), ///
+title("Overall Sample") xlabel(2 "Overall") xtitle("") ///
+ytitle("Probability of Positive Profit") saving(g1, replace) fxsize(50) ylabel(0(.1).6)
+restore
+
+
+margins rescaled_mode_status, at(combine_race_eth =(1 2 3 4) ) 
+mplotoffset, offset(.25) recast(bar) xdimension(combine_race_eth) title("Race/Ethnicity") ///
+xtitle("") ytitle("") ylabel(0(.1).6) saving(g2, replace )  plotopts(barw(.25)) legend(cols(3))
+
+grc1leg  g1.gph g2.gph , ycommon legend(g2.gph) title("Predicted Probability of Positive Profit")  ///
+subtitle("by Initial Employment Status") 
+
+graph export temp.png, replace
+putdocx paragraph, halign(center)
+putdocx image temp.png
+
+
+
 
 putdocx save draft_graphs`logdate', replace 
 
