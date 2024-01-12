@@ -1688,7 +1688,7 @@ margins unempf12_6, at(combine_race_eth =(1 2 3 4) )
 marginsplot, recast(bar) xdimension(combine_race_eth) title("Race/Ethnicity") ///
 xtitle("") ytitle("") ylabel(0(.1).6) saving(g2, replace ) 
 
-grc1leg2  g1.gph g2.gph , ycommon legendfrom(g2.gph) legend title("Predicted Probability of Profit >= $10,000")  ///
+grc1leg2  g1.gph g2.gph , ycommon legendfrom(g2.gph) title("Predicted Probability of Profit >= $10,000")  ///
 subtitle("by Unemployment") 
 graph export temp.png, replace
 putdocx paragraph, halign(center)
@@ -1743,7 +1743,7 @@ margins unempf12_6, at(combine_race_eth =(1 2 3 4) )
 marginsplot, recast(bar) xdimension(combine_race_eth) title("Race/Ethnicity") ///
 xtitle("") ytitle("") ylabel(0(.1).6) saving(g2, replace ) 
 
-grc1leg2  g1.gph g2.gph , ycommon legendfrom(g2.gph) legend title("Predicted Probability of Positive Profit")  ///
+grc1leg2  g1.gph g2.gph , ycommon legendfrom(g2.gph)  title("Predicted Probability of Positive Profit")  ///
 subtitle("by Unemployment") 
 graph export temp.png, replace
 putdocx paragraph, halign(center)
