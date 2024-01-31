@@ -411,7 +411,6 @@ drop if status_1 == 3
 drop if mode_status_f12v1 == 3 
 drop if mode_status_f12v2 == 3 
 drop if industry2 == 15 // dropping military members as can't have self-employed military 
-drop if industry1 == 
 label variable tpearn "tpearn"
 
 
@@ -421,7 +420,6 @@ foreach var of varlist unempf12_6 mode_status_f12v2 educ3 combine_race_eth sex a
 }
 
 
-// modifying tpearn for these folks 
 
 
 
@@ -447,7 +445,7 @@ collapse (sum) tpearn tjb_msum (max) educ3 (first) industry2 parent age (count) 
 
 bysort ssuid_spanel_pnum_id (calyear): gen year_individ = _n 
 
-drop if year_individ == 1 & unempf12_6 == 1
+// drop if year_individ == 1 & unempf12_6 == 1
 
 
 // at this point have a file that is collapsed to person-per year with their total earnings in tpearn and tjb_sum per year
@@ -732,7 +730,7 @@ collect label levels collection Full_Sample "Full Sample" salaried "Wage & Salar
 collect layout (combine_race_eth) (collection#values) (), name(newc)
 collect style column, dups(center) width(equal)
 collect style cell, halign(center)
-collect title "Table 14. Annual Earnings Comparisons by Race/Ethnicity and Initial Employment Status (Self-Employed Sample)"
+collect title "Table 6. Annual Earnings Comparisons by Race/Ethnicity and Initial Employment Status (Self-Employed Sample)"
 collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Self-Employed refers to those who were continously self-employed from month 13 onwards. Mean earnings are calculated as a grand mean of person level average annual earnings as reported in the tpearn variable. T-tests run comparing average annual earnings using Dunnett multiple comparison correction."
 collect style cell values, nformat(%5.1f)
 collect preview
@@ -745,13 +743,13 @@ restore
 
 
 
-putdocx save working_paper_outputs`logdate'_collects, replace 
 
 
 
 
 **# Regressions for earnings 
-frame change earnings 
+frame copy earnings earnings_models
+frame change earnings_models
 
 keep if pct_se_after_12 == 1 | pct_ws_after_12 == 1
 
@@ -778,15 +776,21 @@ global controls  = "i.sex age age2 i.immigrant i.parent industry2 calyear"
 quietly xtreg ln_tpearn i.unempf12_6, vce(robust) 
 eststo any_earn_unemp_m1 
 
-quietly xtreg ln_tpearn i.unempf12_6 i.educ3 i.combine_race_eth $controls, vce(robust) 
+quietly xtreg ln_tpearn i.unempf12_6 i.educ3 $controls, vce(robust) 
 eststo any_earn_unemp_m2
+
+quietly xtreg ln_tpearn i.unempf12_6 i.combine_race_eth i.educ3 $controls, vce(robust) 
+eststo any_earn_unemp_m3
 
 
 quietly xtreg ln_tpearn i.mode_status_f12v2, vce(robust) 
 eststo any_earn_mode_m1 
 
-quietly xtreg ln_tpearn i.mode_status_f12v2 i.educ3 i.combine_race_eth $controls, vce(robust) 
+quietly xtreg ln_tpearn i.mode_status_f12v2 i.educ3 $controls, vce(robust) 
 eststo any_earn_mode_m2
+
+quietly xtreg ln_tpearn i.mode_status_f12v2 i.combine_race_eth i.educ3 $controls, vce(robust) 
+eststo any_earn_mode_m3
 
 
 // regression for self-employed sample 
@@ -795,15 +799,22 @@ keep if pct_se_after_12 == 1
 quietly xtreg ln_tpearn i.unempf12_6, vce(robust) 
 eststo se_earn_unemp_m1 
 
-quietly xtreg ln_tpearn i.unempf12_6 i.educ3 i.combine_race_eth $controls, vce(robust) 
+quietly xtreg ln_tpearn i.unempf12_6 i.educ3 $controls, vce(robust) 
 eststo se_earn_unemp_m2
+
+quietly xtreg ln_tpearn i.unempf12_6 i.combine_race_eth i.educ3  $controls, vce(robust) 
+eststo se_earn_unemp_m3
+
 
 
 quietly xtreg ln_tpearn i.mode_status_f12v2, vce(robust) 
 eststo se_earn_mode_m1 
 
-quietly xtreg ln_tpearn i.mode_status_f12v2 i.educ3 i.combine_race_eth $controls, vce(robust) 
+quietly xtreg ln_tpearn i.mode_status_f12v2 i.educ3 $controls, vce(robust) 
 eststo se_earn_mode_m2
+
+quietly xtreg ln_tpearn i.mode_status_f12v2 i.combine_race_eth i.educ3 $controls, vce(robust) 
+eststo se_earn_mode_m3
 
 restore 
 
@@ -814,15 +825,21 @@ keep if pct_ws_after_12 == 1
 quietly xtreg ln_tpearn i.unempf12_6, vce(robust) 
 eststo ws_earn_unemp_m1 
 
-quietly xtreg ln_tpearn i.unempf12_6 i.educ3 i.combine_race_eth $controls, vce(robust) 
+quietly xtreg ln_tpearn i.unempf12_6 i.educ3  $controls, vce(robust) 
 eststo ws_earn_unemp_m2
+
+quietly xtreg ln_tpearn i.unempf12_6 i.combine_race_eth i.educ3 $controls, vce(robust) 
+eststo ws_earn_unemp_m3
 
 
 quietly xtreg ln_tpearn i.mode_status_f12v2, vce(robust) 
 eststo ws_earn_mode_m1 
 
-quietly xtreg ln_tpearn i.mode_status_f12v2 i.educ3 i.combine_race_eth $controls, vce(robust)  
+quietly xtreg ln_tpearn i.mode_status_f12v2 i.educ3 $controls, vce(robust)  
 eststo ws_earn_mode_m2
+
+quietly xtreg ln_tpearn i.mode_status_f12v2 i.combine_race_eth i.educ3  $controls, vce(robust)  
+eststo ws_earn_mode_m3
 
 
 restore 
@@ -1026,7 +1043,7 @@ putdocx collect
 
 putdocx pagebreak
 
-putdocx save working_paper_outputs`logdate'_collects, append 
+putdocx save working_paper_outputs`logdate'_collects, replace 
 
 
 
@@ -1048,8 +1065,11 @@ foreach y of varlist profpos prof10k   {
 		quietly xtlogit `y' i.`x', vce(robust)  
 		eststo `y'_`xname'_1re
 
-		quietly xtlogit `y' i.`x' i.educ3 i.combine_race_eth $controls , vce(robust) 
+		quietly xtlogit `y' i.`x' i.educ3 $controls , vce(robust) 
 		eststo `y'_`xname'_2re
+		
+		quietly xtlogit `y' i.`x' i.combine_race_eth i.educ3  $controls , vce(robust) 
+		eststo `y'_`xname'_3re
 }
 }
 
@@ -1062,8 +1082,12 @@ foreach y of varlist ln_tjb_prftb ln_tbsjval   {
 		quietly xtreg `y' i.`x', vce(robust) 
 		eststo `y'_`xname'_1re
 
-		quietly xtreg `y' i.`x' i.educ3 i.combine_race_eth $controls , vce(robust) 
+		quietly xtreg `y' i.`x' i.educ3  $controls , vce(robust) 
 		eststo `y'_`xname'_2re
+		
+		quietly xtreg `y' i.`x' i.combine_race_eth i.educ3  $controls , vce(robust) 
+		eststo `y'_`xname'_3re
+
 
 }
 }
@@ -1085,7 +1109,7 @@ esttab prof*unemp* using draft_outputs_`logdate'.rtf, ///
 **# Table 10 (old table 23)
 esttab prof*mode* using draft_outputs_`logdate'.rtf, ///
 	legend label ///
-	title(Table 23. Logistic Regressions Profit on Initial Employment Status) ///
+	title(Table 10. Logistic Regressions Profit on Initial Employment Status) ///
 	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
 	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
 	nonumbers mtitles("Positive Profit" "Positive Profit" "Profit >= 10k" ///
