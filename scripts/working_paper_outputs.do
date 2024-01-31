@@ -506,3 +506,613 @@ label  values immigrant immigrant_labels
 
 
 **# Table 1
+
+dtable tpearn tpearn_med i.sex i.combine_race_eth i.educ3 i.immigrant i.parent i.industry2 , ///
+	by(mode_status_f12v2) ///
+	sample(, statistics(freq) place(seplabels)) ///
+	continuous(tpearn_med tjb_msum_med, statistics(median)) /// 
+	sformat("(N=%s)" frequency) ///
+	note(Average earnings are grand means of individuals' average annual earnings for any type of employment. Median earnings are the median of individual average annual earnings. Initial employment status determined by individuals' most common employment status during first 12 months observed in data. Excluded from sample are those who dropped out of the SIPP sample after only one year of participation, months where individuals worked fewer than 15 hours, and "Other" employment types besides self-employed or wage and salaried. Sample is also restricted to those who were continuously employed in either self-employment or wage and salaried employment after the first 12-months observed in the data. ) ///
+	column(by(hide) total("Full Sample")) ///
+	nformat(%7.2f mean sd) ///
+	title(Table 1. Descriptive Statistics by Initial Employment Status) 
+	
+putdocx begin 
+
+putdocx collect 
+putdocx pagebreak
+
+
+
+**# Table 2
+gen status_after_12 = "Self-Employed" if pct_se_after_12 == 1
+replace  status_after_12 = "Wage-Salaried" if pct_ws_after_12 == 1
+
+dtable tpearn tpearn_med i.sex i.combine_race_eth i.educ3 i.immigrant i.parent i.industry2  , by(status_after_12) ///
+sample(, statistics(freq) place(seplabels)) ///
+	continuous(tpearn_med tjb_msum_med, statistics(median)) /// 
+	sformat("(N=%s)" frequency) ///	nformat(%7.2f mean sd) ///
+	column(by(hide) total("Full Sample")) ///
+	title(Table 2. Descriptive Statistics for Self-Employed Only and Wage and Salary Only Samples) ///
+	note(Here, "Self-Employed" refers to those who from the 13th month of observation onwards were never unemployed and reported being self-employed for each month. Similarly, "Wage and Salary" refers to thoe who from the 13th month of observation onwards were never unemployed and reported being employed in a waged/salaried position for each month. Average earnings are grand means of individuals' average annual earnings for any type of employment. Median earnings are the median of individual average annual earnings. Excluded from sample are those who dropped out of the SIPP sample after only one year of participation, months where individuals worked fewer than 15 hours, and "Other" employment types besides self-employed or wage and salaried. Sample is also restricted to those who were continuously employed in either self-employment or wage and salaried employment after the first 12-months observed in the data.)
+	
+putdocx collect 
+putdocx pagebreak
+
+
+
+**# Table 3 (old tab 8.) Salaried Sample by initial status within race 
+
+preserve
+keep if pct_ws_after_12 == 1
+
+
+local x = 0
+local names White Black Asian Hispanic Other
+foreach name of local names {
+	local x = `x' + 1
+	collect create `name', replace 
+	quietly: pwmean tpearn if combine_race_eth ==`x' , over(mode_status_f12v2) mcompare(dunnett) 
+	collect get r(table) 
+	collect remap rowname[b] = values[lev1], ///
+		fortags(colname[1.mode_status_f12v2 2.mode_status_f12v2 4.mode_status_f12v2])
+	collect remap rowname[b] = values[lev2], ///
+		fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+	collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+
+	collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+}
+
+collect create Full_Sample, replace 
+quietly: pwmean tpearn, over(mode_status_f12v2) mcompare(dunnett) 
+collect get r(table) 
+collect remap rowname[b] = values[lev1], ///
+	fortags(colname[1.mode_status_f12v2 2.mode_status_f12v2 4.mode_status_f12v2])
+collect remap rowname[b] = values[lev2], ///
+	fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+
+collect combine newc = Full_Sample White Black Asian Hispanic Other, replace
+ 
+collect layout  (collection#values) (mode_status_f12v2) (), name(newc)
+collect label levels mode_status_f12v2 1 "Wage/Salary" 2 "Self-Employed" 4 "Unemployed", replace
+collect style row split, dups(first)
+collect title "Table 3. Annual Earnings Within Race/Ethnicity by Initial Employment Status (Salaried Sample)"
+collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Mean earnings are calculated as a grand mean of person level average annual earnings as reported in the tpearn variable. T-tests run comparing average annual earnings using Dunnett multiple comparison correction. Salaried sample is defined as those who reported continous wage or salary employment from month 13-onwards."
+collect style cell values, nformat(%5.1f)
+collect preview
+putdocx collect
+
+
+
+
+**# Table 4 (old Table 10) Salaried Sample Between Race/Ethnicity within Initial Employment Status 
+
+*------------------------------------------------------------------------------|
+
+collect create salaried, replace 
+quietly: pwmean tpearn if mode_status_f12v2 ==1 , over(combine_race_eth) mcompare(dunnett) 
+collect get r(table) 
+collect remap rowname[b] = values[lev1], fortags(colname[1.combine_race_eth 2.combine_race_eth 3.combine_race_eth 4.combine_race_eth 5.combine_race_eth])
+collect remap rowname[b] = values[lev2], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+collect remap rowname[se] = values[lev3], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+
+collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+collect layout (combine_race_eth) (values)
+
+
+
+// self-employed 
+collect create self_employed, replace 
+quietly: pwmean tpearn if mode_status_f12v2 ==2 , over(combine_race_eth) mcompare(dunnett) 
+collect get r(table) 
+collect remap rowname[b] = values[lev1], fortags(colname[1.combine_race_eth 2.combine_race_eth 3.combine_race_eth 4.combine_race_eth 5.combine_race_eth])
+collect remap rowname[b] = values[lev2], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+collect remap rowname[se] = values[lev3], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+
+collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+collect layout (combine_race_eth) (values)
+
+// unemployed
+collect create unemployed_start, replace 
+quietly: pwmean tpearn if mode_status_f12v2 ==4 , over(combine_race_eth) mcompare(dunnett) 
+collect get r(table) 
+collect remap rowname[b] = values[lev1], fortags(colname[1.combine_race_eth 2.combine_race_eth 3.combine_race_eth 4.combine_race_eth 5.combine_race_eth])
+collect remap rowname[b] = values[lev2], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+collect remap rowname[se] = values[lev3], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+
+collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+collect layout (combine_race_eth) (values)
+
+
+// combine them into one 
+collect combine newc = Full_Sample salaried self_employed unemployed_start, replace 
+collect label levels collection Full_Sample "Full Sample" salaried "Wage & Salary" self_employed "Self-Employed" unemployed_start "Unemployed"
+collect layout (combine_race_eth) (collection#values) (), name(newc)
+collect style column, dups(center) width(equal)
+collect style cell, halign(center)
+collect title "Table 4. Annual Earnings Comparisons by Race/Ethnicity and Initial Employment Status (Wage/Salary Sample)"
+collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Wage/Salary refers to those who were continously employed in wage/salary positions from month 13 onwards. Mean earnings are calculated as a grand mean of person level average annual earnings as reported in the tpearn variable. T-tests run comparing average annual earnings using Dunnett multiple comparison correction."
+collect style cell values, nformat(%5.1f)
+collect preview
+
+
+putdocx collect
+putdocx pagebreak
+
+
+restore 
+
+
+
+**# Table 5 (old Table 12). Self-Employed Sample by initial status within race 
+preserve
+keep if pct_se_after_12 == 1
+
+local x = 0
+local names White Black Asian Hispanic Other
+foreach name of local names {
+	local x = `x' + 1
+	collect create `name', replace 
+	quietly: pwmean tpearn if combine_race_eth ==`x' , over(mode_status_f12v2) mcompare(dunnett) 
+	collect get r(table) 
+	collect remap rowname[b] = values[lev1], ///
+		fortags(colname[1.mode_status_f12v2 2.mode_status_f12v2 4.mode_status_f12v2])
+	collect remap rowname[b] = values[lev2], ///
+		fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+	collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+
+	collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+}
+
+collect create Full_Sample, replace 
+quietly: pwmean tpearn, over(mode_status_f12v2) mcompare(dunnett) //already filtered to pct_se_after_12 == 1 above
+collect get r(table) 
+collect remap rowname[b] = values[lev1], ///
+	fortags(colname[1.mode_status_f12v2 2.mode_status_f12v2 4.mode_status_f12v2])
+collect remap rowname[b] = values[lev2], ///
+	fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+
+collect combine newc = Full_Sample White Black Asian Hispanic Other, replace
+ 
+collect layout  (collection#values) (mode_status_f12v2), name(newc)
+collect label levels mode_status_f12v2 1 "Wage/Salary" 2 "Self-Employed" 4 "Unemployed", replace
+collect style row split, dups(first)
+collect title "Table 5. Annual Earnings Within Race/Ethnicity by Initial Employment Status (Self-Employed Sample)"
+collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Mean earnings are calculated as a grand mean of person level average annual earnings as reported in the tpearn variable. T-tests run comparing average annual earnings using Dunnett multiple comparison correction. Self-Employed sample is defined as those who were continously self-emplyed from month 13-onwards."
+collect style cell values, nformat(%5.1f)
+collect preview
+putdocx collect
+
+
+
+**# Table 6 (old Table 14) Self-employed Sample Between Race/Ethnicity within Initial Employment Status 
+
+*------------------------------------------------------------------------------|
+
+collect create salaried, replace 
+quietly: pwmean tpearn if mode_status_f12v2 ==1 , over(combine_race_eth) mcompare(dunnett) 
+collect get r(table) 
+collect remap rowname[b] = values[lev1], fortags(colname[1.combine_race_eth 2.combine_race_eth 3.combine_race_eth 4.combine_race_eth 5.combine_race_eth])
+collect remap rowname[b] = values[lev2], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+collect remap rowname[se] = values[lev3], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+
+collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+collect layout (combine_race_eth) (values)
+
+
+
+// self-employed 
+collect create self_employed, replace 
+quietly: pwmean tpearn if mode_status_f12v2 ==2 , over(combine_race_eth) mcompare(dunnett) 
+collect get r(table) 
+collect remap rowname[b] = values[lev1], fortags(colname[1.combine_race_eth 2.combine_race_eth 3.combine_race_eth 4.combine_race_eth 5.combine_race_eth])
+collect remap rowname[b] = values[lev2], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+collect remap rowname[se] = values[lev3], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+
+collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+collect layout (combine_race_eth) (values)
+
+// unemployed
+collect create unemployed_start, replace 
+quietly: pwmean tpearn if mode_status_f12v2 ==4 , over(combine_race_eth) mcompare(dunnett) 
+collect get r(table) 
+collect remap rowname[b] = values[lev1], fortags(colname[1.combine_race_eth 2.combine_race_eth 3.combine_race_eth 4.combine_race_eth 5.combine_race_eth])
+collect remap rowname[b] = values[lev2], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+collect remap rowname[se] = values[lev3], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+
+collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+collect layout (combine_race_eth) (values)
+
+
+// combine them into one 
+collect combine newc = Full_Sample salaried self_employed unemployed_start, replace 
+collect label levels collection Full_Sample "Full Sample" salaried "Wage & Salary" self_employed "Self-Employed" unemployed_start "Unemployed"
+collect layout (combine_race_eth) (collection#values) (), name(newc)
+collect style column, dups(center) width(equal)
+collect style cell, halign(center)
+collect title "Table 14. Annual Earnings Comparisons by Race/Ethnicity and Initial Employment Status (Self-Employed Sample)"
+collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Self-Employed refers to those who were continously self-employed from month 13 onwards. Mean earnings are calculated as a grand mean of person level average annual earnings as reported in the tpearn variable. T-tests run comparing average annual earnings using Dunnett multiple comparison correction."
+collect style cell values, nformat(%5.1f)
+collect preview
+
+
+putdocx collect
+putdocx pagebreak
+
+restore 
+
+
+
+putdocx save working_paper_outputs`logdate'_collects, replace 
+
+
+
+
+**# Regressions for earnings 
+frame change earnings 
+
+keep if pct_se_after_12 == 1 | pct_ws_after_12 == 1
+
+collapse (sum) tpearn tjb_msum (max) educ3 (first) industry2 parent age (count) n_months = tpearn, by(ssuid_spanel_pnum_id mode_status_f12v2 combine_race_eth immigrant sex pct_se_after_12 unempf12_6 pct_ws_after_12 calyear)
+
+
+gen age2 = age^2
+label variable age2 "Age squared"
+
+// modifying tpearn for these folks 
+gen ln_tjb_msum = ln(tjb_msum+1) if tjb_msum != . 
+egen min_tpearn = min(tpearn)
+replace min_tpearn = min_tpearn *-1
+gen ln_tpearn = ln(tpearn + min_tpearn+1) if tpearn !=.
+
+ 
+
+xtset ssuid_spanel_pnum_id calyear 
+
+global controls  = "i.sex age age2 i.immigrant i.parent industry2 calyear"
+
+
+// regressions for full-sample
+quietly xtreg ln_tpearn i.unempf12_6, vce(robust) 
+eststo any_earn_unemp_m1 
+
+quietly xtreg ln_tpearn i.unempf12_6 i.educ3 i.combine_race_eth $controls, vce(robust) 
+eststo any_earn_unemp_m2
+
+
+quietly xtreg ln_tpearn i.mode_status_f12v2, vce(robust) 
+eststo any_earn_mode_m1 
+
+quietly xtreg ln_tpearn i.mode_status_f12v2 i.educ3 i.combine_race_eth $controls, vce(robust) 
+eststo any_earn_mode_m2
+
+
+// regression for self-employed sample 
+preserve 
+keep if pct_se_after_12 == 1 
+quietly xtreg ln_tpearn i.unempf12_6, vce(robust) 
+eststo se_earn_unemp_m1 
+
+quietly xtreg ln_tpearn i.unempf12_6 i.educ3 i.combine_race_eth $controls, vce(robust) 
+eststo se_earn_unemp_m2
+
+
+quietly xtreg ln_tpearn i.mode_status_f12v2, vce(robust) 
+eststo se_earn_mode_m1 
+
+quietly xtreg ln_tpearn i.mode_status_f12v2 i.educ3 i.combine_race_eth $controls, vce(robust) 
+eststo se_earn_mode_m2
+
+restore 
+
+// regressions for wage/salaried sample 
+preserve 
+keep if pct_ws_after_12 == 1
+
+quietly xtreg ln_tpearn i.unempf12_6, vce(robust) 
+eststo ws_earn_unemp_m1 
+
+quietly xtreg ln_tpearn i.unempf12_6 i.educ3 i.combine_race_eth $controls, vce(robust) 
+eststo ws_earn_unemp_m2
+
+
+quietly xtreg ln_tpearn i.mode_status_f12v2, vce(robust) 
+eststo ws_earn_mode_m1 
+
+quietly xtreg ln_tpearn i.mode_status_f12v2 i.educ3 i.combine_race_eth $controls, vce(robust)  
+eststo ws_earn_mode_m2
+
+
+restore 
+
+
+
+
+**# Table 7 (old Table 15) Regression Earnings on Unemployment 
+esttab any_earn_unemp* se_earn_unemp* ws_earn_unemp* using draft_annual_outputs_`logdate'.rtf, ///
+	legend label ///
+	title(Table 7: Relationship between Unemployment and Log Annual Earnings) ///
+	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
+	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
+	nonumbers mtitles("Full Sample" "Full Sample" "Self-Employed Sample" ///
+	"Self-Employed Sample" "Salaried Sample" "Salaried Sample") ///
+	addnote("Source: SIPP Data. Dependent Variable is log of tpearn") ///
+	compress onecell replace  
+
+**# Table 8 (old Table 16): Regression Earnings on Initial Employment Status
+esttab any_earn_mode* se_earn_mode* ws_earn_mode* using draft_annual_outputs_`logdate'.rtf, ///
+	legend label ///
+	title(Table 8: Relationship between Initial Employment Status and Log Annual Earnings) ///
+	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
+	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
+	nonumbers mtitles("Full Sample" "Full Sample" "Self-Employed Sample" ///
+	"Self-Employed Sample" "Salaried Sample" "Salaried Sample") ///
+	addnote("Source: SIPP Data Dependent Variable is log of tpearn") ///
+	compress onecell append 
+	
+	
+	
+	
+	
+	
+	
+	
+*------------------------------------------------------------------------------|
+**# Examining Business Profits
+*------------------------------------------------------------------------------|
+frame copy earnings profits, replace  
+frame change profits
+
+// profit and tbsjval are only reported in records coded as main job SE so need to carry them throughout the year for each person. 
+list swave monthcode tjb_prftb tbsjval if ssuid_spanel_pnum_id  ==  198178, sepby(swave)
+gsort ssuid_spanel_pnum_id swave -tjb_prftb
+by ssuid_spanel_pnum_id swave: carryforward tjb_prftb, replace 
+gsort ssuid_spanel_pnum_id swave -tbsjval
+by ssuid_spanel_pnum_id swave: carryforward tbsjval, replace 
+list swave monthcode tjb_prftb tbsjval if ssuid_spanel_pnum_id  ==  198178, sepby(swave)
+
+// now can create unique year tag given that we have prft and bus val  equal for every row per person per wave 
+egen unique_yr_tag= tag(ssuid_spanel_pnum_id swave) // creating person-year flag 
+keep if unique_yr_tag // now we're down to one row per person per year an
+
+
+// recoding profits 
+gen profposi=tjb_prftb>0 if tjb_prftb<. // 
+tab profpos, missing
+gen prof10k=tjb_prftb>=10000 if tjb_prftb<.
+tab prof10k, missing
+
+foreach x in  tjb_prftb tbsjval {
+	egen min_`x' = min(`x')
+	replace min_`x' = min_`x' *-1
+	gen ln_`x' = ln(`x' + min_`x'+1)
+} 
+
+list ssuid_spanel_pnum_id calyear profpos prof10k ln_tjb_prftb tjb_prftb tbsjval ln_tbsjval ///
+unempf12_6 mode_status_f12v2 in 1/50 if pct_se_after_12 ==1, sepby(ssuid_spanel_pnum_id) abbrev(10)
+
+
+
+// getting to sample of interest
+keep if pct_se_after_12 == 1 
+
+frame copy profits profits_collapse, replace 
+frame change profits_collapse
+
+collapse (mean) tjb_prftb tbsjval ln_tjb_prftb ln_tbsjval (max) educ3 (first) industry2 parent age, by(ssuid_spanel_pnum_id mode_status_f12v2 combine_race_eth immigrant sex unempf12_6 pct_ws_after_12)
+label variable combine_race_eth "Race/Ethnicity"
+label variable sex "Sex"
+label variable age "Age"
+label values immigrant immigrant_values
+label variable immigrant "Immigrant"
+label variable parent "Parent"
+label variable unempf12_6 "Unemployed 6-months"
+
+label values industry2 industry_labels 
+label variable industry2 "Industry"
+
+label values educ3 education_labels
+label variable educ3 "Education"
+
+label variable tjb_prftb "Mean Annual Profit (tjb_prftb)"
+label variable ln_tjb_prftb "Mean Log Annual Profit (ln_tjb_prftb)"
+label variable tbsjval "Mean Annual Business Value (tbsjval)"
+label variable ln_tbsjval "Mean Log Annual Business Value (ln_tbsjval)"
+
+
+gen tjb_prftb_med = tjb_prftb 
+label variable tjb_prftb_med "Median Annual Profit Earnings (tjb_prftb)"
+gen tbsjval_med = tbsjval
+label variable tbsjval_med "Median Annual Business Value (tbsjval)"
+
+
+**# Table 18: Profit by Race/Ethnicity using mode_statu
+
+local x = 0
+local names White Black Asian Hispanic Other
+foreach name of local names {
+	local x = `x' + 1
+	collect create `name', replace 
+	quietly: pwmean tjb_prftb if combine_race_eth ==`x' , over(mode_status_f12v2) mcompare(dunnett) 
+	collect get r(table) 
+	collect remap rowname[b] = values[lev1], ///
+		fortags(colname[1.mode_status_f12v2 2.mode_status_f12v2 4.mode_status_f12v2])
+	collect remap rowname[b] = values[lev2], ///
+		fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+	collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+
+	collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+}
+
+collect create Full_Sample, replace 
+quietly: pwmean tjb_prftb, over(mode_status_f12v2) mcompare(dunnett) 
+collect get r(table) 
+collect remap rowname[b] = values[lev1], ///
+	fortags(colname[1.mode_status_f12v2 2.mode_status_f12v2 4.mode_status_f12v2])
+collect remap rowname[b] = values[lev2], ///
+	fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+collect remap rowname[se] = values[lev3], fortags(colname[2vs1.mode_status_f12v2  4vs1.mode_status_f12v2])
+
+collect combine newc = Full_Sample White Black Asian Hispanic Other, replace
+ 
+collect layout  (collection#values) (mode_status_f12v2), name(newc)
+collect label levels mode_status_f12v2 1 "Wage/Salary" 2 "Self-Employed" 4 "Unemployed", replace
+collect style row split, dups(first)
+collect title "Table 18. Profit within Race/Ethnicity by Initial Employment Status"
+collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Mean profit is calculated as a grand mean of person level average annual profit as reported in the tjb_msum variable. T-tests run comparing average profit using Dunnett multiple comparison correction."
+collect style cell values, nformat(%5.1f)
+collect preview
+putdocx collect
+
+dtable i.combine_race_eth
+putdocx collect 
+
+
+**# Table 21 Profit Comparison Between Race/Ethnicity within Initial Employment Status 
+
+collect create salaried, replace 
+quietly: pwmean tjb_prftb if mode_status_f12v2 ==1 , over(combine_race_eth) mcompare(dunnett) 
+collect get r(table) 
+collect remap rowname[b] = values[lev1], fortags(colname[1.combine_race_eth 2.combine_race_eth 3.combine_race_eth 4.combine_race_eth 5.combine_race_eth])
+collect remap rowname[b] = values[lev2], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+collect remap rowname[se] = values[lev3], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+
+collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+collect layout (combine_race_eth) (values)
+
+
+
+// self-employed 
+collect create self_employed, replace 
+quietly: pwmean tjb_prftb if mode_status_f12v2 ==2 , over(combine_race_eth) mcompare(dunnett) 
+collect get r(table) 
+collect remap rowname[b] = values[lev1], fortags(colname[1.combine_race_eth 2.combine_race_eth 3.combine_race_eth 4.combine_race_eth 5.combine_race_eth])
+collect remap rowname[b] = values[lev2], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+collect remap rowname[se] = values[lev3], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+
+collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+collect layout (combine_race_eth) (values)
+
+// self-employed 
+collect create unemployed_start, replace 
+quietly: pwmean tjb_prftb if mode_status_f12v2 ==4 , over(combine_race_eth) mcompare(dunnett) 
+collect get r(table) 
+collect remap rowname[b] = values[lev1], fortags(colname[1.combine_race_eth 2.combine_race_eth 3.combine_race_eth 4.combine_race_eth 5.combine_race_eth])
+collect remap rowname[b] = values[lev2], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+collect remap rowname[se] = values[lev3], fortags(colname[2vs1.combine_race_eth 3vs1.combine_race_eth 4vs1.combine_race_eth 5vs1.combine_race_eth])
+
+collect label levels values lev1 "Mean" lev2 "Difference" lev3 "Std. Error"
+collect layout (combine_race_eth) (values)
+
+
+// combine them into one 
+collect combine newc = Full_Sample salaried self_employed unemployed_start, replace 
+collect label levels collection Full_Sample "Full Sample" salaried "Wage & Salary" self_employed "Self-Employed" unemployed_start "Unemployed"
+collect layout (combine_race_eth) (collection#values) (), name(newc)
+collect style column, dups(center) width(equal)
+collect style cell, halign(center)
+collect title "Table 21. Profit Comparisons by Race/Ethnicity and Initial Employment Status"
+collect notes "Initial employment status is determined by individuals' most common employment status during first 12 months observed in data. Mean profit are calculated as a grand mean of person level average annual profits as reported in the tjb_prftb variable. T-tests run comparing average monthly earnings using Dunnett multiple comparison correction."
+collect style cell values, nformat(%5.1f)
+collect preview
+putdocx collect
+
+collect create n_counts, replace
+table combine_race_eth mode_status_f12v2 
+collect layout (combine_race_eth) (mode_status_f12v2)
+putdocx collect 
+
+putdocx pagebreak
+
+putdocx save working_paper_outputs`logdate'_collects, append 
+
+
+
+
+
+*------------------------------------------------------------------------------|
+** Profit Modeling
+*------------------------------------------------------------------------------|
+
+frame change profits 
+xtset ssuid_spanel_pnum_id calyear 
+
+foreach y of varlist profpos prof10k   {
+	foreach x of varlist unempf12_6 mode_status_f12v2  {
+		
+		local xname = substr("`x'",1,5)
+		di "`y'_`xname'"
+
+		quietly xtlogit `y' i.`x', vce(robust)  
+		eststo `y'_`xname'_1re
+
+		quietly xtlogit `y' i.`x' i.educ3 i.combine_race_eth $controls , vce(robust) 
+		eststo `y'_`xname'_2re
+}
+}
+
+foreach y of varlist ln_tjb_prftb ln_tbsjval   {
+	foreach x of varlist unempf12_6 mode_status_f12v2  {
+		
+		local xname = substr("`x'",1,5)
+		di "`y'_`xname'"
+
+		quietly xtreg `y' i.`x', vce(robust) 
+		eststo `y'_`xname'_1re
+
+		quietly xtreg `y' i.`x' i.educ3 i.combine_race_eth $controls , vce(robust) 
+		eststo `y'_`xname'_2re
+
+}
+}
+
+
+
+**# Regressions for Profits 
+**# Table 9 (old Table 22)
+esttab prof*unemp* using draft_outputs_`logdate'.rtf, ///
+	legend label ///
+	title(Table 9. Logistic Regressions Profit on Unemployment) ///
+	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
+	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
+	nonumbers mtitles("Positive Profit" "Positive Profit" "Profit >= 10k" ///
+	"Profit >= 10k") ///
+	addnote("Source: SIPP Data.") ///
+	compress onecell append  
+
+**# Table 10 (old table 23)
+esttab prof*mode* using draft_outputs_`logdate'.rtf, ///
+	legend label ///
+	title(Table 23. Logistic Regressions Profit on Initial Employment Status) ///
+	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
+	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
+	nonumbers mtitles("Positive Profit" "Positive Profit" "Profit >= 10k" ///
+	"Profit >= 10k") ///
+	addnote("Source: SIPP Data.") ///
+	compress onecell append  
+
+
+**# Regressions for business value 
+esttab *jval*, legend label varlabels(_cons Constant) title(Business Value  Models) aic bic 
+	
+**# Table 11 (old table 26)
+esttab ln_tbsjval_unemp_* using draft_outputs_`logdate'.rtf, ///
+	legend label ///
+	title(Table 11. Regressions Profit on Unemployment) ///
+	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
+	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
+	nonumbers mtitles("Log Business Value" "Log Business Value") ///
+	addnote("Source: SIPP Data.") ///
+	compress onecell append  
+
+**# Old table 27
+esttab ln_tbsjval_mode_* using draft_outputs_`logdate'.rtf, ///
+	legend label ///
+	title(Table 27. Regressions Profit on Initial Employment Status) ///
+	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
+	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
+	nonumbers mtitles("Log Business Value" "Log Business Value") ///
+	addnote("Source: SIPP Data.") ///
+	compress onecell append  
