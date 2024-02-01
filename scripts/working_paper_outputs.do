@@ -430,9 +430,16 @@ local logdate : di %tdCYND daily("$S_DATE", "DMY")
 display `logdate'
 
 
-
 label variable unempf12_6 "Unemployed 6-months"
 label variable calyear "Year"
+label define parent_labels 1 "Parent" 0 "Not Parent"
+label values parent parent_labels
+label variable parent "Parent"
+
+label variable immigrant "Immigrant"
+
+label define immigrant_labels 1 "Immigrant" 0 "Native Born"
+label  values immigrant immigrant_labels
 
 
 frame copy earnings annual_earnings, replace 
@@ -459,7 +466,7 @@ collapse (mean) tpearn tjb_msum (max) educ3 (first) industry2 parent age (count)
 label variable combine_race_eth "Race/Ethnicity"
 label variable sex "Sex"
 label variable age "Age"
-label values immigrant immigrant_values
+label values immigrant immigrant_labels
 label variable immigrant "Immigrant"
 label variable parent "Parent"
 
@@ -495,11 +502,9 @@ gen tjb_msum_med = tjb_msum
 label variable tjb_msum_med "Median Annual Earnings (tjb_msum)"
 
 
-label define parent_labels 1 "Parent" 0 "Not Parent"
 label values parent parent_labels
 
 
-label define immigrant_labels 1 "Immigrant" 0 "Native Born"
 label  values immigrant immigrant_labels
 
 
@@ -758,6 +763,7 @@ collapse (sum) tpearn tjb_msum (max) educ3 (first) industry2 parent age (count) 
 
 gen age2 = age^2
 label variable age2 "Age squared"
+label variable age "Age"
 
 // modifying tpearn for these folks 
 gen ln_tjb_msum = ln(tjb_msum+1) if tjb_msum != . 
@@ -848,24 +854,35 @@ restore
 
 
 **# Table 7 (old Table 15) Regression Earnings on Unemployment 
-esttab any_earn_unemp* se_earn_unemp* ws_earn_unemp* using draft_annual_outputs_`logdate'.rtf, ///
+label variable age "Age"
+label variable parent "Parent"
+label values parent parent_labels
+label variable industry "Industry"
+
+label variable immigrant "Immigrant"
+label values immigrant immigrant_labels
+
+
+
+
+esttab any_earn_unemp* se_earn_unemp* ws_earn_unemp* using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
 	title(Table 7: Relationship between Unemployment and Log Annual Earnings) ///
 	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
 	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
-	nonumbers mtitles("Full Sample" "Full Sample" "Self-Employed Sample" ///
-	"Self-Employed Sample" "Salaried Sample" "Salaried Sample") ///
+	nonumbers mtitles("Full Sample" "Full Sample" "Full Sample"  "Self-Employed Sample" ///
+	"Self-Employed Sample" "Self-Employed Sample" "Salaried Sample" "Salaried Sample" "Salaried Sample") ///
 	addnote("Source: SIPP Data. Dependent Variable is log of tpearn") ///
 	compress onecell replace  
 
 **# Table 8 (old Table 16): Regression Earnings on Initial Employment Status
-esttab any_earn_mode* se_earn_mode* ws_earn_mode* using draft_annual_outputs_`logdate'.rtf, ///
+esttab any_earn_mode* se_earn_mode* ws_earn_mode* using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
 	title(Table 8: Relationship between Initial Employment Status and Log Annual Earnings) ///
 	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
 	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
-	nonumbers mtitles("Full Sample" "Full Sample" "Self-Employed Sample" ///
-	"Self-Employed Sample" "Salaried Sample" "Salaried Sample") ///
+	nonumbers mtitles("Full Sample" "Full Sample"  "Full Sample" "Self-Employed Sample" ///
+	"Self-Employed Sample" "Self-Employed Sample" "Salaried Sample" "Salaried Sample" "Salaried Sample") ///
 	addnote("Source: SIPP Data Dependent Variable is log of tpearn") ///
 	compress onecell append 
 	
@@ -922,7 +939,7 @@ collapse (mean) tjb_prftb tbsjval ln_tjb_prftb ln_tbsjval (max) educ3 (first) in
 label variable combine_race_eth "Race/Ethnicity"
 label variable sex "Sex"
 label variable age "Age"
-label values immigrant immigrant_values
+label values immigrant immigrant_labels
 label variable immigrant "Immigrant"
 label variable parent "Parent"
 label variable unempf12_6 "Unemployed 6-months"
@@ -1054,7 +1071,9 @@ putdocx save working_paper_outputs`logdate'_collects, replace
 *------------------------------------------------------------------------------|
 
 frame change profits 
+label  values immigrant immigrant_labels
 xtset ssuid_spanel_pnum_id calyear 
+
 
 foreach y of varlist profpos prof10k   {
 	foreach x of varlist unempf12_6 mode_status_f12v2  {
@@ -1096,24 +1115,24 @@ foreach y of varlist ln_tjb_prftb ln_tbsjval   {
 
 **# Regressions for Profits 
 **# Table 9 (old Table 22)
-esttab prof*unemp* using draft_outputs_`logdate'.rtf, ///
+esttab prof*unemp* using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
 	title(Table 9. Logistic Regressions Profit on Unemployment) ///
 	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
 	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
-	nonumbers mtitles("Positive Profit" "Positive Profit" "Profit >= 10k" ///
-	"Profit >= 10k") ///
+	nonumbers mtitles("Positive Profit" "Positive Profit" "Positive Profit" "Profit >= 10k" ///
+	"Profit >= 10k" 	"Profit >= 10k") ///
 	addnote("Source: SIPP Data.") ///
 	compress onecell append  
 
 **# Table 10 (old table 23)
-esttab prof*mode* using draft_outputs_`logdate'.rtf, ///
+esttab prof*mode* using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
 	title(Table 10. Logistic Regressions Profit on Initial Employment Status) ///
 	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
 	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
-	nonumbers mtitles("Positive Profit" "Positive Profit" "Profit >= 10k" ///
-	"Profit >= 10k") ///
+	nonumbers mtitles("Positive Profit" "Positive Profit" "Positive Profit" "Profit >= 10k" ///
+	"Profit >= 10k" 	"Profit >= 10k") ///
 	addnote("Source: SIPP Data.") ///
 	compress onecell append  
 
@@ -1122,21 +1141,36 @@ esttab prof*mode* using draft_outputs_`logdate'.rtf, ///
 esttab *jval*, legend label varlabels(_cons Constant) title(Business Value  Models) aic bic 
 	
 **# Table 11 (old table 26)
-esttab ln_tbsjval_unemp_* using draft_outputs_`logdate'.rtf, ///
+esttab ln_tbsjval_unemp_* using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
 	title(Table 11. Regressions Profit on Unemployment) ///
 	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
 	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
-	nonumbers mtitles("Log Business Value" "Log Business Value") ///
+	nonumbers mtitles("Log Business Value" "Log Business Value" "Log Business Value") ///
 	addnote("Source: SIPP Data.") ///
 	compress onecell append  
 
 **# Old table 27
-esttab ln_tbsjval_mode_* using draft_outputs_`logdate'.rtf, ///
+esttab ln_tbsjval_mode_* using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
 	title(Table 27. Regressions Profit on Initial Employment Status) ///
 	varlabels(_cons Constant 1.educ3 "HS or Less" 2.educ3  ///
 	"Some College or Assoc." 3.educ3 "4-year College" 4.educ3 "Graduate Degree") ///
-	nonumbers mtitles("Log Business Value" "Log Business Value") ///
+	nonumbers mtitles("Log Business Value" "Log Business Value" "Log Business Value") ///
 	addnote("Source: SIPP Data.") ///
 	compress onecell append  
+	
+	
+	
+	
+**# Quantile Regressions
+// potential commands to use for these are 
+// qregpd 
+// xtqreg
+// mdqr
+// xtmdqr
+// net install mdqr, from("https://raw.githubusercontent.com/bmelly/Stata/main/")
+	
+**# Mixed Earnings Models 
+
+
