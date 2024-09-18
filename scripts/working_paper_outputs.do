@@ -9,19 +9,14 @@ local datapath "`homepath'/dtas"
 cd "`datapath'"
 */
 
-cd "/Users/toddnobles/Documents/sipp_analyses/"
+cd "/Users/toddnobles/Documents/sipp_analyses/outputs"
 set linesize 255
 
 
-/***
-<html>
-<body>
-<h2>Data Prep</h2>
-***/
 
 **# Data import
 //use earnings_by_status, clear  
-use sipp_reshaped_work_comb_imputed, clear  
+use "../sipp_reshaped_work_comb_imputed", clear  
 
 // bringing in monthly level data 
 merge m:1 ssuid_spanel_pnum_id spanel swave monthcode using sipp_monthly_combined 
@@ -32,12 +27,7 @@ bysort ssuid_spanel_pnum_id: egen _merge_avg = mean(_merge)
 // filtering to population of interest
 keep if tage>=18 & tage<=64
 
-/***
-<html>
-<body>
-<h3>Creating main job flag</h3>
-***/
-**# main job
+**# Creating main job flag<
 
 gsort ssuid_spanel_pnum_id swave monthcode -tjb_mwkhrs -ejb_jobid  // sort descending by hours, breaking ties by jobid 
 qby ssuid_spanel_pnum_id swave monthcode: gen jb_main=_n==1 // 
@@ -50,11 +40,8 @@ bysort ssuid_spanel_pnum_id: egen sum_enjflag = sum(unemployed_flag)
 bysort ssuid_spanel_pnum_id: gen num_records = _N
 drop if sum_enjflag == num_records
 
-/***
-<html>
-<body>
-<h3>creating lenient employment type flag</h3>
-<p> job trumps unemployment flag  (must be unemployed for at least one month to count as unemployed)</p>
+/***creating lenient employment type flag</h3>
+job trumps unemployment flag  (must be unemployed for at least one month to count as unemployed)</p>
 ***/
 **# employment type flag 
 
@@ -546,7 +533,7 @@ sample(, statistics(freq) place(seplabels)) ///
 	title(Table 1B. Descriptive Statistics for Self-Employed Only and Wage and Salary Only Samples) ///
 	note(Here, "Self-Employed" refers to those who from the 13th month of observation onwards were never unemployed and reported being self-employed for each month. Similarly, "Wage and Salary" refers to thoe who from the 13th month of observation onwards were never unemployed and reported being employed in a waged/salaried position for each month. Average earnings are grand means of individuals' average annual earnings for any type of employment. Median earnings are the median of individual average annual earnings. Excluded from sample are those who dropped out of the SIPP sample after only one year of participation, months where individuals worked fewer than 15 hours, and "Other" employment types besides self-employed or wage and salaried. Sample is also restricted to those who were continuously employed in either self-employment or wage and salaried employment after the first 12-months observed in the data.)
 	
-collect export working_paper_outputs_`logdate'.xlsx, sheet(Appendix Table 1B, replace) modify
+collect export working_paper_outputs_`logdate'.xlsx, sheet(Appendix Table 1B) modify
 
 
 **# Working with Wage and Salary Sample for tables
@@ -700,10 +687,8 @@ collect preview
 collect export working_paper_outputs_`logdate'.xlsx, sheet(Table 2) cell(A18) modify
 
 
-dtable i.combine_race_eth i.sex i.educ3 i.mode_status_f12v2
+dtable i.combine_race_eth i.sex i.educ3, by(mode_status_f12v2)
 collect export working_paper_outputs_`logdate'.xlsx, sheet(Table 2) cell(M8) modify
-
-
 
 
 restore
@@ -849,8 +834,8 @@ collect preview
 collect export working_paper_outputs_`logdate'.xlsx, sheet(Table 3) cell(A18) modify
 
 
-dtable i.combine_race_eth i.sex i.educ3 i.mode_status_f12v2
-collect export working_paper_outputs_`logdate'.xlsx, sheet(Table 3) cell(M8) modify
+dtable i.combine_race_eth i.sex i.educ3, by(mode_status_f12v2)
+collect export working_paper_outputs_`logdate'.xlsx, sheet(Table 3) cell(m8) modify
 
 restore 
 
@@ -1050,7 +1035,7 @@ esttab any_earn_unemp??? ws_earn_unemp??? using working_paper_outputs_`logdate'.
 	varlabels(_cons Constant) ///
 	nonumbers mtitles("Full Sample" ""  "" "Salaried Sample" "" "") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
-	compress onecell replace  
+	compress onecell append  
 
 **# Table 6: Regression Earnings on Initial Employment Status (Self-Employed Sample)
 *------------------------------------------------------------------------------|
@@ -1428,5 +1413,70 @@ esttab mix_ln_tbsjval_mode_* using working_paper_outputs_`logdate'.rtf, ///
 	addnote("Source: SIPP Data.") ///
 	compress onecell append  
 */	
+
+
+**# Plotting
+*------------------------------------------------------------------------------|
+
+**# Plots for unemployment 
+label define unemp_labels 0 "Not Unemployed" 1 "Unemployed", replace 
+label values unempf12_6 unemp_labels
+cd "/Users/toddnobles/Documents/sipp_analyses/outputs"
+
+
+xtlogit prof10k i.unempf12_6 i.educ3 i.combine_race_eth $controls , vce(robust) 
+
+**# Graph Unemployment Profit 10k scatter
+*---------------------------------------------------------------------------|
+margins unempf12_6, saving(tempmargins, replace)
+preserve
+clear
+use tempmargins
+twoway (rcap _ci_lb _ci_ub _m1, sort colorvar(_m1) colordiscrete colorcuts(0 1) colorlist(stc1 stc2) clegend(off)) ///
+(scatter _margin _m1 if _m1==0, sort mc("stc1") ) ///
+(scatter _margin _m1 if _m1==1, sort mc("stc2")), ///
+legend(off) title("Overall Sample") xlabel(0 "Not Unemployed" 1 "Unemployed") xtitle("") ///
+ytitle("Probability of Profit >= 10k") saving(g1, replace) fxsize(50) ylabel(0(.1).6)
+restore
+
+
+margins unempf12_6, at(combine_race_eth =(1 2 3 4) ) 
+marginsplot, recast(scatter) xdimension(combine_race_eth) title("Race/Ethnicity") ///
+xtitle("Race/Ethnicity") ytitle("") ylabel(0(.1).6) saving(g2, replace ) 
+
+grc1leg  g1.gph g2.gph , ycommon legend(g2.gph) title("Predicted Probability of Profit >= $10,000")  ///
+subtitle("by Unemployment") 
+
+graph export graph_10kprofit.png, replace
+
+
+
+**# Graph Unemployment Positive Profit Scatter
+*---------------------------------------------------------------------------|
+xtlogit profpos i.unempf12_6 i.educ3 i.combine_race_eth $controls , vce(robust) 
+
+margins unempf12_6, saving(tempmargins, replace)
+preserve
+clear
+use tempmargins
+twoway (rcap _ci_lb _ci_ub _m1, sort colorvar(_m1) colordiscrete colorcuts(0 1) colorlist(stc1 stc2) clegend(off)) ///
+(scatter _margin _m1 if _m1==0, sort mc("stc1") ) ///
+(scatter _margin _m1 if _m1==1, sort mc("stc2")), ///
+legend(off) title("Overall Sample") xlabel(0 "Not Unemployed" 1 "Unemployed") xtitle("") ///
+ytitle("Probability of Positive Profit") saving(g1, replace) fxsize(50) ylabel(0(.1).6)
+restore
+
+
+margins unempf12_6, at(combine_race_eth =(1 2 3 4) ) 
+marginsplot, recast(scatter) xdimension(combine_race_eth) title("Race/Ethnicity") ///
+xtitle("Race/Ethnicity") ytitle("") ylabel(0(.1).6) saving(g2, replace ) 
+
+grc1leg  g1.gph g2.gph , ycommon legend(g2.gph) title("Predicted Probability of Positive Profit")  ///
+subtitle("by Unemployment") 
+
+graph export graph_postive_profit.png, replace
+
+
+
 	
 	
