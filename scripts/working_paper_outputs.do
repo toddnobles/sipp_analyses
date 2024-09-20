@@ -19,7 +19,7 @@ set linesize 255
 use "../sipp_reshaped_work_comb_imputed", clear  
 
 // bringing in monthly level data 
-merge m:1 ssuid_spanel_pnum_id spanel swave monthcode using sipp_monthly_combined 
+merge m:1 ssuid_spanel_pnum_id spanel swave monthcode using "../sipp_monthly_combined"
 sort ssuid_spanel_pnum_id spanel swave monthcode 
 bysort ssuid_spanel_pnum_id: egen _merge_avg = mean(_merge)
 
@@ -211,17 +211,18 @@ global controls= "i.sex age age2 immigrant parent industry2 calyear"
 
 
 
-/***
-<html>
-<body>
-<h3>Flags for unemployment during first 12 months </h3>
-<p>max_consec_unempf12 gives us the length of longest unemployment spell during the first 12 months. months_unempf12 gives us the total number of months unemployed during first 12 months</p>
-***/
+**# Flags for unemployment during first 12 months 
+/*
+max_consec_unempf12 gives us the length of longest unemployment spell during the first 12 months. months_unempf12 gives us the total number of months unemployed during first 12 months</
+*/
 
 frame change earnings 
 bysort ssuid_spanel_pnum_id: gen months_in_data = _N
-drop if months_in_data < 12 // do we actually want this? 
+drop if months_in_data < 12
 bysort ssuid_spanel_pnum_id: egen months_unempf12=  count(month_individ) if (employment_type1 == 4 & month_individ <=12) // doesn't account for non-consecutive issues 
+by ssuid_spanel_pnum_id: egen months_unempf12_max = max(months_unempf12)if month_individ <=12
+drop months_unempf12
+rename months_unemp12_max = months_unempf12
 
 gen unemp_month = 1 if employment_type1 == 4  
 replace unemp_month = . if month_individ >12
