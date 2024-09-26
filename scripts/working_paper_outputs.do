@@ -350,12 +350,6 @@ drop if mode_status_f12v1 == 3
 drop if mode_status_f12v2 == 3 
 */
 
-// cleaning up missings 
-foreach var of varlist unempf12_6 mode_status_f12v2 y1_status* educ_collapsed combine_race_eth sex age immigrant parent industry2 calyear{
-	drop if `var' == . 
-}
-
-
 
 gen sumpcts_ft = pct_se_after_12_ft + pct_ws_after_12_ft
 gen sumpcts = pct_se_after_12 + pct_ws_after_12
@@ -395,13 +389,18 @@ label define educ_lab 1 "HS or Less" 2 "Some College or Assoc." 3 "4-year Degree
 label values educ_collapsed educ_lab
 
 
+// cleaning up missings 
+foreach var of varlist unempf12_6 mode_status_f12v2 y1_status* educ_collapsed combine_race_eth sex age immigrant parent industry2 calyear{
+	drop if `var' == . 
+}
+
 frame copy earnings annual_earnings, replace 
 frame change annual_earnings 
 
 
 bys ssuid_spanel_pnum_id: egen mode_industry=mode(industry2), minmode
 
-collapse (sum) tpearn tjb_msum (max) educ_collapsed (first) mode_industry parent age (count) n_months = tpearn (mean) tjb_mwkhrs, by(ssuid_spanel_pnum_id mode_status_f12v2 combine_race_eth immigrant sex pct_se_after_12 unempf12_6  unempf12_3 months_unempf12 pct_ws_after_12 y1_status* calyear)
+collapse (sum) tpearn tjb_msum (max) educ_collapsed (first) mode_industry parent age (count) n_months = tpearn (mean) tjb_mwkhrs, by(ssuid_spanel_pnum_id mode_status_f12v2 race_collapsed immigrant sex pct_se_after_12 unempf12_6  unempf12_3 months_unempf12 pct_ws_after_12 y1_status* calyear)
 
 // at this point have a file that is collapsed to person-per year with their total earnings in tpearn and tjb_sum per year
 
@@ -411,7 +410,7 @@ bysort ssuid_spanel_pnum_id (calyear): drop if _n == 1 // drop first year for ea
 bysort ssuid_spanel_pnum_id (calyear): gen year_in_data = _n
 
 // collapsing once more to mirror the monthly earnings analysis where we can produce a table that n-counts match the individuals that fall in that group
-collapse (mean) tpearn tjb_msum (max) educ_collapsed year_in_data (first) mode_industry parent age (count) n_years = tpearn (mean) tjb_mwkhrs, by(ssuid_spanel_pnum_id mode_status_f12v2 combine_race_eth immigrant sex pct_se_after_12 unempf12_6 unempf12_3  months_unempf12 pct_ws_after_12 y1_status*)
+collapse (mean) tpearn tjb_msum (max) educ_collapsed year_in_data (first) mode_industry parent age (count) n_years = tpearn (mean) tjb_mwkhrs, by(ssuid_spanel_pnum_id mode_status_f12v2 race_collapsed immigrant sex pct_se_after_12 unempf12_6 unempf12_3  months_unempf12 pct_ws_after_12 y1_status*)
 
 
 label variable sex "Sex"
@@ -635,7 +634,6 @@ collect export working_paper_outputs_`logdate'.xlsx, sheet(Table 2) cell(m8) mod
 frame copy earnings earnings_models
 frame change earnings_models
 
-keep if pct_se_after_12 >= .5 
 bys ssuid_spanel_pnum_id calyear: egen mode_industry_year =mode(industry2), minmode
 
 collapse (sum) tpearn tjb_msum (max) educ_collapsed (first) mode_industry_year parent age (count) n_months = tpearn, by(ssuid_spanel_pnum_id y1_status_v2 race_collapsed immigrant sex pct_se_after_12 unempf12_6 pct_ws_after_12 calyear)
@@ -643,6 +641,7 @@ collapse (sum) tpearn tjb_msum (max) educ_collapsed (first) mode_industry_year p
 
 // Dropping first year for everyone as otherwise we don't have a fair comparison group for earnings. 
 bysort ssuid_spanel_pnum_id (calyear): drop if _n == 1 
+drop if y1_status_v2 == 3 // dropping others 
 
 
 gen age2 = age^2
@@ -663,117 +662,43 @@ xtset ssuid_spanel_pnum_id calyear
 global controls  = "i.sex age age2 i.immigrant i.parent mode_industry_year calyear"
 
 // regressions for full-sample
-quietly xtreg ln_tpearn i.unempf12_6, vce(robust) 
-eststo any_earn_unemp_m1 
 quietly xtreg ln_tpearn i.unempf12_6 i.educ_collapsed $controls, vce(robust) 
-eststo any_earn_unemp_m2
+eststo any_earn_unemp_m1 
 quietly xtreg ln_tpearn i.unempf12_6 i.race_collapsed i.educ_collapsed $controls, vce(robust) 
+eststo any_earn_unemp_m2
+quietly xtreg ln_tpearn unempf12_6##race_collapsed i.educ_collapsed $controls, vce(robust)
 eststo any_earn_unemp_m3
-
-// same models with mixed commands
-/*
-quietly mixed ln_tpearn i.unempf12_6 || ssuid_spanel_pnum_id:, vce(robust)
-eststo mix_any_earn_unemp_m1
-quietly mixed ln_tpearn i.unempf12_6 i.educ_collapsed $controls || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_any_earn_unemp_m2
-quietly mixed ln_tpearn i.unempf12_6 i.race_collapsed i.educ_collapsed $controls || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_any_earn_unemp_m3
-*/
 
 
 // mode status regressions 
-quietly xtreg ln_tpearn i.y1_status_v2, vce(robust) 
-eststo any_earn_mode_m1
 quietly xtreg ln_tpearn i.y1_status_v2 i.educ_collapsed $controls, vce(robust) 
-eststo any_earn_mode_m2
+eststo any_earn_mode_m1
 quietly xtreg ln_tpearn i.y1_status_v2 i.race_collapsed i.educ_collapsed $controls, vce(robust) 
+eststo any_earn_mode_m2
+quietly xtreg ln_tpearn y1_status_v2##race_collapsed i.educ_collapsed $controls, vce(robust)
 eststo any_earn_mode_m3
 
 
-// same models with mixed commands 
-/*
-quietly mixed ln_tpearn i.y1_status_v2 || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_any_earn_mode_m1
-quietly mixed ln_tpearn i.y1_status_v2 i.educ_collapsed $controls || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_any_earn_mode_m2
-quietly mixed ln_tpearn i.y1_status_v2 i.race_collapsed i.educ_collapsed $controls || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_any_earn_mode_m3
-*/
 
 // regression for self-employed sample 
 preserve 
-keep if pct_se_after_12 == 1 
-quietly xtreg ln_tpearn i.unempf12_6, vce(robust) 
-eststo se_earn_unemp_m1 
+keep if pct_se_after_12 >=.5
 quietly xtreg ln_tpearn i.unempf12_6 i.educ_collapsed $controls, vce(robust) 
-eststo se_earn_unemp_m2
+eststo se_earn_unemp_m1 
 quietly xtreg ln_tpearn i.unempf12_6 i.race_collapsed i.educ_collapsed  $controls, vce(robust) 
+eststo se_earn_unemp_m2
+quietly xtreg ln_tpearn unempf12_6##race_collapsed i.educ_collapse $controls, vce(robust)
 eststo se_earn_unemp_m3
 
-quietly xtreg ln_tpearn i.y1_status_v2, vce(robust) 
-eststo se_earn_mode_m1 
 quietly xtreg ln_tpearn i.y1_status_v2 i.educ_collapsed $controls, vce(robust) 
-eststo se_earn_mode_m2
+eststo se_earn_mode_m1 
 quietly xtreg ln_tpearn i.y1_status_v2 i.race_collapsed i.educ_collapsed $controls, vce(robust) 
+eststo se_earn_mode_m2
+quietly xtreg ln_tpearn y1_status_v2##race_collapsed i.educ_collapsed $controls, vce(robust)
 eststo se_earn_mode_m3
 
-
-
-// mixed version 
-/*
-quietly mixed ln_tpearn i.unempf12_6 || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_se_earn_unemp_m1
-quietly mixed ln_tpearn i.unempf12_6 i.educ_collapsed $controls || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_se_earn_unemp_m2
-quietly mixed ln_tpearn i.unempf12_6 i.race_collapsed i.educ_collapsed  $controls || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_se_earn_unemp_m3
-
-quietly mixed ln_tpearn i.y1_status_v2 || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_se_earn_mode_m1
-quietly mixed ln_tpearn i.y1_status_v2 i.educ_collapsed $controls || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_se_earn_mode_m2
-quietly mixed ln_tpearn i.y1_status_v2 i.race_collapsed i.educ_collapsed $controls || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_se_earn_mode_m3
-*/
 restore 
 
-// regressions for wage/salaried sample 
-*------------------------------------------------------------------------------|
-preserve 
-keep if pct_ws_after_12 == 1
-
-quietly xtreg ln_tpearn i.unempf12_6, vce(robust) 
-eststo ws_earn_unemp_m1 
-quietly xtreg ln_tpearn i.unempf12_6 i.educ_collapsed  $controls, vce(robust) 
-eststo ws_earn_unemp_m2
-quietly xtreg ln_tpearn i.unempf12_6 i.race_collapsed i.educ_collapsed $controls, vce(robust) 
-eststo ws_earn_unemp_m3
-
-
-quietly xtreg ln_tpearn i.y1_status_v2, vce(robust) 
-eststo ws_earn_mode_m1 
-quietly xtreg ln_tpearn i.y1_status_v2 i.educ_collapsed $controls, vce(robust)  
-eststo ws_earn_mode_m2
-quietly xtreg ln_tpearn i.y1_status_v2 i.race_collapsed i.educ_collapsed  $controls, vce(robust)  
-eststo ws_earn_mode_m3
-
-//mixed versions
-/*
-quietly mixed ln_tpearn i.unempf12_6 || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_ws_earn_unemp_m1
-quietly mixed ln_tpearn i.unempf12_6 i.educ_collapsed  $controls || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_ws_earn_unemp_m2
-quietly mixed ln_tpearn i.unempf12_6 i.race_collapsed i.educ_collapsed $controls || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_ws_earn_unemp_m3
-
-quietly mixed ln_tpearn i.y1_status_v2 || ssuid_spanel_pnum_id:, vce(robust) 
-eststo mix_ws_earn_mode_m1
-quietly mixed ln_tpearn i.y1_status_v2 i.educ_collapsed $controls || ssuid_spanel_pnum_id:, vce(robust)  
-eststo mix_ws_earn_mode_m2
-quietly mixed ln_tpearn i.y1_status_v2 i.race_collapsed i.educ_collapsed  $controls || ssuid_spanel_pnum_id:, vce(robust)  
-eststo mix_ws_earn_mode_m3
-*/
-restore 
 
 
 
@@ -789,75 +714,29 @@ label values immigrant immigrant_labels
 label values educ_collapsed educ_lab
 
 esttab any_earn_unemp??? se_earn_unemp??? using working_paper_outputs_`logdate'.rtf, ///
-	legend label ///
+	aic bic legend label ///
 	order(*unemp* *race_collapsed) ///
 	title(Table 4: Relationship between Unemployment and Log Annual Earnings (Self-Employed Sample)) ///
-	varlabels(_cons Constant) ///
+	varlabels(_cons Constant)  nobaselevels ///
 	nonumbers mtitles("Full Sample" ""  "" "Self-Employed Sample" "" "") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell replace  
 
-/*
-esttab mix_any_earn_unemp??? mix_se_earn_unemp??? mix_ws_earn_unemp??? using working_paper_outputs_`logdate'.rtf, ///
-	legend label ///
-	order(*unemp* *race_collapsed) ///
-	title(Table 5: Mixed: Relationship between Unemployment and Log Annual Earnings) ///
-	varlabels(_cons Constant 1.educ_collapsed "HS or Less" 2.educ_collapsed  ///
-	"Some College or Assoc." 3.educ_collapsed "4-year College" 4.educ_collapsed "Graduate Degree") ///
-	nonumbers mtitles("Full Sample" "Full Sample" "Full Sample"  "Self-Employed Sample" ///
-	"Self-Employed Sample" "Self-Employed Sample" "Salaried Sample" "Salaried Sample" "Salaried Sample") ///
-	addnote("Source: SIPP Data. Dependent Variable is log of tpearn") ///
-	compress onecell append  	
-*/
 
 
-**# Table 5: Regression Earnings on Unemployment (WS Sample)
-*------------------------------------------------------------------------------|
-esttab any_earn_unemp??? ws_earn_unemp??? using working_paper_outputs_`logdate'.rtf, ///
-	legend label ///
-	order(*unemp* *race_collapsed) ///
-	title(Table 5: Relationship between Unemployment and Log Annual Earnings (Salaried Sample)) ///
-	varlabels(_cons Constant) ///
-	nonumbers mtitles("Full Sample" ""  "" "Salaried Sample" "" "") ///
-	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
-	compress onecell append  
-
-**# Table 6: Regression Earnings on Initial Employment Status (Self-Employed Sample)
+**# Table 5: Regression Earnings on Initial Employment Status (Self-Employed Sample)
 *------------------------------------------------------------------------------|
 esttab any_earn_mode??? se_earn_mode??? using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
 	order(*status* *race_collapsed) ///
-	title(Table 6: Relationship between Initial Employment Status and Log Annual Earnings (Self-Employed Sample)) ///
-	varlabels(_cons Constant) ///
+	title(Table 5: Relationship between Initial Employment Status and Log Annual Earnings (Self-Employed Sample)) ///
+	varlabels(_cons Constant)  nobaselevels ///
 	nonumbers mtitles("Full Sample" ""  "" "Self-Employed Sample" "" "") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell append 
 	
-**# Table 7: Regression Earnings on Initial Employment Status (Salaried Sample)
-*------------------------------------------------------------------------------|
-esttab any_earn_mode??? ws_earn_mode??? using working_paper_outputs_`logdate'.rtf, ///
-	legend label ///
-	order(*status* *race_collapsed) ///
-	title(Table 7: Relationship between Initial Employment Status and Log Annual Earnings (Salaried Sample )) ///
-	varlabels(_cons Constant) ///
-	nonumbers mtitles("Full Sample" ""  "" "Salaried Sample" "" "") ///
-	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
-	compress onecell append 
-	
-/*
-esttab mix_any_earn_mode??? mix_se_earn_mode??? mix_ws_earn_mode??? using working_paper_outputs_`logdate'.rtf, ///
-	legend label ///
-	order(*status* *race_collapsed) ///
-	title(Table 6: Mixed: Relationship between Initial Employment Status and Log Annual Earnings) ///
-	varlabels(_cons Constant 1.educ_collapsed "HS or Less" 2.educ_collapsed  ///
-	"Some College or Assoc." 3.educ_collapsed "4-year College" 4.educ_collapsed "Graduate Degree") ///
-	nonumbers mtitles("Full Sample" "Full Sample"  "Full Sample" "Self-Employed Sample" ///
-	"Self-Employed Sample" "Self-Employed Sample" "Salaried Sample" "Salaried Sample" "Salaried Sample") ///
-	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
-	compress onecell append 
-*/
-	
-	
+
+
 	
 *------------------------------------------------------------------------------|
 **# Examining Business Profits
@@ -904,10 +783,10 @@ frame change profits_collapse
 // taking most common industry reported by person over the years we observe them
 bys ssuid_spanel_pnum_id: egen mode_industry=mode(industry2), minmode
 
-collapse (mean) tjb_prftb tbsjval ln_tjb_prftb ln_tbsjval (max) educ_collapsed (first) mode_industry parent age, by(ssuid_spanel_pnum_id y1_status_v2 combine_race_eth immigrant sex unempf12_6 pct_ws_after_12)
+collapse (mean) tjb_prftb tbsjval ln_tjb_prftb ln_tbsjval (max) educ_collapsed (first) mode_industry parent age, by(ssuid_spanel_pnum_id y1_status_v2 race_collapsed immigrant sex unempf12_6 pct_ws_after_12)
 
 
-label variable combine_race_eth "Race/Ethnicity"
+label variable race_collapsed "Race/Ethnicity"
 label variable sex "Sex"
 label variable age "Age"
 label values immigrant immigrant_labels
@@ -937,7 +816,7 @@ label variable tbsjval_med "Median Annual Business Value"
 **# Table 2A: Profit within Race/Ethnicity by Initial Employment Status
 *------------------------------------------------------------------------------|
 local x = 0
-local names White Black Asian Hispanic Other
+local names White Non_White
 foreach name of local names {
 	local x = `x' + 1
 	collect create `name', replace 
@@ -961,7 +840,7 @@ collect remap rowname[b] = values[lev2], ///
 	fortags(colname[2vs1.y1_status_v2  4vs1.y1_status_v2])
 collect remap rowname[se] = values[lev3], fortags(colname[2vs1.y1_status_v2  4vs1.y1_status_v2])
 
-collect combine newc = Full_Sample White Black Asian Hispanic Other, replace
+collect combine newc = Full_Sample White Non_White, replace
 collect layout  (collection#values) (y1_status_v2), name(newc)
 collect label levels y1_status_v2 1 "Wage/Salary" 2 "Self-Employed" 4 "Unemployed", replace
 collect style row split, dups(first)
@@ -1047,26 +926,16 @@ foreach y of varlist profposi prof10k   {
 		local xname = substr("`x'",1,5)
 		di "`y'_`xname'"
 
-		quietly xtlogit `y' i.`x', vce(robust)  
+		quietly xtlogit `y' i.`x' i.educ_collapsed $controls , vce(robust) 
 		eststo `y'_`xname'_1re
 
-		quietly xtlogit `y' i.`x' i.educ_collapsed $controls , vce(robust) 
+	    quietly xtlogit `y' i.`x' i.educ_collapsed i.race_collapsed $controls , vce(robust) 
 		eststo `y'_`xname'_2re
 		
-		quietly xtlogit `y' i.`x' i.race_collapsed i.educ_collapsed  $controls , vce(robust) 
+		quietly xtlogit `y' `x'##race_collapsed i.educ_collapsed  $controls , vce(robust) 
 		eststo `y'_`xname'_3re
 		
-		/*
-		 melogit `y' i.`x' || ssuid_spanel_pnum_id: , vce(robust)  
-		eststo mix_`y'_`xname'_1
 
-		 melogit `y' i.`x' i.educ_collapsed $controls || ssuid_spanel_pnum_id: , vce(robust) 
-		eststo mix_`y'_`xname'_2
-		
-		 melogit `y' i.`x' i.race_collapsed i.educ_collapsed $controls || ssuid_spanel_pnum_id: , vce(robust) 
-		eststo mix_`y'_`xname'_3
-		*/
-		
 
 		}
 }
@@ -1079,26 +948,15 @@ foreach y of varlist ln_tjb_prftb ln_tbsjval   {
 		local xname = substr("`x'",1,5)
 		di "`y'_`xname'"
 
-		quietly xtreg `y' i.`x', vce(robust) 
+		quietly xtreg `y' i.`x' i.educ_collapsed  $controls , vce(robust) 
 		eststo `y'_`xname'_1re
 
-		quietly xtreg `y' i.`x' i.educ_collapsed  $controls , vce(robust) 
+	    quietly xtreg `y' i.`x' i.educ_collapsed i.race_collapsed $controls , vce(robust) 
 		eststo `y'_`xname'_2re
 		
-		quietly xtreg `y' i.`x' i.race_collapsed i.educ_collapsed  $controls , vce(robust) 
+		quietly xtreg `y' `x'##race_collapsed i.educ_collapsed  $controls , vce(robust) 
 		eststo `y'_`xname'_3re
 		
-		/*
-		quietly mixed `y' i.`x' || ssuid_spanel_pnum_id: , vce(robust) 
-		eststo mix_`y'_`xname'_1
-
-		quietly mixed `y' i.`x' i.educ_collapsed  $controls || ssuid_spanel_pnum_id: , vce(robust) 
-		eststo mix_`y'_`xname'_2
-		
-		quietly mixed `y' i.`x' i.race_collapsed i.educ_collapsed  $controls ||ssuid_spanel_pnum_id: , vce(robust) 
-		eststo mix_`y'_`xname'_3
-
-*/
 	}
 }
 
@@ -1109,43 +967,22 @@ esttab prof*unemp* using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
 	order(*unemp* *combine*) ///
 	title(Table 8. Logistic Regressions Profit on Unemployment) ///
-	varlabels(_cons Constant) ///
+	varlabels(_cons Constant)  nobaselevels ///
 	mtitles("Positive Profit" "" "" "Profit >= 10k"  "" 	"") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell append  
 
-/*
-	esttab mix_prof*unemp* using working_paper_outputs_`logdate'.rtf, ///
-	legend label ///
-	title(Table 7. Mixed: Logistic Regressions Profit on Unemployment) ///
-	varlabels(_cons Constant 1.educ_collapsed "HS or Less" 2.educ_collapsed  ///
-	"Some College or Assoc." 3.educ_collapsed "4-year College" 4.educ_collapsed "Graduate Degree") ///
-	nonumbers mtitles("Positive Profit" "Positive Profit" "Positive Profit" "Profit >= 10k" ///
-	"Profit >= 10k" 	"Profit >= 10k") ///
-	addnote("Source: SIPP Data.") ///
-	compress onecell append  
-*/	
-	
+
 **# Table 9 Logistic Regressions of Profit on Initial Employment Status
 *------------------------------------------------------------------------------|
-esttab prof*mode* using working_paper_outputs_`logdate'.rtf, ///
-	legend label ///
+esttab prof*y1* using working_paper_outputs_`logdate'.rtf, ///
+	legend label  nobaselevels ///
 	title(Table 9. Logistic Regressions Profit on Initial Employment Status) ///
 	varlabels(_cons Constant) ///
 	mtitles("Positive Profit" "" "" "Profit >= 10k" "" 	"") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell append  
-/*
-	esttab mix_prof*mode* using working_paper_outputs_`logdate'.rtf, ///
-	legend label ///
-	title(Table 10. Mixed: Logistic Regressions Profit on Initial Employment Status) ///
-	varlabels(_cons Constant) ///
-	nonumbers mtitles("Positive Profit" "" "" "Profit >= 10k" ///
-	"" 	"") ///
-	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
-	compress onecell append  
 
-*/
 	
 *------------------------------------------------------------------------------|
 **# Regressions for business value
@@ -1158,43 +995,23 @@ esttab ln_tbsjval_unemp_* using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
 	order(*unemp* *combine*) ///
 	title(Table 4A. Regressions Business Value on Unemployment) ///
-	varlabels(_cons Constant) ///
+	varlabels(_cons Constant)   nobaselevels ///
 	mtitles("Log Business Value" "" "") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell append  
 	
-/*	
-esttab mix_ln_tbsjval_unemp_* using working_paper_outputs_`logdate'.rtf, ///
-	legend label ///
-	order(*unemp* *combine*) ///
-	title(Table 1A. Mixed: Regressions Business Value on Unemployment) ///
-	varlabels(_cons Constant 1.educ_collapsed "HS or Less" 2.educ_collapsed  ///
-	"Some College or Assoc." 3.educ_collapsed "4-year College" 4.educ_collapsed "Graduate Degree") ///
-	nonumbers mtitles("Log Business Value" "Log Business Value" "Log Business Value") ///
-	addnote("Source: SIPP Data.") ///
-	compress onecell append 
-*/
+
 
 **# Table 5A Regressions Business Value on Initial Employment Status
 *------------------------------------------------------------------------------|
-esttab ln_tbsjval_mode_* using working_paper_outputs_`logdate'.rtf, ///
+esttab ln_tbsjval_y1_* using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
 	title(Table 5A. Regressions Business Value on Initial Employment Status) ///
-	varlabels(_cons Constant) ///
+	varlabels(_cons Constant)  nobaselevels ///
 	nonumbers mtitles("Log Business Value" "" "") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell append  
 	
-/*
-esttab mix_ln_tbsjval_mode_* using working_paper_outputs_`logdate'.rtf, ///
-	legend label ///
-	title(Table 27. Mixed: Regressions Business Value on Initial Employment Status) ///
-	varlabels(_cons Constant 1.educ_collapsed "HS or Less" 2.educ_collapsed  ///
-	"Some College or Assoc." 3.educ_collapsed "4-year College" 4.educ_collapsed "Graduate Degree") ///
-	nonumbers mtitles("Log Business Value" "Log Business Value" "Log Business Value") ///
-	addnote("Source: SIPP Data.") ///
-	compress onecell append  
-*/	
 
 
 **# Plotting
@@ -1222,7 +1039,7 @@ ytitle("Probability of Profit >= 10k") saving(g1, replace) fxsize(50) ylabel(0(.
 restore
 
 
-margins unempf12_6, at(race_collapsed =(1 2 3 4) ) 
+margins unempf12_6, at(race_collapsed =(1 2) ) 
 marginsplot, recast(scatter) xdimension(race_collapsed) title("Race/Ethnicity") ///
 xtitle("Race/Ethnicity") ytitle("") ylabel(0(.1).6) saving(g2, replace ) 
 
@@ -1249,7 +1066,7 @@ ytitle("Probability of Positive Profit") saving(g1, replace) fxsize(50) ylabel(0
 restore
 
 
-margins unempf12_6, at(race_collapsed =(1 2 3 4) ) 
+margins unempf12_6, at(race_collapsed =(1 2) ) 
 marginsplot, recast(scatter) xdimension(race_collapsed) title("Race/Ethnicity") ///
 xtitle("Race/Ethnicity") ytitle("") ylabel(0(.1).6) saving(g2, replace ) 
 
@@ -1260,5 +1077,31 @@ graph export graph_postive_profit.png, replace
 
 
 
+
+**# graphs for interactions
+frame change earnings_models
+
+xtreg ln_tpearn unempf12_6##race_collapsed i.educ_collapsed $controls, vce(robust)
+margins unempf12_6#race_collapsed 
+marginsplot 
+
+xtreg ln_tpearn y1_status_v2##race_collapsed i.educ_collapsed $controls, vce(robust)
+margins y1_status_v2#race_collapsed
+marginsplot
+
+preserve
+keep if pct_se_after_12 >= .5
+
+xtreg ln_tpearn unempf12_6##race_collapsed i.educ_collapsed $controls, vce(robust)
+margins unempf12_6#race_collapsed 
+margins race_collapsed, dydx(unempf12_6)
+
+
+
+xtreg ln_tpearn y1_status_v2##race_collapsed i.educ_collapsed $controls, vce(robust)
+margins y1_status_v2#race_collapsed
+marginsplot, recast(scatter)
+
+restore 
 	
 	
