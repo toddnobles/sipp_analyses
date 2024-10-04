@@ -464,7 +464,7 @@ We also have flags for unemployment during the first 12 months:
 
 ***/
 
-
+drop if combine_race_eth == 3 // dropping asians to see what changes 
 
 
 **# Collapsing to yearly values for earnings 
@@ -798,9 +798,9 @@ label values educ_collapsed educ_lab
 
 esttab any_earn_unemp??? se_earn_unemp??? using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
-	title(Table 3: Relationship between Unemployment and Log Annual Earnings (Self-Employed Sample)) ///
+	title(Table 3: Relationship between Unemployment and Log Annual Earnings) ///
 	varlabels(_cons Constant)   ///
-	nonumbers mtitles("Full Sample" ""  "" "Self-Employed Sample" "" "") ///
+	nonumbers mtitles("Full Sample" ""  "" "" "Self-Employed Sample" "" "" "") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell replace  
 
@@ -810,9 +810,9 @@ esttab any_earn_unemp??? se_earn_unemp??? using working_paper_outputs_`logdate'.
 *------------------------------------------------------------------------------|
 esttab any_earn_mode??? se_earn_mode??? using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
-	title(Table 6: Relationship between Initial Employment Status and Log Annual Earnings (Self-Employed Sample)) ///
+	title(Table 6: Relationship between Initial Employment Status and Log Annual Earnings) ///
 	varlabels(_cons Constant)   ///
-	nonumbers mtitles("Full Sample" ""  "" "Self-Employed Sample" "" "") ///
+	nonumbers mtitles("Full Sample" ""  "" ""  "Self-Employed Sample" "" "" "") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell append 
 	
