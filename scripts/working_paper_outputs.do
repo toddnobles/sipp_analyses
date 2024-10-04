@@ -21,6 +21,8 @@ merge m:1 ssuid_spanel_pnum_id spanel swave monthcode using "../sipp_monthly_com
 sort ssuid_spanel_pnum_id spanel swave monthcode 
 bysort ssuid_spanel_pnum_id: egen _merge_avg = mean(_merge)
 
+// These non-merges appear to be those that are out of the working age population, or were just never employed during the time so don't have job data. 
+
 // filtering to population of interest
 keep if tage>=18 & tage<=64
 
@@ -147,6 +149,23 @@ tab combine_race_eth initial_race, missing
 tab combine_race_eth initial_hisp, missing
 table (initial_hisp initial_race) combine_race_eth, missing
 
+// creating collapsed verison of race/ethnicity variable
+gen race_collapsed = 1 if combine_race_eth == 1
+replace race_collapsed = 2 if combine_race_eth == 2 | combine_race_eth == 3 | combine_race_eth == 4 | combine_race_eth == 5
+label variable race_collapsed "Race/Ethnicity"
+label define rlab 1 "White" 2 "Non-White"
+label values race_collapsed rlab
+
+// creating collapsed version of education variable 
+gen educ_collapsed = 1 if educ3 ==1
+replace educ_collapsed =2 if educ3 == 2 
+replace educ_collapsed = 3 if educ3 == 3 
+replace educ_collapsed = 3 if educ3 == 4 
+
+label variable educ_collapsed "Education"
+label define educ_lab 1 "HS or Less" 2 "Some College or Assoc." 3 "4-year Degree or more" 
+label values educ_collapsed educ_lab
+
 
 // Generating month and calendar year variables 
 bysort ssuid_spanel_pnum_id (swave monthcode): gen month_individ = _n 
@@ -167,6 +186,33 @@ replace calyear = 2020 if spanel == 2021 & swave == 1
 
 
 egen unique_tag = tag(ssuid_spanel_pnum_id) // unique id
+
+
+// oddly we are losing a number of people through parent not being consistent, 
+bysort ssuid_spanel_pnum_id (month_individ): gen parent_change = parent != parent[_n-1]
+bysort ssuid_spanel_pnum_id (month_individ): replace parent_change = 0 if _n == 1
+
+
+bysort ssuid_spanel_pnum_id (month_individ): replace parent =1 if parent[_n-1] == 1  & parent == . // we can carryforward that they're a parent in an earlier year as this question is just whether they've had a kid not about their current dependents. 
+
+// we can also replace it if we have their status as not a parent at the beginning and end of their observations
+bysort ssuid_spanel_pnum_id (month_individ): gen first_parent = parent if _n == 1
+bysort ssuid_spanel_pnum_id (month_individ): gen last_parent = parent if _n ==_N
+bysort ssuid_spanel_pnum_id (month_individ): carryforward first_parent, replace 
+gsort ssuid_spanel_pnum_id -month_individ	
+by ssuid_spanel_pnum_id: carryforward last_parent, replace  
+
+list swave spanel month_individ tjb_mwkhrs employment_type1  parent*  tceb first_parent last_parent  if ssuid_spanel_pnum_id  == 86076
+list swave spanel month_individ tjb_mwkhrs employment_type1  parent*  tceb first_parent last_parent  if ssuid_spanel_pnum_id  == 28734
+replace parent = 0 if first_parent == 0 & last_parent == 0 // now we've replaced those instances where we have confirmation someone earlier reported being a parent, then there are blanks, then we know they are 
+
+
+list swave spanel month_individ tjb_mwkhrs employment_type1  parent*  tceb first_parent last_parent  if ssuid_spanel_pnum_id  == 86076
+list swave spanel month_individ tjb_mwkhrs employment_type1  parent*  tceb first_parent last_parent  if ssuid_spanel_pnum_id  == 28734
+
+
+
+
 
 
 
@@ -219,10 +265,24 @@ bysort ssuid_spanel_pnum_id: egen pt_time_months = count(ssuid_spanel_pnum_id) i
 bysort ssuid_spanel_pnum_id: egen pt_time_months_max = max(pt_time_months) 
 replace pt_time_months_max = 0 if pt_time_months_max == . 
 tab pt_time_months_max if unique_tag == 1, miss
+count if pt_time_months_max > 0 & unique_tag == 1
 
 gen pct_pt_time_months = pt_time_months_max/months_in_data
 tab pct_pt_time_months if unique_tag == 1
 summ pct_pt_time_months if unique_tag == 1
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // we want their most common status during first 12 months, 
 bysort ssuid_spanel_pnum_id (month_individ): egen mode_status_f12v1 = mode(employment_type1) if month_individ <=12, minmode 
@@ -230,7 +290,6 @@ bysort ssuid_spanel_pnum_id (month_individ): egen mode_status_f12v2 = mode(emplo
 
 bysort ssuid_spanel_pnum_id (month_individ): carryforward mode_status_f12v1 , replace
 bysort ssuid_spanel_pnum_id (month_individ): carryforward mode_status_f12v2 , replace
-
 
 *# there are a a handful of observations here where they don't have any valid observations of first year employment to dictate a new status here leading to the 156 missing obs. 
 
@@ -270,45 +329,121 @@ unique ssuid_spanel_pnum_id, by(y1_status_v2)
 unique ssuid_spanel_pnum_id, by(mode_status_f12v2)
 
 
-
-
-
-
-
 **# Quantifying self-employment after the first 12 months 
 *---------------------------------------------------------------------------|
 // measure of how many unemployed or employment months we observe this person after first 12 months
 gen month_after12 = 1 if month_individ > 12 
-bysort ssuid_spanel_pnum_id (month_individ): egen months_after_12 = sum(month_after12) 
+bysort ssuid_spanel_pnum_id: egen months_after_12 = total(month_after12) 
 drop if months_after_12 == 0 // don't care about people who we only have for 12 months 
 keep if mod(months_after_12, 12) == 0 // dropping the 5.86 percent of observations that don't have full years of observations for us to track them
 
+list ssuid_spanel_pnum_id month_individ employment_type1  if ssuid_spanel_pnum_id  ==181353
 
 // creating a measure of how many months we observe them after 12 but full-time employment only. 
-// QUESTION: WHAT'S THE PROPER DENOMINATOR HERE? IS IT ALL FT MONTHS PLUS UNEMPLOYMENT OR ONLY FT MONTHS
-gen month_after12_ft = 1 if month_individ > 12 & tjb_mwkhrs >= 15 & employment_type != 4 
-bysort ssuid_spanel_pnum_id (month_individ): egen months_after_12_ft = sum(month_after12_ft)
+gen month_after12_ft = 1 if month_individ > 12 & tjb_mwkhrs >= 15 & employment_type != 4 & tjb_mwkhrs != .  
+bysort ssuid_spanel_pnum_id (month_individ): egen months_after_12_ft = total(month_after12_ft)
 
 // pct of Self employed months after 12 months 
 gen self_emp_month = 1 if month_individ >12 & employment_type1 == 2
-bysort ssuid_spanel_pnum_id: egen months_se_after_12 = sum(self_emp_month)
+bysort ssuid_spanel_pnum_id: egen months_se_after_12 = total(self_emp_month)
 gen pct_se_after_12 = months_se_after_12/months_after_12
 
 // full-time only version 
-gen self_emp_month_ft = 1 if month_individ > 12 & employment_type1 == 2 & tjb_mwkhrs >=15 
-bysort ssuid_spanel_pnum_id: egen months_se_after_12_ft = sum(self_emp_month_ft)
+gen self_emp_month_ft = 1 if month_individ > 12 & employment_type1 == 2 & tjb_mwkhrs >=15 & tjb_mwkhrs != .  
+bysort ssuid_spanel_pnum_id: egen months_se_after_12_ft = total(self_emp_month_ft)
 gen pct_se_after_12_ft = months_se_after_12_ft/months_after_12_ft
-
+replace pct_se_after_12_ft = 0 if pct_se_after_12_ft == . 
 
 // pct of wage and salary months after 12 months 
 gen ws_month = 1 if month_individ >12 & employment_type1 == 1
-bysort ssuid_spanel_pnum_id: egen months_ws_after_12 = sum(ws_month)
+bysort ssuid_spanel_pnum_id: egen months_ws_after_12 = total(ws_month)
 gen pct_ws_after_12 = months_ws_after_12/months_after_12
 
 // full-time only version 
-gen ws_month_ft = 1 if month_individ > 12 & employment_type == 1 & tjb_mwkhrs >=15 
-bysort ssuid_spanel_pnum_id: egen months_ws_after_12_ft = sum(ws_month_ft)
+gen ws_month_ft = 1 if month_individ > 12 & employment_type == 1 & tjb_mwkhrs >=15  & tjb_mwkhrs != .  
+bysort ssuid_spanel_pnum_id: egen months_ws_after_12_ft = total(ws_month_ft)
 gen pct_ws_after_12_ft = months_ws_after_12_ft/months_after_12_ft
+replace pct_ws_after_12_ft = 0 if pct_ws_after_12_ft == . 
+
+list ssuid_spanel_pnum_id month_individ tjb_mwkhrs employment_type1 pct_ws_after* pct_se_after* if ssuid_spanel_pnum_id  ==   200798 , abbrev(15)
+
+list ssuid_spanel_pnum_id month_individ tjb_mwkhrs employment_type1 months_after_12 months_after_12_ft months_se_* months_ws_*  if ssuid_spanel_pnum_id  ==   200798 , abbrev(12)
+
+list ssuid_spanel_pnum_id month_individ tjb_mwkhrs employment_type1 months_after_12 months_after_12_ft months_se_* months_ws_*  if ssuid_spanel_pnum_id  ==    200731 , abbrev(12)
+
+// based on the above, if we filtered to those with pct_se_after_12_ft >=.5 then we would have those that were Self employed for 50% of the months that they were full-time employed. What we want instead is to get those who were full-time employed for the full period after month 12 and were SE for a particular percent of those months. So, we need to adjust the denominator of those variables (could also do with a pre-filtering of sorts to only those who were )
+
+// We'll filter to those that are only full-time employed (in any employment) after month 12. 
+unique ssuid_spanel_pnum_id
+drop if months_after_12 != months_after_12_ft
+drop if months_after_12 == 0 
+unique ssuid_spanel_pnum_id
+
+
+foreach var of varlist  mode*  y1_status_* {
+	label values `var' employment_types
+}
+compress 
+
+
+// dropping military members as can't have self-employed military 
+gen military_emp = 1 if industry2 == 15
+bysort ssuid_spanel_pnum_id: egen military_emp_sum = total(military_emp)
+drop if military_emp_sum > 0 
+
+
+
+// getting rid of people who start off as "Other" employment type
+drop if y1_status_v2 == 3 
+
+
+count if employment_type1 == 3 // currently we still have employment records that are for "other" employment. They will get filtered out below
+unique ssuid_spanel_pnum_id if employment_type1 == 3 
+
+
+
+
+
+local logdate : di %tdCYND daily("$S_DATE", "DMY")
+label variable unempf12_6 "Unemployed 6-months"
+label variable calyear "Year"
+label variable immigrant "Immigrant"
+label define immigrant_labels 1 "Immigrant" 0 "Native Born"
+label  values immigrant immigrant_labels
+
+
+
+
+// cleaning up missings of key demographic variables 
+foreach var of varlist unempf12_6 y1_status* educ_collapsed combine_race_eth sex age immigrant  calyear{
+	unique ssuid_spanel_pnum_id if `var' == . 
+	drop if `var' == . 
+}
+
+
+
+
+list month_individ employment_type1 pct_se_after_12_ft industry2 if ssuid_spanel_pnum_id == 181353, abbrev(20)
+
+drop if industry2 == . & month_individ > 12 // Earlier we dropped those that were not full-time employed during the period from month 12 onwards. Here we need to make sure that they also have industry information for those months. If we only dropped where industry2 ==. then we'd also drop the first year for people that were unemployed during the first 12 months, which we don't want to do quite yet. 
+list month_individ employment_type1 pct_se_after_12_ft industry2 if ssuid_spanel_pnum_id == 181353, abbrev(20)
+
+
+// We still need to address the "other" employment records. We only want people who were full-time employed in self-employment or wage and salary employed from month 12 onwards. It can be a combination of these, since we've lowered our threshold of pct_se_after_12. 
+gen sumpcts = pct_se_after_12_ft + pct_ws_after_12_ft
+unique ssuid_spanel_pnum_id if sumpcts < 1
+gen other_after_12 = 1 if month_individ > 12 & employment_type1 == 3 
+bysort ssuid_spanel_pnum_id: egen tot_other_after_12 =total(other_after_12)
+unique ssuid_spanel_pnum_id if tot_other_after_12 >0 
+
+
+list month_individ employment_type1 tot_other_after_12 if ssuid_spanel_pnum_id == 200585, abbrev(20)
+
+drop if tot_other_after_12 >0 
+
+
+
+unique ssuid_spanel_pnum_id if parent == ., by(y1_status_v2)
 
 
 
@@ -329,78 +464,24 @@ We also have flags for unemployment during the first 12 months:
 
 ***/
 
-foreach var of varlist  mode*  y1_status_* {
-	label values `var' employment_types
-}
-
-
-compress 
-
-
-// dropping military members as can't have self-employed military 
-gen military_emp = 1 if industry2 == 15
-bysort ssuid_spanel_pnum_id: egen military_emp_sum = sum(military_emp)
-drop if military_emp_sum > 0 
-
-
-
-/*
-drop if employment_type1 == 3 
-drop if mode_status_f12v1 == 3 
-drop if mode_status_f12v2 == 3 
-*/
-
-
-gen sumpcts_ft = pct_se_after_12_ft + pct_ws_after_12_ft
-gen sumpcts = pct_se_after_12 + pct_ws_after_12
-
-// list ssuid_spanel_pnum_id spanel swave month_individ employment_type1  tjb_mwkhrs y1_status_v2 pct_ws_after_12_ft pct_se_after_12_ft months_after_12_ft pct_ws_after_12 pct_se_after_12 months_after_12   if sumpcts ==.5, sepby(ssuid_spanel_pnum_id ) header noobs
 
 
 
 **# Collapsing to yearly values for earnings 
 *-------------------------------------------------------------------------------|
-local logdate : di %tdCYND daily("$S_DATE", "DMY")
-label variable unempf12_6 "Unemployed 6-months"
-label variable calyear "Year"
-label define parent_labels 1 "Parent" 0 "Not Parent"
-label values parent parent_labels
-label variable parent "Parent"
-label variable immigrant "Immigrant"
-label define immigrant_labels 1 "Immigrant" 0 "Native Born"
-label  values immigrant immigrant_labels
-
-
-// creating collapsed verison of race/ethnicity variable
-gen race_collapsed = 1 if combine_race_eth == 1
-replace race_collapsed = 2 if combine_race_eth == 2 | combine_race_eth == 3 | combine_race_eth == 4 | combine_race_eth == 5
-label variable race_collapsed "Race/Ethnicity"
-label define rlab 1 "White" 2 "Non-White"
-label values race_collapsed rlab
-
-// creating collapsed version of education variable 
-gen educ_collapsed = 1 if educ3 ==1
-replace educ_collapsed =2 if educ3 == 2 
-replace educ_collapsed = 3 if educ3 == 3 
-replace educ_collapsed = 3 if educ3 == 4 
-
-label variable educ_collapsed "Education"
-label define educ_lab 1 "HS or Less" 2 "Some College or Assoc." 3 "4-year Degree or more" 
-label values educ_collapsed educ_lab
-
-
-// cleaning up missings 
-foreach var of varlist unempf12_6 mode_status_f12v2 y1_status* educ_collapsed combine_race_eth sex age immigrant parent industry2 calyear{
-	drop if `var' == . 
-}
-
+* switching to new dataframe for producing annual estimates for descriptive tables 
 frame copy earnings annual_earnings, replace 
 frame change annual_earnings 
 
+// filtering to our SE sample. 
+keep if pct_se_after_12_ft >= .5
 
+// For making a table at the person level we need a single industry to assign them to. 
 bys ssuid_spanel_pnum_id: egen mode_industry=mode(industry2), minmode
 
-collapse (sum) tpearn tjb_msum (max) educ_collapsed (first) mode_industry parent age (count) n_months = tpearn (mean) tjb_mwkhrs, by(ssuid_spanel_pnum_id mode_status_f12v2 race_collapsed immigrant sex pct_se_after_12 unempf12_6  unempf12_3 months_unempf12 pct_ws_after_12 y1_status* calyear)
+
+// collapsing to person year 
+collapse (sum) tpearn tjb_msum (max) educ_collapsed (first) mode_industry age (count) n_months = tpearn (mean) tjb_mwkhrs, by(ssuid_spanel_pnum_id mode_status_f12v2 combine_race_eth race_collapsed immigrant sex pct_se_after_12* unempf12_6  unempf12_3 months_unempf12 months_after_12* pct_ws_after_12* y1_status* calyear)
 
 // at this point have a file that is collapsed to person-per year with their total earnings in tpearn and tjb_sum per year
 
@@ -410,14 +491,13 @@ bysort ssuid_spanel_pnum_id (calyear): drop if _n == 1 // drop first year for ea
 bysort ssuid_spanel_pnum_id (calyear): gen year_in_data = _n
 
 // collapsing once more to mirror the monthly earnings analysis where we can produce a table that n-counts match the individuals that fall in that group
-collapse (mean) tpearn tjb_msum (max) educ_collapsed year_in_data (first) mode_industry parent age (count) n_years = tpearn (mean) tjb_mwkhrs, by(ssuid_spanel_pnum_id mode_status_f12v2 race_collapsed immigrant sex pct_se_after_12 unempf12_6 unempf12_3  months_unempf12 pct_ws_after_12 y1_status*)
+collapse (mean) tpearn tjb_msum (max) educ_collapsed year_in_data (first) mode_industry  age (count) n_years = tpearn (mean) tjb_mwkhrs, by(ssuid_spanel_pnum_id mode_status_f12v2 combine_race_eth race_collapsed immigrant sex pct_se_after_12* unempf12_6 unempf12_3  months_unempf12 pct_ws_after_12* months_after* y1_status*)
 
 
 label variable sex "Sex"
 label variable age "Age"
 label values immigrant immigrant_labels
 label variable immigrant "Immigrant"
-label variable parent "Parent"
 
 
 label define industry_labels ///
@@ -441,7 +521,6 @@ label variable mode_industry "Industry"
 label variable tpearn "Mean Annual Earnings"
 gen tpearn_med = tpearn 
 label variable tpearn_med "Median Annual Earnings"
-label values parent parent_labels
 label  values immigrant immigrant_labels
 label define mode_status_labels 1 "Wage & Salary" 2 "Self-Employed" 4 "Unemployed"
 label values mode_status_f12v2 mode_status_labels
@@ -459,15 +538,13 @@ label variable educ_collapsed "Education"
 
 
 
-// filtering to our SE sample. 
-keep if pct_se_after_12 >= .5
-drop if y1_status_v2 == 3 // dropping those with first year status of "other" which drops around 35 people
+
 
 
 **# Table 1
 *------------------------------------------------------------------------------|
 
-dtable tpearn tpearn_med i.sex i.race_collapsed i.educ_collapsed i.immigrant i.parent i.mode_industry, by(y1_status_v2) ///
+dtable tpearn tpearn_med i.sex i.race_collapsed i.educ_collapsed i.immigrant i.mode_industry, by(y1_status_v2) ///
 sample(, statistics(freq) place(seplabels)) ///
 	continuous(tpearn_med, statistics(median)) /// 
 	sformat("(N=%s)" frequency) nformat(%7.0f mean sd) ///
@@ -636,12 +713,11 @@ frame change earnings_models
 
 bys ssuid_spanel_pnum_id calyear: egen mode_industry_year =mode(industry2), minmode
 
-collapse (sum) tpearn tjb_msum (max) educ_collapsed (first) mode_industry_year parent age (count) n_months = tpearn, by(ssuid_spanel_pnum_id y1_status_v2 race_collapsed immigrant sex pct_se_after_12 unempf12_6 pct_ws_after_12 calyear)
+collapse (sum) tpearn tjb_msum (max) educ_collapsed (first) mode_industry_year age (count) n_months = tpearn, by(ssuid_spanel_pnum_id y1_status_v2 combine_race_eth race_collapsed immigrant sex pct_se_after_12 unempf12_6 pct_ws_after_12 calyear)
 
 
 // Dropping first year for everyone as otherwise we don't have a fair comparison group for earnings. 
 bysort ssuid_spanel_pnum_id (calyear): drop if _n == 1 
-drop if y1_status_v2 == 3 // dropping others 
 
 
 gen age2 = age^2
@@ -659,7 +735,8 @@ egen min_tpearn = min(tpearn)
 replace min_tpearn = min_tpearn *-1
 gen ln_tpearn = ln(tpearn + min_tpearn+1) if tpearn !=.
 xtset ssuid_spanel_pnum_id calyear 
-global controls  = "i.sex age age2 i.immigrant i.parent mode_industry_year calyear"
+global controls  = "i.sex age age2 i.immigrant  mode_industry_year calyear"
+global ctrl_nosex = "age age2 i.immigrant  mode_industry_year calyear"
 
 // regressions for full-sample
 quietly xtreg ln_tpearn i.unempf12_6 i.educ_collapsed $controls, vce(robust) 
@@ -668,6 +745,8 @@ quietly xtreg ln_tpearn i.unempf12_6 i.race_collapsed i.educ_collapsed $controls
 eststo any_earn_unemp_m2
 quietly xtreg ln_tpearn unempf12_6##race_collapsed i.educ_collapsed $controls, vce(robust)
 eststo any_earn_unemp_m3
+quietly xtreg ln_tpearn unempf12_6##sex i.race_collapsed i.educ_collapsed $ctrl_nosex, vce(robust)
+eststo any_earn_unemp_m4
 
 
 // mode status regressions 
@@ -677,7 +756,8 @@ quietly xtreg ln_tpearn i.y1_status_v2 i.race_collapsed i.educ_collapsed $contro
 eststo any_earn_mode_m2
 quietly xtreg ln_tpearn y1_status_v2##race_collapsed i.educ_collapsed $controls, vce(robust)
 eststo any_earn_mode_m3
-
+quietly xtreg ln_tpearn y1_status_v2##sex i.race_collapsed i.educ_collapsed $ctrl_nosex, vce(robust)
+eststo any_earn_mode_m4
 
 
 // regression for self-employed sample 
@@ -689,6 +769,9 @@ quietly xtreg ln_tpearn i.unempf12_6 i.race_collapsed i.educ_collapsed  $control
 eststo se_earn_unemp_m2
 quietly xtreg ln_tpearn unempf12_6##race_collapsed i.educ_collapse $controls, vce(robust)
 eststo se_earn_unemp_m3
+quietly xtreg ln_tpearn unempf12_6##sex i.race_collapsed i.educ_collapse $ctrl_nosex, vce(robust)
+eststo se_earn_unemp_m4
+
 
 quietly xtreg ln_tpearn i.y1_status_v2 i.educ_collapsed $controls, vce(robust) 
 eststo se_earn_mode_m1 
@@ -696,6 +779,8 @@ quietly xtreg ln_tpearn i.y1_status_v2 i.race_collapsed i.educ_collapsed $contro
 eststo se_earn_mode_m2
 quietly xtreg ln_tpearn y1_status_v2##race_collapsed i.educ_collapsed $controls, vce(robust)
 eststo se_earn_mode_m3
+quietly xtreg ln_tpearn y1_status_v2##sex i.race_collapsed i.educ_collapsed $ctrl_nosex, vce(robust)
+eststo se_earn_mode_m4
 
 restore 
 
@@ -703,34 +788,30 @@ restore
 
 
 
-**# Table 4 Regression Earnings on Unemployment (SE Sample)
+**# Table 3 Regression Earnings on Unemployment (SE Sample)
 *------------------------------------------------------------------------------|
 label variable age "Age"
-label variable parent "Parent"
-label values parent parent_labels
 label variable immigrant "Immigrant"
 label values immigrant immigrant_labels
 
 label values educ_collapsed educ_lab
 
 esttab any_earn_unemp??? se_earn_unemp??? using working_paper_outputs_`logdate'.rtf, ///
-	aic bic legend label ///
-	order(*unemp* *race_collapsed) ///
-	title(Table 4: Relationship between Unemployment and Log Annual Earnings (Self-Employed Sample)) ///
-	varlabels(_cons Constant)  nobaselevels ///
+	legend label ///
+	title(Table 3: Relationship between Unemployment and Log Annual Earnings (Self-Employed Sample)) ///
+	varlabels(_cons Constant)   ///
 	nonumbers mtitles("Full Sample" ""  "" "Self-Employed Sample" "" "") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell replace  
 
 
 
-**# Table 5: Regression Earnings on Initial Employment Status (Self-Employed Sample)
+**# Table 6: Regression Earnings on Initial Employment Status (Self-Employed Sample)
 *------------------------------------------------------------------------------|
 esttab any_earn_mode??? se_earn_mode??? using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
-	order(*status* *race_collapsed) ///
-	title(Table 5: Relationship between Initial Employment Status and Log Annual Earnings (Self-Employed Sample)) ///
-	varlabels(_cons Constant)  nobaselevels ///
+	title(Table 6: Relationship between Initial Employment Status and Log Annual Earnings (Self-Employed Sample)) ///
+	varlabels(_cons Constant)   ///
 	nonumbers mtitles("Full Sample" ""  "" "Self-Employed Sample" "" "") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell append 
@@ -783,7 +864,7 @@ frame change profits_collapse
 // taking most common industry reported by person over the years we observe them
 bys ssuid_spanel_pnum_id: egen mode_industry=mode(industry2), minmode
 
-collapse (mean) tjb_prftb tbsjval ln_tjb_prftb ln_tbsjval (max) educ_collapsed (first) mode_industry parent age, by(ssuid_spanel_pnum_id y1_status_v2 race_collapsed immigrant sex unempf12_6 pct_ws_after_12)
+collapse (mean) tjb_prftb tbsjval ln_tjb_prftb ln_tbsjval (max) educ_collapsed (first) mode_industry  age, by(ssuid_spanel_pnum_id y1_status_v2 race_collapsed immigrant sex unempf12_6 pct_ws_after_12)
 
 
 label variable race_collapsed "Race/Ethnicity"
@@ -791,7 +872,6 @@ label variable sex "Sex"
 label variable age "Age"
 label values immigrant immigrant_labels
 label variable immigrant "Immigrant"
-label variable parent "Parent"
 label variable unempf12_6 "Unemployed 6-months"
 
 //label values industry2 industry_labels 
@@ -935,6 +1015,8 @@ foreach y of varlist profposi prof10k   {
 		quietly xtlogit `y' `x'##race_collapsed i.educ_collapsed  $controls , vce(robust) 
 		eststo `y'_`xname'_3re
 		
+		quietly xtlogit `y' `x'##sex i.race_collapsed i.educ_collapsed  $ctrl_nosex , vce(robust) 
+		eststo `y'_`xname'_4re
 
 
 		}
@@ -957,58 +1039,53 @@ foreach y of varlist ln_tjb_prftb ln_tbsjval   {
 		quietly xtreg `y' `x'##race_collapsed i.educ_collapsed  $controls , vce(robust) 
 		eststo `y'_`xname'_3re
 		
+		quietly xtreg `y' `x'##sex i.race_collapsed i.educ_collapsed $ctrl_nosex, vce(robust)
+		eststo `y'_`xname'_4re
+		
 	}
 }
 
 
-**# Table 8 Logistic Regressions Profit on Unemployment
+**# Table 4 Logistic Regressions Profit on Unemployment
 *------------------------------------------------------------------------------|
 esttab prof*unemp* using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
-	order(*unemp* *combine*) ///
-	title(Table 8. Logistic Regressions Profit on Unemployment) ///
-	varlabels(_cons Constant)  nobaselevels ///
-	mtitles("Positive Profit" "" "" "Profit >= 10k"  "" 	"") ///
+	title(Table 4. Logistic Regressions Profit on Unemployment) ///
+	varlabels(_cons Constant)   ///
+	mtitles("Positive Profit" "" "" "" "Profit >= 10k"  "" ""	"") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell append  
-
-
-**# Table 9 Logistic Regressions of Profit on Initial Employment Status
-*------------------------------------------------------------------------------|
-esttab prof*y1* using working_paper_outputs_`logdate'.rtf, ///
-	legend label  nobaselevels ///
-	title(Table 9. Logistic Regressions Profit on Initial Employment Status) ///
-	varlabels(_cons Constant) ///
-	mtitles("Positive Profit" "" "" "Profit >= 10k" "" 	"") ///
-	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
-	compress onecell append  
-
 	
-*------------------------------------------------------------------------------|
-**# Regressions for business value
-*------------------------------------------------------------------------------|
-
-	
-**# Table 4A Regressions Business Value on Unemployment
+**# Table 5 Regressions Business Value on Unemployment
 *------------------------------------------------------------------------------|
 esttab ln_tbsjval_unemp_* using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
-	order(*unemp* *combine*) ///
-	title(Table 4A. Regressions Business Value on Unemployment) ///
-	varlabels(_cons Constant)   nobaselevels ///
-	mtitles("Log Business Value" "" "") ///
+	title(Table 5. Regressions Business Value on Unemployment) ///
+	varlabels(_cons Constant)    ///
+	mtitles("Log Business Value" "" "" "") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell append  
+
+**# Table 7 Logistic Regressions of Profit on Initial Employment Status
+*------------------------------------------------------------------------------|
+esttab prof*y1* using working_paper_outputs_`logdate'.rtf, ///
+	legend label  ///
+	title(Table 7. Logistic Regressions Profit on Initial Employment Status) ///
+	varlabels(_cons Constant) ///
+	mtitles("Positive Profit" "" "" "" "Profit >= 10k" "" "" "") ///
+	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
+	compress onecell append  
+
 	
 
-
-**# Table 5A Regressions Business Value on Initial Employment Status
+	
+**# Table 8 Regressions Business Value on Initial Employment Status
 *------------------------------------------------------------------------------|
 esttab ln_tbsjval_y1_* using working_paper_outputs_`logdate'.rtf, ///
 	legend label ///
-	title(Table 5A. Regressions Business Value on Initial Employment Status) ///
-	varlabels(_cons Constant)  nobaselevels ///
-	nonumbers mtitles("Log Business Value" "" "") ///
+	title(Table 8. Regressions Business Value on Initial Employment Status) ///
+	varlabels(_cons Constant)   ///
+	nonumbers mtitles("Log Business Value" "" "" "") ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell append  
 	
@@ -1094,9 +1171,12 @@ keep if pct_se_after_12 >= .5
 
 xtreg ln_tpearn unempf12_6##race_collapsed i.educ_collapsed $controls, vce(robust)
 margins unempf12_6#race_collapsed 
-margins race_collapsed, dydx(unempf12_6)
+marginsplot, recast(scatter)
+margins race_collapsed, dydx(unempf12_6) 
+marginsplot, recast(scatter)
 
-
+margins race_collapsed#unempf12_6
+marginsplot
 
 xtreg ln_tpearn y1_status_v2##race_collapsed i.educ_collapsed $controls, vce(robust)
 margins y1_status_v2#race_collapsed
