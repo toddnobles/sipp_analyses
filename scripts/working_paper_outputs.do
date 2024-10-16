@@ -741,22 +741,22 @@ global ctrl_nosex = "age age2 i.immigrant  mode_industry_year calyear"
 // regressions for full-sample
 quietly xtreg ln_tpearn i.unempf12_6 i.educ_collapsed $controls, vce(robust) 
 eststo any_earn_unemp_m1 
-quietly xtreg ln_tpearn i.unempf12_6 i.race_collapsed i.educ_collapsed $controls, vce(robust) 
+quietly xtreg ln_tpearn i.unempf12_6 i.combine_race_eth i.educ_collapsed $controls, vce(robust) 
 eststo any_earn_unemp_m2
-quietly xtreg ln_tpearn unempf12_6##race_collapsed i.educ_collapsed $controls, vce(robust)
+quietly xtreg ln_tpearn unempf12_6##combine_race_eth i.educ_collapsed $controls, vce(robust)
 eststo any_earn_unemp_m3
-quietly xtreg ln_tpearn unempf12_6##sex i.race_collapsed i.educ_collapsed $ctrl_nosex, vce(robust)
+quietly xtreg ln_tpearn unempf12_6##sex i.combine_race_eth i.educ_collapsed $ctrl_nosex, vce(robust)
 eststo any_earn_unemp_m4
 
 
 // mode status regressions 
 quietly xtreg ln_tpearn i.y1_status_v2 i.educ_collapsed $controls, vce(robust) 
 eststo any_earn_mode_m1
-quietly xtreg ln_tpearn i.y1_status_v2 i.race_collapsed i.educ_collapsed $controls, vce(robust) 
+quietly xtreg ln_tpearn i.y1_status_v2 i.combine_race_eth i.educ_collapsed $controls, vce(robust) 
 eststo any_earn_mode_m2
-quietly xtreg ln_tpearn y1_status_v2##race_collapsed i.educ_collapsed $controls, vce(robust)
+quietly xtreg ln_tpearn y1_status_v2##combine_race_eth i.educ_collapsed $controls, vce(robust)
 eststo any_earn_mode_m3
-quietly xtreg ln_tpearn y1_status_v2##sex i.race_collapsed i.educ_collapsed $ctrl_nosex, vce(robust)
+quietly xtreg ln_tpearn y1_status_v2##sex i.combine_race_eth i.educ_collapsed $ctrl_nosex, vce(robust)
 eststo any_earn_mode_m4
 
 
@@ -765,21 +765,21 @@ preserve
 keep if pct_se_after_12 >=.5
 quietly xtreg ln_tpearn i.unempf12_6 i.educ_collapsed $controls, vce(robust) 
 eststo se_earn_unemp_m1 
-quietly xtreg ln_tpearn i.unempf12_6 i.race_collapsed i.educ_collapsed  $controls, vce(robust) 
+quietly xtreg ln_tpearn i.unempf12_6 i.combine_race_eth i.educ_collapsed  $controls, vce(robust) 
 eststo se_earn_unemp_m2
-quietly xtreg ln_tpearn unempf12_6##race_collapsed i.educ_collapse $controls, vce(robust)
+quietly xtreg ln_tpearn unempf12_6##combine_race_eth i.educ_collapse $controls, vce(robust)
 eststo se_earn_unemp_m3
-quietly xtreg ln_tpearn unempf12_6##sex i.race_collapsed i.educ_collapse $ctrl_nosex, vce(robust)
+quietly xtreg ln_tpearn unempf12_6##sex i.combine_race_eth i.educ_collapse $ctrl_nosex, vce(robust)
 eststo se_earn_unemp_m4
 
 
 quietly xtreg ln_tpearn i.y1_status_v2 i.educ_collapsed $controls, vce(robust) 
 eststo se_earn_mode_m1 
-quietly xtreg ln_tpearn i.y1_status_v2 i.race_collapsed i.educ_collapsed $controls, vce(robust) 
+quietly xtreg ln_tpearn i.y1_status_v2 i.combine_race_eth i.educ_collapsed $controls, vce(robust) 
 eststo se_earn_mode_m2
-quietly xtreg ln_tpearn y1_status_v2##race_collapsed i.educ_collapsed $controls, vce(robust)
+quietly xtreg ln_tpearn y1_status_v2##combine_race_eth i.educ_collapsed $controls, vce(robust)
 eststo se_earn_mode_m3
-quietly xtreg ln_tpearn y1_status_v2##sex i.race_collapsed i.educ_collapsed $ctrl_nosex, vce(robust)
+quietly xtreg ln_tpearn y1_status_v2##sex i.combine_race_eth i.educ_collapsed $ctrl_nosex, vce(robust)
 eststo se_earn_mode_m4
 
 restore 
@@ -864,10 +864,10 @@ frame change profits_collapse
 // taking most common industry reported by person over the years we observe them
 bys ssuid_spanel_pnum_id: egen mode_industry=mode(industry2), minmode
 
-collapse (mean) tjb_prftb tbsjval ln_tjb_prftb ln_tbsjval (max) educ_collapsed (first) mode_industry  age, by(ssuid_spanel_pnum_id y1_status_v2 race_collapsed immigrant sex unempf12_6 pct_ws_after_12)
+collapse (mean) tjb_prftb tbsjval ln_tjb_prftb ln_tbsjval (max) educ_collapsed (first) mode_industry  age, by(ssuid_spanel_pnum_id y1_status_v2 combine_race_eth immigrant sex unempf12_6 pct_ws_after_12)
 
 
-label variable race_collapsed "Race/Ethnicity"
+label variable combine_race_eth "Race/Ethnicity"
 label variable sex "Sex"
 label variable age "Age"
 label values immigrant immigrant_labels
@@ -896,11 +896,11 @@ label variable tbsjval_med "Median Annual Business Value"
 **# Table 2A: Profit within Race/Ethnicity by Initial Employment Status
 *------------------------------------------------------------------------------|
 local x = 0
-local names White Non_White
+local names White Black Hispanic Other
 foreach name of local names {
 	local x = `x' + 1
 	collect create `name', replace 
-	quietly: pwmean tjb_prftb if race_collapsed ==`x' , over(y1_status_v2) mcompare(dunnett) 
+	quietly: pwmean tjb_prftb if combine_race_eth ==`x' , over(y1_status_v2) mcompare(dunnett) 
 	collect get r(table) 
 	collect remap rowname[b] = values[lev1], ///
 		fortags(colname[1.y1_status_v2 2.y1_status_v2 4.y1_status_v2])
@@ -932,7 +932,7 @@ collect export working_paper_outputs_`logdate'.xlsx, sheet(Table 2A, replace) mo
 
 
 
-dtable i.race_collapsed
+dtable i.combine_race_eth
 collect export working_paper_outputs_`logdate'.xlsx, sheet(Table 2A) cell(H1) modify
 
 
@@ -952,7 +952,7 @@ forvalues i = 1/3 {
 
     collect create `collection_name', replace
     
-    quietly: pwmean tjb_prftb if y1_status_v2 == `status', over(race_collapsed) mcompare(dunnett)
+    quietly: pwmean tjb_prftb if y1_status_v2 == `status', over(combine_race_eth) mcompare(dunnett)
     
     collect get r(table)
     collect remap rowname[b] = values[lev1], fortags(colname[`race_list'])
@@ -968,7 +968,7 @@ forvalues i = 1/3 {
 // combine them into one 
 collect combine newc = salaried self_employed unemployed_start, replace 
 collect label levels collection Full_Sample "Full Sample" salaried "Wage & Salary" self_employed "Self-Employed" unemployed_start "Unemployed"
-collect layout (race_collapsed) (collection#values) (), name(newc)
+collect layout (combine_race_eth) (collection#values) (), name(newc)
 collect style column, dups(center) width(equal)
 collect style cell, halign(center)
 collect title "Table 2A. Profit Comparisons by Race/Ethnicity and Initial Employment Status"
@@ -978,8 +978,8 @@ collect preview
 collect export working_paper_outputs_`logdate'.xlsx, sheet(Table 2A, replace) modify
 
 collect create n_counts, replace
-table race_collapsed y1_status_v2 
-collect layout (race_collapsed) (y1_status_v2)
+table combine_race_eth y1_status_v2 
+collect layout (combine_race_eth) (y1_status_v2)
 collect export working_paper_outputs_`logdate'.xlsx, sheet(Table 2A) cell(M1) modify
 
 
@@ -1009,13 +1009,13 @@ foreach y of varlist profposi prof10k   {
 		quietly xtlogit `y' i.`x' i.educ_collapsed $controls , vce(robust) 
 		eststo `y'_`xname'_1re
 
-	    quietly xtlogit `y' i.`x' i.educ_collapsed i.race_collapsed $controls , vce(robust) 
+	    quietly xtlogit `y' i.`x' i.educ_collapsed i.combine_race_eth $controls , vce(robust) 
 		eststo `y'_`xname'_2re
 		
-		quietly xtlogit `y' `x'##race_collapsed i.educ_collapsed  $controls , vce(robust) 
+		quietly xtlogit `y' `x'##combine_race_eth i.educ_collapsed  $controls , vce(robust) 
 		eststo `y'_`xname'_3re
 		
-		quietly xtlogit `y' `x'##sex i.race_collapsed i.educ_collapsed  $ctrl_nosex , vce(robust) 
+		quietly xtlogit `y' `x'##sex i.combine_race_eth i.educ_collapsed  $ctrl_nosex , vce(robust) 
 		eststo `y'_`xname'_4re
 
 
@@ -1033,13 +1033,13 @@ foreach y of varlist ln_tjb_prftb ln_tbsjval   {
 		quietly xtreg `y' i.`x' i.educ_collapsed  $controls , vce(robust) 
 		eststo `y'_`xname'_1re
 
-	    quietly xtreg `y' i.`x' i.educ_collapsed i.race_collapsed $controls , vce(robust) 
+	    quietly xtreg `y' i.`x' i.educ_collapsed i.combine_race_eth $controls , vce(robust) 
 		eststo `y'_`xname'_2re
 		
-		quietly xtreg `y' `x'##race_collapsed i.educ_collapsed  $controls , vce(robust) 
+		quietly xtreg `y' `x'##combine_race_eth i.educ_collapsed  $controls , vce(robust) 
 		eststo `y'_`xname'_3re
 		
-		quietly xtreg `y' `x'##sex i.race_collapsed i.educ_collapsed $ctrl_nosex, vce(robust)
+		quietly xtreg `y' `x'##sex i.combine_race_eth i.educ_collapsed $ctrl_nosex, vce(robust)
 		eststo `y'_`xname'_4re
 		
 	}
@@ -1100,7 +1100,7 @@ label values unempf12_6 unemp_labels
 cd "/Users/toddnobles/Documents/sipp_analyses/outputs"
 
 
-xtlogit prof10k i.unempf12_6 i.educ_collapsed i.race_collapsed $controls , vce(robust) 
+xtlogit prof10k i.unempf12_6 i.educ_collapsed i.combine_race_eth $controls , vce(robust) 
 
 **# Graph Unemployment Profit 10k scatter
 *---------------------------------------------------------------------------|
@@ -1116,8 +1116,8 @@ ytitle("Probability of Profit >= 10k") saving(g1, replace) fxsize(50) ylabel(0(.
 restore
 
 
-margins unempf12_6, at(race_collapsed =(1 2) ) 
-marginsplot, recast(scatter) xdimension(race_collapsed) title("Race/Ethnicity") ///
+margins unempf12_6, at(combine_race_eth =(1 2) ) 
+marginsplot, recast(scatter) xdimension(combine_race_eth) title("Race/Ethnicity") ///
 xtitle("Race/Ethnicity") ytitle("") ylabel(0(.1).6) saving(g2, replace ) 
 
 grc1leg  g1.gph g2.gph , ycommon legend(g2.gph) title("Predicted Probability of Profit >= $10,000")  ///
@@ -1129,7 +1129,7 @@ graph export graph_10kprofit.png, replace
 
 **# Graph Unemployment Positive Profit Scatter
 *---------------------------------------------------------------------------|
-xtlogit profpos i.unempf12_6 i.educ_collapsed i.race_collapsed $controls , vce(robust) 
+xtlogit profpos i.unempf12_6 i.educ_collapsed i.combine_race_eth $controls , vce(robust) 
 
 margins unempf12_6, saving(tempmargins, replace)
 preserve
@@ -1143,8 +1143,8 @@ ytitle("Probability of Positive Profit") saving(g1, replace) fxsize(50) ylabel(0
 restore
 
 
-margins unempf12_6, at(race_collapsed =(1 2) ) 
-marginsplot, recast(scatter) xdimension(race_collapsed) title("Race/Ethnicity") ///
+margins unempf12_6, at(combine_race_eth =(1 2) ) 
+marginsplot, recast(scatter) xdimension(combine_race_eth) title("Race/Ethnicity") ///
 xtitle("Race/Ethnicity") ytitle("") ylabel(0(.1).6) saving(g2, replace ) 
 
 grc1leg  g1.gph g2.gph , ycommon legend(g2.gph) title("Predicted Probability of Positive Profit")  ///
@@ -1158,28 +1158,28 @@ graph export graph_postive_profit.png, replace
 **# graphs for interactions
 frame change earnings_models
 
-xtreg ln_tpearn unempf12_6##race_collapsed i.educ_collapsed $controls, vce(robust)
-margins unempf12_6#race_collapsed 
+xtreg ln_tpearn unempf12_6##combine_race_eth i.educ_collapsed $controls, vce(robust)
+margins unempf12_6#combine_race_eth 
 marginsplot 
 
-xtreg ln_tpearn y1_status_v2##race_collapsed i.educ_collapsed $controls, vce(robust)
-margins y1_status_v2#race_collapsed
+xtreg ln_tpearn y1_status_v2##combine_race_eth i.educ_collapsed $controls, vce(robust)
+margins y1_status_v2#combine_race_eth
 marginsplot
 
 preserve
 keep if pct_se_after_12 >= .5
 
-xtreg ln_tpearn unempf12_6##race_collapsed i.educ_collapsed $controls, vce(robust)
-margins unempf12_6#race_collapsed 
+xtreg ln_tpearn unempf12_6##combine_race_eth i.educ_collapsed $controls, vce(robust)
+margins unempf12_6#combine_race_eth 
 marginsplot, recast(scatter)
-margins race_collapsed, dydx(unempf12_6) 
+margins combine_race_eth, dydx(unempf12_6) 
 marginsplot, recast(scatter)
 
-margins race_collapsed#unempf12_6
+margins combine_race_eth#unempf12_6
 marginsplot
 
-xtreg ln_tpearn y1_status_v2##race_collapsed i.educ_collapsed $controls, vce(robust)
-margins y1_status_v2#race_collapsed
+xtreg ln_tpearn y1_status_v2##combine_race_eth i.educ_collapsed $controls, vce(robust)
+margins y1_status_v2#combine_race_eth
 marginsplot, recast(scatter)
 
 restore 
