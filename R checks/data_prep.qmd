@@ -1,0 +1,131 @@
+---
+title: "data_prep"
+format: html
+---
+ 
+ 
+This is the second script in the process for recreating the Stata anaylses for the SIPP data. This script reads in the raw SIPP files, extracts relevant work/income variables, reshapes the person-month-job variables to align to the person-month variables. 
+
+
+
+Here we impute those instances where someone had all of the earnings and job information we care about but did not have a jobid value for that specific job. Because we conduct later analyses at the month level we don't particularly care if this job is just an uncoded version of ejobid 101 , 102, 103 for instance. Put differently, it's unclear from the data quality flags why these are "not in universe" for jobid, but the records contain all the information we'd want so we can impute some fictional jobids. We lose the ability to track if these are the same jobs they held before/after that month but we aren't concerned with that. 
+
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+monthly <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_monthly_combined.rds")
+joblevel_wide <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_joblevel_combined_wide.rds") 
+
+
+
+```
+
+```{r}
+joblevel_wide %>% filter(ssuid == 418209316 & pnum == 102) %>% select(ssuid, pnum, monthcode, contains("enjflag"), contains("jborse"), contains("jobid"), contains("msum"), contains("prftb"), contains("mwkhrs"), contains("ind")) %>%  View()
+```
+
+```{r}
+process_job_level_vars <- function(df) {
+  df %>%
+    select(
+      'ssuid',
+      'spanel',
+      'swave',
+      'pnum',
+      'monthcode',
+      contains("gamt"),
+      contains("prftb"),
+      contains("msum"),
+      contains("mwkhrs"),
+      contains("jborse"),
+      contains("jobid"),
+      contains("ind")
+    ) %>%
+    tidylog::mutate(
+      ejb1_jobid = ifelse(
+        is.na(ejb1_jobid) & !is.na(tjb1_mwkhrs) & !is.na(ejb1_jborse) &
+          (!is.na(tjb1_msum) | !is.na(tjb1_prftb)),
+        1,
+        ejb1_jobid
+      ),
+      ejb2_jobid = ifelse(
+        is.na(ejb2_jobid) & !is.na(tjb2_mwkhrs) & !is.na(ejb2_jborse) &
+          (!is.na(tjb2_msum) |
+             !is.na(tjb2_prftb)),
+        2,
+        ejb2_jobid
+      ),
+      ejb3_jobid = ifelse(
+        is.na(ejb3_jobid) & !is.na(tjb3_mwkhrs) & !is.na(ejb3_jborse) &
+          (!is.na(tjb3_msum) |
+             !is.na(tjb3_prftb)),
+        3,
+        ejb3_jobid
+      ),
+      ejb4_jobid = ifelse(
+        is.na(ejb4_jobid) & !is.na(tjb4_mwkhrs) & !is.na(ejb4_jborse) &
+          (!is.na(tjb4_msum) |
+             !is.na(tjb4_prftb)),
+        4,
+        ejb4_jobid
+      ),
+      ejb5_jobid = ifelse(
+        is.na(ejb5_jobid) & !is.na(tjb5_mwkhrs) & !is.na(ejb5_jborse) &
+          (!is.na(tjb5_msum) |
+             !is.na(tjb5_prftb)),
+        5,
+        ejb5_jobid
+      ),
+      ejb6_jobid = ifelse(
+        is.na(ejb6_jobid) & !is.na(tjb6_mwkhrs) & !is.na(ejb6_jborse) &
+          (!is.na(tjb6_msum) |
+             !is.na(tjb6_prftb)),
+        6,
+        ejb6_jobid
+      ),
+      ejb7_jobid = ifelse(
+        is.na(ejb7_jobid) & !is.na(tjb7_mwkhrs) & !is.na(ejb7_jborse) &
+          (!is.na(tjb7_msum) |
+             !is.na(tjb7_prftb)),
+        7,
+        ejb7_jobid
+      ),
+      ssuid_spanel_pnum = paste0(
+        as.character(ssuid),
+        as.character(spanel),
+        as.character(pnum)
+      )
+    )
+}
+
+```
+
+```{r}
+# List of dataframes to process
+dataframes <- list(
+  pu2014w1 = pu2014w1,
+  pu2014w2 = pu2014w2,
+  pu2014w3 = pu2014w3,
+  pu2014w4 = pu2014w4,
+  pu2018 = pu2018,
+  pu2019 = pu2019, 
+  pu2020 = pu2020, 
+  pu2021 = pu2021, 
+  pu2022 = pu2022, 
+  pu2023 = pu2023,
+)
+
+# run our new function on the dataframes for cleaning
+processed_dataframes <- lapply(names(dataframes), function(name) {
+  new_name <- paste0(name, "_reshaped")
+  assign(new_name, process_job_level_vars(dataframes[[name]]), envir = .GlobalEnv)
+  return(new_name)
+})
+
+rm(dataframes, processed_dataframes)
+```
+
