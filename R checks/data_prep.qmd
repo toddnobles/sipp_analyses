@@ -6,13 +6,9 @@ format: html
  
 This is the second script in the process for recreating the Stata anaylses for the SIPP data. This script reads in the raw SIPP files, extracts relevant work/income variables, reshapes the person-month-job variables to align to the person-month variables. 
 
-
-
-Here we impute those instances where someone had all of the earnings and job information we care about but did not have a jobid value for that specific job. Because we conduct later analyses at the month level we don't particularly care if this job is just an uncoded version of ejobid 101 , 102, 103 for instance. Put differently, it's unclear from the data quality flags why these are "not in universe" for jobid, but the records contain all the information we'd want so we can impute some fictional jobids. We lose the ability to track if these are the same jobs they held before/after that month but we aren't concerned with that. 
-
-
 ```{r}
 library(tidyverse)
+library(bit64)
 ```
 
 
@@ -20,31 +16,61 @@ library(tidyverse)
 monthly <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_monthly_combined.rds")
 joblevel_wide <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_joblevel_combined_wide.rds") 
 
+# pu2014w1_joblevel  <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2014w1_joblevel.rds")
+# pu2014w2_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2014w2_joblevel.rds")
+# pu2014w3_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2014w3_joblevel.rds")
+# pu2014w4_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2014w4_joblevel.rds")
+# pu2018_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2018_joblevel.rds")
+# pu2019_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2019_joblevel.rds")
+# pu2020_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2020_joblevel.rds")
+# pu2021_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2021_joblevel.rds")
+# pu2022_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2022_joblevel.rds")
+# pu2023_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2023_joblevel.rds")
+```
 
 
+```{r}
+monthly <- monthly %>% mutate(
+  ssuid = as.character.integer64(ssuid),
+  ssuid_spanel_pnum = paste0(
+        ssuid,
+        as.character(spanel),
+        as.character(pnum)
+      ))
+
+
+joblevel_wide <- joblevel_wide %>% mutate(
+  ssuid = as.character.integer64(ssuid),
+  ssuid_spanel_pnum = paste0(
+        ssuid,
+        as.character(spanel),
+        as.character(pnum)
+      )
+)
+```
+
+Here we impute those instances where someone had all of the earnings and job information we care about but did not have a jobid value for that specific job. Because we conduct later analyses at the month level we don't particularly care if this job is just an uncoded version of ejobid 101 , 102, 103 for instance. Put differently, it's unclear from the data quality flags why these are "not in universe" for jobid, but the records contain all the information we'd want so we can impute some fictional jobids. We lose the ability to track if these are the same jobs they held before/after that month but we aren't concerned with that. 
+
+```{r}
+joblevel_wide %>% filter(ssuid == "418209316" & pnum == 102) %>% select(ssuid_spanel_pnum, ssuid, pnum, monthcode, contains("enjflag"), contains("jborse"), contains("jobid"), contains("msum"), contains("prftb"), contains("mwkhrs"), contains("ind")) 
 ```
 
 ```{r}
-joblevel_wide %>% filter(ssuid == 418209316 & pnum == 102) %>% select(ssuid, pnum, monthcode, contains("enjflag"), contains("jborse"), contains("jobid"), contains("msum"), contains("prftb"), contains("mwkhrs"), contains("ind")) %>%  View()
-```
-
-```{r}
-process_job_level_vars <- function(df) {
-  df %>%
-    select(
+joblevel_wide <- joblevel_wide %>% 
+  select(
       'ssuid',
       'spanel',
       'swave',
       'pnum',
       'monthcode',
-      contains("gamt"),
+      'ssuid_spanel_pnum',
       contains("prftb"),
       contains("msum"),
       contains("mwkhrs"),
       contains("jborse"),
       contains("jobid"),
-      contains("ind")
-    ) %>%
+      contains("ind"),
+      contains("tbsj")) %>%
     tidylog::mutate(
       ejb1_jobid = ifelse(
         is.na(ejb1_jobid) & !is.na(tjb1_mwkhrs) & !is.na(ejb1_jborse) &
@@ -93,39 +119,121 @@ process_job_level_vars <- function(df) {
              !is.na(tjb7_prftb)),
         7,
         ejb7_jobid
-      ),
-      ssuid_spanel_pnum = paste0(
-        as.character(ssuid),
-        as.character(spanel),
-        as.character(pnum)
       )
     )
-}
 
 ```
+
+
+```{r combining to one dataframe}
+full_data_base <- tidylog::left_join(monthly, joblevel_wide, by = c("ssuid_spanel_pnum", "spanel", "swave", "monthcode"))
+```
+
+```{r filtering to working age pop by age at entry}
+full_data <- full_data_base %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(age_entry = min(tage),
+         age_exit = max(tage)) %>% 
+  filter(age_entry >= 18 & age_entry <= 64) %>% ungroup()
+```
+
+
+```{r standardizing enjflag}
+# Unemployment flag is 0 = not unemployed and 1 = unemployed for 2014 panel. Then switches to 2 = not unemployed and 1 = unemployed for 2018 onwards. So recoding accordingly here 
+full_data <- full_data %>% 
+  mutate(enjflag_std = ifelse(spanel == 2014 & enjflag == 1, 1,
+                              ifelse(spanel >2014 & enjflag == 1, 1,
+                                     ifelse(enjflag == 0 | enjflag == 2, 0, NA)))) 
+```
+
+
+Dropping those who never worked
+```{r}
+full_data <- full_data %>% 
+  mutate(workless_month = if_all(starts_with("ejb") & ends_with("jobid"), is.na)) %>% 
+  mutate(workless_month = ifelse(workless_month, 1, 0)) %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(months_in_data = n(),
+         workless_month_tot = sum(workless_month)) %>%
+  ungroup() %>% 
+  tidylog::filter(months_in_data > workless_month_tot) 
+
+```
+
+
+
+Now we need to mark their main job based on number of hours worked and keep only that row for the month. 
+```{r}
+full_data <- full_data %>% 
+  tidylog::select(-ends_with(".y"), -starts_with("ajb")) %>% 
+  rename_with(
+    ~ gsub("^(tbsj\\d+)(val)$", "\\1_\\2", .), # adding in underscore to match the name formatting of tjb and ejb variables for easier reshaping
+    starts_with("tbsj")
+  ) 
+```
+
 
 ```{r}
-# List of dataframes to process
-dataframes <- list(
-  pu2014w1 = pu2014w1,
-  pu2014w2 = pu2014w2,
-  pu2014w3 = pu2014w3,
-  pu2014w4 = pu2014w4,
-  pu2018 = pu2018,
-  pu2019 = pu2019, 
-  pu2020 = pu2020, 
-  pu2021 = pu2021, 
-  pu2022 = pu2022, 
-  pu2023 = pu2023,
-)
+ptm <- proc.time()
 
-# run our new function on the dataframes for cleaning
-processed_dataframes <- lapply(names(dataframes), function(name) {
-  new_name <- paste0(name, "_reshaped")
-  assign(new_name, process_job_level_vars(dataframes[[name]]), envir = .GlobalEnv)
-  return(new_name)
-})
-
-rm(dataframes, processed_dataframes)
+long <- full_data %>% 
+  #head(1000000) %>% 
+  pivot_longer(
+    cols = matches("^(tjb|ejb|tbsj)\\d+_"),  
+    names_to = c("job", ".value"),     
+    names_pattern = "^[a-z]+(\\d+)_(.*)$" 
+  ) %>% group_by(ssuid_spanel_pnum, swave, monthcode) %>% 
+  relocate(ssuid_spanel_pnum, swave, monthcode, jobid, mwkhrs, msum) %>% 
+  slice_max(mwkhrs, with_ties = FALSE) %>% ungroup()
+proc.time() - ptm
 ```
 
+
+
+```{r}
+long2 <- full_data %>% 
+  head(2000) %>% 
+  pivot_longer(
+    cols = matches("^(tjb|ejb|tbsj)\\d+_"),  
+    names_to = c("job", ".value"),     
+    names_pattern = "^[a-z]+(\\d+)_(.*)$" 
+  ) %>% group_by(ssuid_spanel_pnum, swave, monthcode) %>% 
+  relocate(ssuid_spanel_pnum, swave, monthcode, jobid, mwkhrs, msum) %>% 
+  slice_max(msum, with_ties = FALSE) %>% ungroup()
+```
+
+
+```{r}
+long_wd <- long %>% 
+  mutate(employment_type = case_when(jborse ==1 ~  1,
+                                     jborse == 2 ~ 2,
+                                     jborse == 3 ~ 3,
+                                     is.na(jborse) & enjflag_std == 1 ~ 4,
+                                     .default = NA)) %>%  # this creats ~300 NAs, where they have no job data for their main job but they don't get flagged as unemployed spell in the enjflag data. So we'll impute unemployment here for these months. 
+  tidylog::mutate(employment_type = ifelse(is.na(employment_type), 4, employment_type))
+
+
+
+```
+
+
+To-dos: 
+- use codebook to categorize for race/ethnicty
+  -  race/ethnicity impute values where we go with their initial value for race
+- factorize sex
+- factorize immigration
+- recode industry 
+- recode education
+- recode calendaryear
+- recode parent
+  - impute missings where someone was a parent early on and then no longer reported being a parent, we can do this since the question is phrased as ever having had a child. 
+- flag for unemployment during first 12 months
+- most common status during first 12 months
+- quantifying self-employment after the first 12 months
+- drop military industry 
+- drop other employment people
+- drop missings
+
+
+
+- look at annual earnings 
