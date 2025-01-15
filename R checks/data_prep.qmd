@@ -209,22 +209,102 @@ long_wd <- long %>%
                                      jborse == 2 ~ 2,
                                      jborse == 3 ~ 3,
                                      is.na(jborse) & enjflag_std == 1 ~ 4,
-                                     .default = NA)) %>%  # this creats ~300 NAs, where they have no job data for their main job but they don't get flagged as unemployed spell in the enjflag data. So we'll impute unemployment here for these months. 
-  tidylog::mutate(employment_type = ifelse(is.na(employment_type), 4, employment_type))
-
+                                     .default = NA)) %>%  # this creates ~300 NAs, where they have no job data for their main job but they don't get flagged as unemployed spell in the enjflag data. So we'll impute unemployment here for these months. 
+  tidylog::mutate(employment_type = ifelse(is.na(employment_type), 4, employment_type)) %>% 
+  tidylog::mutate(hispanic = case_when(eorigin == 1 ~ 1,
+                                      eorigin == 2 ~ 0,
+                                      .default= NA)) 
 
 
 ```
+Investigating inconsistent race and ethnicity values for individuals. For example, 378 people changed their response to whether or not they were hispanic during the course of their survey participation. Likewise, 1747 people changed their response to their race question during the course of the survey. 
+```{r}
+temp <- long_wd %>% group_by(ssuid_spanel_pnum) %>% 
+  mutate(erace_change = erace != first(erace, default= first(erace)),
+         hispanic_change = hispanic !=first(hispanic, default = first(hispanic))) %>% 
+  ungroup() %>% relocate(ssuid_spanel_pnum,  erace_change, erace, hispanic, hispanic_change) 
 
+temp %>% group_by(hispanic_change) %>% distinct(ssuid_spanel_pnum) %>% count()
+temp %>% group_by(erace_change) %>% distinct(ssuid_spanel_pnum) %>% count()
+```
+
+# recoding demographic variables    
+```{r}
+long_wd <- long_wd %>% 
+  arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(erace_std = first(erace),
+         hispanic_std = first(hispanic)) %>% 
+  ungroup() %>% 
+  mutate(race_eth = case_when(hispanic_std == 1 ~ "Hispanic",
+                              erace_std == 1 ~ "White", 
+                              erace_std == 2 ~ "Black", 
+                              erace_std == 3 ~ "Asian",
+                              erace_std == 4 ~ "Other",
+                              .default = NA),
+         race_eth_fct = factor(race_eth, levels = c("White", "Black", "Hispanic", "Asian", "Other")),
+         sex_fct = factor(esex, levels = c(1,2), labels = c("Male", "Female")),
+         immig_fct = factor(ebornus, levels = c(1,2), labels = c("US Born", "Immigrant")),
+         calyear = case_when(spanel == 2014 & swave == 1 ~ 2013, # https://www2.census.gov/programs-surveys/sipp/2023/2023_SIPP_Data_Overview_Handout_SEP23.pdf
+                             spanel == 2014 & swave == 2 ~ 2014,
+                             spanel == 2014 & swave == 3 ~ 2015, 
+                             spanel == 2014 & swave == 4 ~ 2016, 
+                             
+                             spanel == 2018 & swave == 1 ~ 2017,
+                             spanel == 2018 & swave == 2 ~ 2018,
+                             spanel == 2018 & swave == 3 ~ 2019, 
+                             spanel == 2018 & swave == 4 ~ 2020, 
+                             
+                             spanel == 2019 & swave == 1 ~ 2018,
+                             
+                             spanel == 2020 & swave == 1 ~ 2019,
+                             spanel == 2020 & swave == 2 ~ 2020,
+                             spanel == 2020 & swave == 3 ~ 2021, 
+                             spanel == 2020 & swave == 4 ~ 2022,
+                             
+                             spanel == 2021 & swave == 1 ~ 2020,
+                             spanel == 2021 & swave == 2 ~ 2021,
+                             spanel == 2021 & swave == 3 ~ 2022,
+                             
+                             spanel == 2022 & swave == 1 ~ 2021,
+                             spanel == 2022 & swave == 2 ~ 2022,
+                             
+                             spanel == 2023 & swave == 1 ~ 2022,
+                             .default = NA),
+         educ_fct = factor(case_when(eeduc >= 43 ~ "4-year Degree or More",
+                              eeduc >= 40 ~ "Some College or Assoc",
+                              eeduc < 40 ~ "HS or Less", 
+                              .default = NA), levels = c("HS or Less", "Some College or Assoc", "4-year Degree or More")),
+         industry_fct = case_when(ind < 570 ~ "Forestry, Farming, Fishing, Hunting, & Mining",
+                                  ind == 770 ~ "Construction",
+                                  ind >=1070 & ind <=3990 ~ "Manufacturing",
+                                  ind >= 4070 & ind <= 4590 ~ "Wholesale Trade",
+                                  ind >= 4670 & ind <= 5790 ~ "Retail Trade",
+                                  (ind >=6070 & ind <= 6390) | (ind >= 570 & ind <= 690) ~ "Transportation, Warehousing & Utilities",
+                                  ind >= 6470 & ind <= 6780 ~ "Information",
+                                  ind >= 6870 & ind <= 7190 ~ "Finance and Insurance, and Real Estate, and Rental and Leasing",
+                                  ind >= 7270 & ind <= 7790 ~ "Professional, Scientific, and Management, and Administrative, and Waste Management Services",
+                                  ind >= 7860 & ind <= 8470  ~ "Educational Services, and Health Care and Social Assistance",
+                                  ind >= 8560 & ind <= 8690 ~ "Arts, Entertainment, and Recreation, and Accommodation and Food Services",
+                                  ind >= 8770 & ind <= 9290 ~ "Other Services, Except Public Administration",
+                                  ind >= 9370 & ind <= 9590  ~ "Public Administration",
+                                  ind >= 9890  ~ "Military",
+                                  .default = NA)
+  )
+```
+
+
+
+```{r}
+temp <- long_wd %>% 
+  mutate(parent = ifelse(tceb >0, 1,
+                         ifelse(tceb == 0, 0, NA))) %>% 
+  arrange(ssuid_spanel_pnum, swave, monthcode) %>%  
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(parent_disappear = parent < first(parent)) %>% ungroup()
+```
 
 To-dos: 
-- use codebook to categorize for race/ethnicty
-  -  race/ethnicity impute values where we go with their initial value for race
-- factorize sex
-- factorize immigration
-- recode industry 
-- recode education
-- recode calendaryear
 - recode parent
   - impute missings where someone was a parent early on and then no longer reported being a parent, we can do this since the question is phrased as ever having had a child. 
 - flag for unemployment during first 12 months
