@@ -7,6 +7,7 @@ format: html
 This is the second script in the process for recreating the Stata anaylses for the SIPP data. This script reads in the raw SIPP files, extracts relevant work/income variables, reshapes the person-month-job variables to align to the person-month variables. 
 
 ```{r}
+rm(list=ls())
 library(tidyverse)
 library(bit64)
 ```
@@ -16,16 +17,6 @@ library(bit64)
 monthly <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_monthly_combined.rds")
 joblevel_wide <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_joblevel_combined_wide.rds") 
 
-# pu2014w1_joblevel  <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2014w1_joblevel.rds")
-# pu2014w2_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2014w2_joblevel.rds")
-# pu2014w3_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2014w3_joblevel.rds")
-# pu2014w4_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2014w4_joblevel.rds")
-# pu2018_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2018_joblevel.rds")
-# pu2019_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2019_joblevel.rds")
-# pu2020_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2020_joblevel.rds")
-# pu2021_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2021_joblevel.rds")
-# pu2022_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2022_joblevel.rds")
-# pu2023_joblevel <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/pu2023_joblevel.rds")
 ```
 
 
@@ -173,7 +164,7 @@ full_data <- full_data %>%
 ```
 
 
-```{r}
+```{r, include = FALSE, eval = FALSE}
 ptm <- proc.time()
 
 long <- full_data %>% 
@@ -186,9 +177,13 @@ long <- full_data %>%
   relocate(ssuid_spanel_pnum, swave, monthcode, jobid, mwkhrs, msum) %>% 
   slice_max(mwkhrs, with_ties = FALSE) %>% ungroup()
 proc.time() - ptm
+saveRDS(long, "/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_long_2014_2023.rds")
 ```
 
 
+```{r}
+long <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_long_2014_2023.rds")
+```
 
 ```{r}
 long2 <- full_data %>% 
@@ -202,6 +197,9 @@ long2 <- full_data %>%
   slice_max(msum, with_ties = FALSE) %>% ungroup()
 ```
 
+```{r}
+rm(full_data, full_data_base, long2, joblevel_wide)
+```
 
 ```{r}
 long_wd <- long %>% 
@@ -217,6 +215,9 @@ long_wd <- long %>%
 
 
 ```
+
+
+
 Investigating inconsistent race and ethnicity values for individuals. For example, 378 people changed their response to whether or not they were hispanic during the course of their survey participation. Likewise, 1747 people changed their response to their race question during the course of the survey. 
 ```{r}
 temp <- long_wd %>% group_by(ssuid_spanel_pnum) %>% 
@@ -243,6 +244,7 @@ long_wd <- long_wd %>%
                               erace_std == 4 ~ "Other",
                               .default = NA),
          race_eth_fct = factor(race_eth, levels = c("White", "Black", "Hispanic", "Asian", "Other")),
+         race_eth_fct_cpsd = fct_collapse(race_eth_fct, White = "White", Non-white = c("Black", "Asian", "Hispanic", "Other")),
          sex_fct = factor(esex, levels = c(1,2), labels = c("Male", "Female")),
          immig_fct = factor(ebornus, levels = c(1,2), labels = c("US Born", "Immigrant")),
          calyear = case_when(spanel == 2014 & swave == 1 ~ 2013, # https://www2.census.gov/programs-surveys/sipp/2023/2023_SIPP_Data_Overview_Handout_SEP23.pdf
@@ -289,7 +291,11 @@ long_wd <- long_wd %>%
                                   ind >= 8770 & ind <= 9290 ~ "Other Services, Except Public Administration",
                                   ind >= 9370 & ind <= 9590  ~ "Public Administration",
                                   ind >= 9890  ~ "Military",
-                                  .default = NA)
+                                  .default = NA), 
+         parent = ifelse(epar_scrnr == 1, 1, 
+                         ifelse(epar_scrnr == 2, 0, NA))
+         
+         
   )
 ```
 
@@ -297,18 +303,98 @@ long_wd <- long_wd %>%
 
 ```{r}
 temp <- long_wd %>% 
-  mutate(parent = ifelse(tceb >0, 1,
-                         ifelse(tceb == 0, 0, NA))) %>% 
   arrange(ssuid_spanel_pnum, swave, monthcode) %>%  
   group_by(ssuid_spanel_pnum) %>% 
   mutate(parent_disappear = parent < first(parent)) %>% ungroup()
+
+monthly %>% filter(ssuid_spanel_pnum == "114285465212021103") %>% select(swave, monthcode, tceb, epar_scrnr) # example of someone with inconsistent parent information within the base data. 
+
+temp %>% group_by(parent_disappear) %>% distinct(ssuid_spanel_pnum) %>% count()
+temp %>% filter(ssuid_spanel_pnum == "114285465212021103") %>% select(swave, monthcode, tceb, epar_scrnr, parent)
 ```
 
+
+```{r}
+temp <- long_wd %>% 
+  arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(parent_first = first(parent),
+         parent_last = last(parent)) %>% 
+  # as we saw above some people reported moving from being a parent to being a non-parent, so we can carry that forwards. This is similar to the tceb issue where people reported having biological children in an earlier wave and then report not occurring. Using the epar_scrnr this is 934 people with this disappearing child (could be due to deaths I suppose, but the question seems more general to did they ever have a kid. )
+  mutate(parent_std= parent,
+         parent_std = cummax(parent_std)) %>% ungroup()
+
+temp %>% filter(ssuid_spanel_pnum == "114285465212021103") %>% select(swave, monthcode, tceb, epar_scrnr, contains("parent")) %>% print(n = 100)
+temp %>% filter(ssuid_spanel_pnum == "2920924180182014101") %>% select(swave, monthcode, tceb, epar_scrnr, contains("parent")) %>% print(n = 100)
+
+```
+```{r}
+long_wd <- long_wd %>% 
+  arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(parent_first = first(parent),
+         parent_last = last(parent)) %>% 
+  # as we saw above some people reported moving from being a parent to being a non-parent, so we can carry that forwards. This is similar to the tceb issue where people reported having biological children in an earlier wave and then report not occurring. Using the epar_scrnr this is 934 people with this disappearing child (could be due to deaths I suppose, but the question seems more general to did they ever have a kid. )
+  mutate(parent_std= parent,
+         parent_std = cummax(parent_std)) %>% ungroup() 
+```
+
+
+```{r, flag for first year unemployment}
+# temp <- long_wd %>% 
+#   arrange(ssuid_spanel_pnum, swave, monthcode) %>%
+#   group_by(ssuid_spanel_pnum) %>%
+#   mutate(
+#     seq = cumsum(workless_month != lag(workless_month, default = first(workless_month))),
+#     seq = if_else(row_number() > 12, NA, seq),
+#     seq_length = ifelse(is.na(seq)), cumsum(workless_month)-lag(cumsum(workless_month), default = 0),0)
+#   ) %>%
+#   ungroup()
+# library(dplyr)
+# temp <- long_wd %>% 
+#   group_by(ssuid_spanel_pnum) %>% 
+#   mutate(
+#     spell = {
+#       r <- rle(workless_month)
+#       r$lengths <- cumsum(r$lengths)
+#       inverse.rle(r) 
+#       }
+#   )
+# 
+# temp %>% select(ssuid_spanel_pnum, swave, monthcode, employment_type, workless_month,seq, seq_length) %>% print(n=500)
+# # Step 2: Calculate max consecutive unemployment (`max_consec_unempf12`)
+# df <- df %>%
+#   group_by(ssuid_spanel_pnum_id) %>%
+#   mutate(max_consec_unempf12 = max(_seq, na.rm = TRUE)) %>%
+#   ungroup() %>%
+#   mutate(max_consec_unempf12 = if_else(is.na(max_consec_unempf12), 0, max_consec_unempf12))
+```
+
+```{r}
+find_mode <- function(x) {
+  u <- unique(x)
+  tab <- tabulate(match(x, u))
+  max(u[tab == max(tab)])
+}
+
+mode_statuses <- long_wd %>% select(ssuid_spanel_pnum, swave, monthcode, employment_type) %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  filter(row_number() <=12) %>% 
+  summarize(mode_status = find_mode(employment_type)) 
+
+long_wd <- long_wd %>% 
+  left_join(mode_statuses, by = "ssuid_spanel_pnum")
+```
+
+
+
+```{r}
+
+```
+
+
 To-dos: 
-- recode parent
-  - impute missings where someone was a parent early on and then no longer reported being a parent, we can do this since the question is phrased as ever having had a child. 
 - flag for unemployment during first 12 months
-- most common status during first 12 months
 - quantifying self-employment after the first 12 months
 - drop military industry 
 - drop other employment people
