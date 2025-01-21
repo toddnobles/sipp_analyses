@@ -12,15 +12,14 @@ library(tidyverse)
 library(bit64)
 ```
 
-
-```{r}
+```{r load data}
 monthly <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_monthly_combined.rds")
 joblevel_wide <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_joblevel_combined_wide.rds") 
 
 ```
 
-
-```{r}
+Bring in the monthly/yearly level variables and the joblevel data and create ids for them. We could just use ssuid and pnum but being extra careful here including the spanel in case the SIPP ever reused an ssuid + pnum combo across panels. 
+```{r create ids}
 monthly <- monthly %>% mutate(
   ssuid = as.character.integer64(ssuid),
   ssuid_spanel_pnum = paste0(
@@ -42,11 +41,11 @@ joblevel_wide <- joblevel_wide %>% mutate(
 
 Here we impute those instances where someone had all of the earnings and job information we care about but did not have a jobid value for that specific job. Because we conduct later analyses at the month level we don't particularly care if this job is just an uncoded version of ejobid 101 , 102, 103 for instance. Put differently, it's unclear from the data quality flags why these are "not in universe" for jobid, but the records contain all the information we'd want so we can impute some fictional jobids. We lose the ability to track if these are the same jobs they held before/after that month but we aren't concerned with that. 
 
-```{r}
+```{r data preview for imputation }
 joblevel_wide %>% filter(ssuid == "418209316" & pnum == 102) %>% select(ssuid_spanel_pnum, ssuid, pnum, monthcode, contains("enjflag"), contains("jborse"), contains("jobid"), contains("msum"), contains("prftb"), contains("mwkhrs"), contains("ind")) 
 ```
 
-```{r}
+```{r imputing jobids}
 joblevel_wide <- joblevel_wide %>% 
   select(
       'ssuid',
@@ -116,11 +115,11 @@ joblevel_wide <- joblevel_wide %>%
 ```
 
 
-```{r combining to one dataframe}
+```{r combining to joblevel and monthly into dataframe}
 full_data_base <- tidylog::left_join(monthly, joblevel_wide, by = c("ssuid_spanel_pnum", "spanel", "swave", "monthcode"))
 ```
 
-```{r filtering to working age pop by age at entry}
+```{r filtering to working age sample by age at entry}
 full_data <- full_data_base %>% 
   group_by(ssuid_spanel_pnum) %>% 
   mutate(age_entry = min(tage),
@@ -129,7 +128,7 @@ full_data <- full_data_base %>%
 ```
 
 
-```{r standardizing enjflag}
+```{r standardizing enjflag unemployment flag}
 # Unemployment flag is 0 = not unemployed and 1 = unemployed for 2014 panel. Then switches to 2 = not unemployed and 1 = unemployed for 2018 onwards. So recoding accordingly here 
 full_data <- full_data %>% 
   mutate(enjflag_std = ifelse(spanel == 2014 & enjflag == 1, 1,
@@ -139,7 +138,7 @@ full_data <- full_data %>%
 
 
 Dropping those who never worked
-```{r}
+```{r removing those who never worked}
 full_data <- full_data %>% 
   mutate(workless_month = if_all(starts_with("ejb") & ends_with("jobid"), is.na)) %>% 
   mutate(workless_month = ifelse(workless_month, 1, 0)) %>% 
@@ -154,7 +153,7 @@ full_data <- full_data %>%
 
 
 Now we need to mark their main job based on number of hours worked and keep only that row for the month. 
-```{r}
+```{r marking main job}
 full_data <- full_data %>% 
   tidylog::select(-ends_with(".y"), -starts_with("ajb")) %>% 
   rename_with(
@@ -164,7 +163,7 @@ full_data <- full_data %>%
 ```
 
 
-```{r, include = FALSE, eval = FALSE}
+```{r reshaping joblevel to long, include = FALSE, eval = FALSE}
 ptm <- proc.time()
 
 long <- full_data %>% 
@@ -185,23 +184,11 @@ saveRDS(long, "/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_long_2014_2023.rds")
 long <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_long_2014_2023.rds")
 ```
 
-```{r}
-long2 <- full_data %>% 
-  head(2000) %>% 
-  pivot_longer(
-    cols = matches("^(tjb|ejb|tbsj)\\d+_"),  
-    names_to = c("job", ".value"),     
-    names_pattern = "^[a-z]+(\\d+)_(.*)$" 
-  ) %>% group_by(ssuid_spanel_pnum, swave, monthcode) %>% 
-  relocate(ssuid_spanel_pnum, swave, monthcode, jobid, mwkhrs, msum) %>% 
-  slice_max(msum, with_ties = FALSE) %>% ungroup()
-```
-
-```{r}
+```{r cleaning up memory}
 rm(full_data, full_data_base, long2, joblevel_wide)
 ```
 
-```{r}
+```{r create long_wd for leaving original long dataframe as reference}
 long_wd <- long %>% 
   mutate(employment_type = case_when(jborse ==1 ~  1,
                                      jborse == 2 ~ 2,
@@ -219,7 +206,7 @@ long_wd <- long %>%
 
 
 Investigating inconsistent race and ethnicity values for individuals. For example, 378 people changed their response to whether or not they were hispanic during the course of their survey participation. Likewise, 1747 people changed their response to their race question during the course of the survey. 
-```{r}
+```{r investigate inconsistent race and ethnicity}
 temp <- long_wd %>% group_by(ssuid_spanel_pnum) %>% 
   mutate(erace_change = erace != first(erace, default= first(erace)),
          hispanic_change = hispanic !=first(hispanic, default = first(hispanic))) %>% 
@@ -230,13 +217,15 @@ temp %>% group_by(erace_change) %>% distinct(ssuid_spanel_pnum) %>% count()
 ```
 
 # recoding demographic variables    
-```{r}
+```{r recoding demographic variables}
 long_wd <- long_wd %>% 
   arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
   group_by(ssuid_spanel_pnum) %>% 
+  # given above inconsistent reporting of race and ethnicity here we categorize each person based on their first value reported
   mutate(erace_std = first(erace),
          hispanic_std = first(hispanic)) %>% 
   ungroup() %>% 
+  # create combined version of race/ethnicity
   mutate(race_eth = case_when(hispanic_std == 1 ~ "Hispanic",
                               erace_std == 1 ~ "White", 
                               erace_std == 2 ~ "Black", 
@@ -244,10 +233,11 @@ long_wd <- long_wd %>%
                               erace_std == 4 ~ "Other",
                               .default = NA),
          race_eth_fct = factor(race_eth, levels = c("White", "Black", "Hispanic", "Asian", "Other")),
-         race_eth_fct_cpsd = fct_collapse(race_eth_fct, White = "White", Non-white = c("Black", "Asian", "Hispanic", "Other")),
+         race_eth_fct_cpsd = fct_collapse(race_eth_fct, White = c("White"), Non_white = c("Black", "Asian", "Hispanic", "Other")),
          sex_fct = factor(esex, levels = c(1,2), labels = c("Male", "Female")),
          immig_fct = factor(ebornus, levels = c(1,2), labels = c("US Born", "Immigrant")),
-         calyear = case_when(spanel == 2014 & swave == 1 ~ 2013, # https://www2.census.gov/programs-surveys/sipp/2023/2023_SIPP_Data_Overview_Handout_SEP23.pdf
+        # https://www2.census.gov/programs-surveys/sipp/2023/2023_SIPP_Data_Overview_Handout_SEP23.pdf
+         calyear = case_when(spanel == 2014 & swave == 1 ~ 2013, 
                              spanel == 2014 & swave == 2 ~ 2014,
                              spanel == 2014 & swave == 3 ~ 2015, 
                              spanel == 2014 & swave == 4 ~ 2016, 
@@ -300,7 +290,7 @@ long_wd <- long_wd %>%
 ```
 
 
-
+Investigating inconsisent parent coding. Obviously someone could go from not being a parent to being a parent, but we have people go from being a parent to not being a parent, using either of the parent variables we have. Really we're probably interested in if they have a dependent child but we use this measure and impute forwards if someone ever reported having a child. 
 ```{r}
 temp <- long_wd %>% 
   arrange(ssuid_spanel_pnum, swave, monthcode) %>%  
@@ -313,7 +303,7 @@ temp %>% group_by(parent_disappear) %>% distinct(ssuid_spanel_pnum) %>% count()
 temp %>% filter(ssuid_spanel_pnum == "114285465212021103") %>% select(swave, monthcode, tceb, epar_scrnr, parent)
 ```
 
-
+Continuing work from the last chunk 
 ```{r}
 temp <- long_wd %>% 
   arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
@@ -328,7 +318,7 @@ temp %>% filter(ssuid_spanel_pnum == "114285465212021103") %>% select(swave, mon
 temp %>% filter(ssuid_spanel_pnum == "2920924180182014101") %>% select(swave, monthcode, tceb, epar_scrnr, contains("parent")) %>% print(n = 100)
 
 ```
-```{r}
+```{r imputing parental status}
 long_wd <- long_wd %>% 
   arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
   group_by(ssuid_spanel_pnum) %>% 
@@ -340,66 +330,197 @@ long_wd <- long_wd %>%
 ```
 
 
-```{r, flag for first year unemployment}
-# temp <- long_wd %>% 
-#   arrange(ssuid_spanel_pnum, swave, monthcode) %>%
-#   group_by(ssuid_spanel_pnum) %>%
-#   mutate(
-#     seq = cumsum(workless_month != lag(workless_month, default = first(workless_month))),
-#     seq = if_else(row_number() > 12, NA, seq),
-#     seq_length = ifelse(is.na(seq)), cumsum(workless_month)-lag(cumsum(workless_month), default = 0),0)
-#   ) %>%
-#   ungroup()
-# library(dplyr)
-# temp <- long_wd %>% 
-#   group_by(ssuid_spanel_pnum) %>% 
-#   mutate(
-#     spell = {
-#       r <- rle(workless_month)
-#       r$lengths <- cumsum(r$lengths)
-#       inverse.rle(r) 
-#       }
-#   )
-# 
-# temp %>% select(ssuid_spanel_pnum, swave, monthcode, employment_type, workless_month,seq, seq_length) %>% print(n=500)
-# # Step 2: Calculate max consecutive unemployment (`max_consec_unempf12`)
-# df <- df %>%
-#   group_by(ssuid_spanel_pnum_id) %>%
-#   mutate(max_consec_unempf12 = max(_seq, na.rm = TRUE)) %>%
-#   ungroup() %>%
-#   mutate(max_consec_unempf12 = if_else(is.na(max_consec_unempf12), 0, max_consec_unempf12))
+
+## Filtering to those with full years of data. 
+Representative examples to check, so this person 7178160572292014102 has 17 months in the data, and this person has three 8818607717842014104. We want to lose them both and end up with only those who we observe for a full 12 months in each wave. 
+```{r filtering to only those with full years of data}
+full_year_markers <- long_wd %>% 
+  group_by(ssuid_spanel_pnum, swave) %>% 
+  # check that in each wave the person has a full 12 months. 
+  summarize(has_full_year = all(1:12 %in% monthcode)) %>%
+  ungroup() %>% 
+  # filter to only those waves where a person had 12 months of data. 
+  filter(has_full_year) 
+
+full_year_markers %>% filter(ssuid_spanel_pnum %in% c("7178160572292014102", "8818607717842014104"))
+
+# merge this in with only keeping the records that had full years of data. 
+long_wd <- long_wd %>% inner_join(full_year_markers, by = c("ssuid_spanel_pnum", "swave")) %>% 
+  # make a new months_in_data column now that we've removed partial waves
+  select(-months_in_data) %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(months_in_data = n())
+
+table(long_wd$months_in_data) # confirming we have full years for everyone at this point. 
 ```
 
-```{r}
-find_mode <- function(x) {
+
+## Creating Modal Y1 status
+```{r function to find max mode}
+find_max_mode <- function(x) {
   u <- unique(x)
   tab <- tabulate(match(x, u))
-  max(u[tab == max(tab)])
+  max(u[tab == max(tab)]) 
 }
+```
 
+
+```{r capturing first year status}
 mode_statuses <- long_wd %>% select(ssuid_spanel_pnum, swave, monthcode, employment_type) %>% 
+  arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
   group_by(ssuid_spanel_pnum) %>% 
   filter(row_number() <=12) %>% 
-  summarize(mode_status = find_mode(employment_type)) 
+  summarize(mode_status = find_max_mode(employment_type)) 
 
 long_wd <- long_wd %>% 
-  left_join(mode_statuses, by = "ssuid_spanel_pnum")
+  left_join(mode_statuses, by = "ssuid_spanel_pnum") # this adds their mode status during the first year to all records for the individual. 
 ```
+
+
+## Measuring Y1 consecutive unemployment
+```{r creating max_consec uneployment measure}
+library(data.table)
+consec_unemp <- setDT(long_wd)
+consec_unemp <- consec_unemp %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  filter(row_number() <=12) %>% 
+  mutate(
+    ### Gen value of 1 for first run, 2 for second stretch but doesn't filter to only those that are unemployed months
+    stretch = rleid(workless_month),
+    stretch_workless = ifelse(workless_month == 1, stretch, NA ),
+    is_non_missing = !is.na(stretch_workless), # could recode this with just referencing stretch_workless
+    spell_id = cumsum(is_non_missing & lag(!is_non_missing, default = TRUE)), # Identify spell groups
+    spell_length = ifelse(is_non_missing, ave(is_non_missing, ssuid_spanel_pnum, spell_id, FUN = cumsum), 0),
+    max_consec_unemp = max(spell_length, na.rm=TRUE)) %>%
+  ungroup()
+
+
+# checking it captured people correctly. 
+consec_unemp %>% select(ssuid_spanel_pnum, swave, monthcode, employment_type, 
+                workless_month, stretch, stretch_workless, is_non_missing,
+                spell_id, spell_length, max_consec_unemp) %>% filter(ssuid_spanel_pnum %in% c("1288929322014101", "1142851342014103", "292418136626182018102")) %>% select(ssuid_spanel_pnum, monthcode, employment_type, workless_month, max_consec_unemp) %>% print(n = 100)
+
+consec_unemp <- consec_unemp %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  summarize(max_consec_unemp = first(max_consec_unemp, na.rm = TRUE))
+```
+
+```{r merging in unemployment streak measure  }
+long_wd <- long_wd %>% 
+  left_join(consec_unemp, by = "ssuid_spanel_pnum")
+```
+
+
+
+```{r filtering out those who started out as other employment as modal status}
+long_wd <- long_wd %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  tidylog::filter(!any(mode_status == 3)) %>% 
+  tidylog::filter(!any(industry_fct == "Military", na.rm = TRUE)) %>% 
+  ungroup()
+
+```
+
+```{r replicating y1_status_v2 from stata script}
+# Take our modal status, but override the mode if someone experienced 3 or more months of unemployment during first year in the data. 
+y1_statuses <- long_wd %>% 
+  select(ssuid_spanel_pnum, swave, monthcode, employment_type, workless_month, mode_status) %>% 
+  arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  filter(row_number() <=12) %>%  # keep each person's first year only. 
+  summarize(unemp_f12 = sum(workless_month, na.rm = TRUE),
+            mode_status = first(mode_status)) %>%
+  ungroup() %>% 
+  mutate(y1_status_v2 = ifelse(unemp_f12 >=3, 4,
+                                  mode_status)) 
+
+```
+
+
+```{r}
+long_wd <- long_wd %>% 
+  left_join(y1_statuses %>% select(ssuid_spanel_pnum, y1_status_v2, unemp_f12), by = "ssuid_spanel_pnum")
+```
+
+```{r dropping those we only have one year of data on}
+long_wd <- long_wd %>% 
+  filter(months_in_data > 12 ) ## really only == 12 here since we've already filterd to only thsoe with full years.
+```
+
+```{r}
+se_quantified <- long_wd %>% 
+  arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
+  group_by(ssuid_spanel_pnum) %>%
+   # get only records after first year
+  filter(row_number() > 12) %>% 
+  summarize(ft_se_months_py1 = sum(ifelse(mwkhrs >= 15 & employment_type == 2,1,0), na.rm = TRUE),
+         pt_se_months_py1 = sum(ifelse(mwkhrs < 15 & employment_type == 2,1,0), na.rm = TRUE),
+         pt_months_py1 = sum(ifelse(mwkhrs < 15,1,0), na.rm = TRUE),
+         ft_months_py1 = sum(ifelse(mwkhrs >= 15, 1, 0), na.rm = TRUE),
+         ft_ws_months_py1 = sum(ifelse(mwkhrs >=15 & employment_type == 1,1,0), na.rm = TRUE),
+         pt_ws_months_py1 = sum(ifelse(mwkhrs < 15 & employment_type == 1,1,0), na.rm = TRUE),
+         months_after_y1 = max(row_number()),
+         pct_se_py1_ft = ft_se_months_py1/months_after_y1,
+         months_employed = sum(ifelse(employment_type != 4,1,0)),
+         mean_hrs = mean(mwkhrs, na.rm = TRUE),
+         ) %>% 
+  ungroup()
+
+
+
+```
+
+```{r}
+temp <- long_wd %>% 
+  left_join(se_quantified, by = "ssuid_spanel_pnum") %>% 
+  # based on the number of people we lose here I think we actually want to allow some flexibility here. 
+  tidylog::filter(months_after_y1 == ft_months_py1)
+```
+
+```{r}
+table(temp$ft_months_py1, temp$months_after_y1)
+```
+
+```{r cleanup missings}
+analysis_df <- long_wd %>%
+  tidylog::filter(if_all(
+    c(
+      ssuid_spanel_pnum,
+      swave,
+      spanel,
+      monthcode,
+      race_eth_fct_cpsd,
+      sex_fct,
+      immig_fct,
+      calyear,
+      educ_fct,
+      industry_fct,
+      parent_std,
+      unemp_f12,
+      y1_status_v2,
+      mode_status,
+      max_consec_unemp,
+      employment_type
+    ),
+    ~ !is.na(.)
+  )) %>%
+  tidylog::filter(is.na(msum) & workless_month != 1) %>% 
+  tidylog::filter(is.na(tpearn) & workless_month != 1) 
+```
+
+
+
 
 
 
 ```{r}
 
 ```
+
 
 
 To-dos: 
-- flag for unemployment during first 12 months
-- quantifying self-employment after the first 12 months
-- drop military industry 
-- drop other employment people
-- drop missings
-
-
-
 - look at annual earnings 
+- test descriptives with weights included
+- look at regressions, 
+- test regressions with weights included 
