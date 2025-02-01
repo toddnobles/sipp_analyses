@@ -1,0 +1,154 @@
+---
+title: "working_paper_outputs"
+author: "Todd Nobles"
+format: docx
+---
+
+Read in our working dataset created in data_prep.qmd
+
+```{r}
+rm(list = ls())
+library(tidyverse)
+
+se_sample <- readRDS("se_sample.rds")
+se_sample.5 <- readRDS("se_sample_5.rds")
+se_sample_cleanest <- readRDS("se_sample_cleanest.rds") 
+se_sample.5_cleanest <- readRDS("se_sample_5_cleanest.rds")
+```
+
+
+```{r}
+se_sample <- se_sample %>% 
+  mutate(y1_status_v2 = factor(y1_status_v2, labels = c("W&S", "Self-Employed", "Unemployed")))
+
+
+person_level <- se_sample %>%
+  arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
+  # getting to person-year level
+  group_by(ssuid_spanel_pnum, swave) %>%
+  summarize(# the following three are all constant within individuals so we just grab their first value
+    y1_status_v2 = first(y1_status_v2),
+    race_eth_fct_cpsd = first(race_eth_fct_cpsd),
+    sex_fct = first(sex_fct),
+    # here we take their highest education value ever observed 
+    educ_fct = last(educ_fct),
+    tpearn_annual = sum(tpearn)) %>% 
+  # summarizing to person-level 
+  group_by(ssuid_spanel_pnum) %>% 
+  summarize(
+    avg_earnings = mean(tpearn_annual),
+    median_earnings = quantile(tpearn_annual, .5),
+    y1_status_v2 = first(y1_status_v2),
+    race_eth_fct_cpsd = first(race_eth_fct_cpsd),
+    sex_fct = first(sex_fct),
+    # here we take their highest education value ever observed 
+    educ_fct = last(educ_fct),
+  ) %>%
+  ungroup()
+```
+
+
+
+```{r}
+library(gtsummary)
+person_level %>%
+  select(avg_earnings, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct) %>% 
+  tbl_summary(by = y1_status_v2,
+             statistic = list(all_continuous() ~ "{mean} ({sd})")) %>% 
+  add_overall()
+```
+
+
+
+
+```{r}
+table(average_earnings$educ_fct)
+table(average_earnings$educ_fct, average_earnings$y1_status_v2)
+table(average_earnings$race_eth_fct_cpsd, average_earnings$y1_status_v2)
+```
+
+To-dos: 
+- look at annual earnings 
+- test descriptives with weights included 
+- look at regressions, 
+- test regressions with weights included
+
+
+## Table 1 
+Descriptive statistics for self-employed sample by initial employment status
+Person-level table
+```{r}
+
+```
+
+
+
+## Table 2	Annual Earnings Comparisons by Race/Ethnicity and Initial Employment Status (Self-Employed Sample)
+
+**# Table 2. Sex: Annual Earnings Comparisons by Sex and Initial Employment Status (Self-Employed Sample)
+**# Table 2 Annual Earnings Comparisons by Education and Initial Employment Status 
+
+
+
+
+# Regressions for earnings
+Using person-year level data
+
+
+```{r}
+log earnings 
+```
+
+```{r}
+#regression for full sample with unemployment
+global controls  = "i.sex age age2 i.immigrant  mode_industry_year calyear"
+global ctrl_nosex = "age age2 i.immigrant  mode_industry_year calyear"
+random_effects_model <- lmer(y ~ x1 + x2 + (1 | individual_id), data = mydata)
+
+
+
+
+# regressions for full sample with y1_status_v2
+```
+
+
+```{r}
+# regression for se sample with unemployment
+
+# regressions for se sample with y1_status_v2
+```
+
+```{r}
+# models for SE with house variables
+```
+
+
+
+
+
+
+
+
+
+
+
+# Profits
+
+```{r}
+# models for profit
+
+
+# models for business value 
+
+```
+
+
+
+```{r}
+# profit for profit positive
+# profit for profit10k
+
+#ln_tjb_prftb 
+# ln_tbsjval
+```
+
