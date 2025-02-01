@@ -1,6 +1,10 @@
 ---
 title: "data_prep"
 format: html
+execute:
+  echo: false
+  message: false
+  warning: false
 ---
 
 This is the second script in the process for recreating the Stata anaylses for the SIPP data. This script reads in the raw SIPP files, extracts relevant work/income variables, reshapes the person-month-job variables to align to the person-month variables.
@@ -614,13 +618,13 @@ se_sample %>%
       mode_status,
       max_consec_unemp,
       employment_type,
-      tpearn, msum, prftb, 
+      tpearn, msum, prftb, val,
       thval_home, tval_ast, tval_home, thval_ast) %>% 
   naniar::gg_miss_var()
 ```
 
 
-We see above there are no missings, which is expected at this point, but just running the code for good measure. 
+Business value is the primary issue above. Shouldn't be possible to have business value missing if SE. For now we don't drop them since we're really just concerned with employment. 
 ```{r cleanup missings}
 se_sample <- se_sample %>%
   filter(if_all(
@@ -640,12 +644,42 @@ se_sample <- se_sample %>%
       y1_status_v2,
       mode_status,
       max_consec_unemp,
-      employment_type
+      employment_type, 
+      #val, 
+      msum, 
+      tpearn
     ),
     ~ !is.na(.)
-  )) %>%
-  filter(!is.na(msum) & workless_month != 1) %>% 
-  filter(!is.na(tpearn) & workless_month != 1) 
+  )) 
+
+
+
+se_sample.5 <- se_sample.5 %>%
+  filter(if_all(
+    c(
+      ssuid_spanel_pnum,
+      swave,
+      spanel,
+      monthcode,
+      race_eth_fct_cpsd,
+      sex_fct,
+      immig_fct,
+      calyear,
+      educ_fct,
+      industry_fct,
+      parent_std,
+      unemp_f12,
+      y1_status_v2,
+      mode_status,
+      max_consec_unemp,
+      employment_type, 
+      #val, 
+      msum, 
+      tpearn
+    ),
+    ~ !is.na(.)
+  )) 
+
 
 ```
 
@@ -667,13 +701,19 @@ se_sample <- se_sample %>%
          ln_tpearn = log_transform(tpearn),
          ln_msum = log(msum),
          )
-  
+
+se_sample.5 <- se_sample.5 %>% 
+  mutate(profposi = ifelse(prftb > 0, 1, 0),
+         prof10k = ifelse(prftb >= 10000, 1, 0),
+         ln_tpearn = log_transform(tpearn),
+         ln_msum = log(msum),
+         )
 ```
 
 
 
 
-
+# Final data checks. 
 
 Note we may need another decision rule around people for business values and for earnings. For instance, the next few tables highlight some odd folks here. 
 
@@ -688,10 +728,10 @@ se_sample %>%
 ```
 
 
-Relatedly, this person is reporting 
+On the other hand, this person is reporting working 40 hours but reporting no income. In neither of these cases are they even jobids that we imputed. This was an issue in the Stata data as well (I went back and checked) but I hadn't caught it there. 
 ```{r, message = FALSE }
 se_sample %>% 
-  select(ssuid_spanel_pnum, swave, monthcode, mwkhrs, msum, tpearn, 
+  select(ssuid_spanel_pnum, swave,jobid,  monthcode, mwkhrs, msum, tpearn, 
          prftb, employment_type, val, tptotinc, tage,thnetworth, thval_ast ) %>%
   filter(ssuid_spanel_pnum %in% c("292136334552182018102"))  %>% 
   flextable::flextable()
@@ -699,50 +739,66 @@ se_sample %>%
 ```
 
 
-How big of an issue are these folks
+How big of an issue are these various problems? 
+
+Well we have a total of `r se_sample  %>% distinct(ssuid_spanel_pnum) %>% count()` people in the dataset. 
+
+The chunk below calculates the number of poeople who at some point report a month with work hours but report no income of any sort during that month. 
 ```{r, message = FALSE }
-se_sample %>% filter(is.na(val)) %>% distinct(ssuid_spanel_pnum) %>% count() 
-se_sample %>% filter(mwkhrs > 0 & tpearn == 0 & msum == 0 & tptotinc == 0) %>% distinct(ssuid_spanel_pnum) %>% count()
+se_sample %>% filter(mwkhrs > 0 & tpearn == 0 & msum == 0 & tptotinc == 0 & prftb == 0 ) %>% distinct(ssuid_spanel_pnum) %>% count()
+```
+Perhaps they're just extraordinarily wealthy? Nope. Even with a modest restriction of networth < 50000 we still see a lot of people with work hours and no income. 
+```{r}
+se_sample %>% filter(mwkhrs > 0 & tpearn == 0 & msum == 0 & tptotinc == 0 & prftb == 0 & thnetworth < 50000) %>% distinct(ssuid_spanel_pnum) %>% count()
+
+```
+
+
+What about the related issue of months reported with no working hours but they still met our threshold of being employed each month (according to jobid data) and having mean hours greater than or equal to 15. 
+```{r, message = FALSE }
 se_sample %>% filter(mwkhrs == 0) %>% distinct(ssuid_spanel_pnum) %>% count()
+se_sample %>% group_by(ssuid_spanel_pnum) %>% summarize(months_0workhours = sum(mwkhrs == 0), months = n()) %>% arrange(desc(months_0workhours))
 ```
 
-// recoding profits 
-gen profposi=tjb_prftb>0 if tjb_prftb<. // 
-tab profpos, missing
-gen prof10k=tjb_prftb>=10000 if tjb_prftb<.
-tab prof10k, missing
-
-foreach x in  tjb_prftb tbsjval {
-	egen min_`x' = min(`x')
-	replace min_`x' = min_`x' *-1
-	gen ln_`x' = ln(`x' + min_`x'+1)
-} 
-
-
-
-
+What about those missing business values? 
 ```{r}
-average_earnings <- se_sample %>%
+se_sample %>% filter(is.na(val)) %>% distinct(ssuid_spanel_pnum) %>% count() 
+
+```
+
+For good measure we'll create a new dataframe that excludes the oddities above and filters to only those with full years after dropping the suspect years. 
+```{r}
+se_sample_cleanest <- se_sample %>% 
   group_by(ssuid_spanel_pnum) %>%
-  summarize(
-    people = n_distinct(ssuid_spanel_pnum),
-    # the following three are all constant within individuals so we just grab their first value
-    y1_status_v2 = first(y1_status_v2),
-    race_eth_fct_cpsd = first(race_eth_fct_cpsd),
-    sex_fct = first(sex_fct),
-    # here we take their highest education value ever observed 
-    educ_fct = max(educ_fct),
-    avg_earnings = mean(tpearn),
-    avg_msum_earnings = mean(msum)
-  ) %>%
-  ungroup()
+  filter(all(mwkhrs != 0)) %>% 
+  filter(!any(mwkhrs > 0 & tpearn == 0 & msum == 0 & tptotinc == 0 & prftb == 0))
 
+
+se_sample.5_cleanest <- se_sample.5 %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  filter(all(mwkhrs != 0)) %>%
+  filter(!any(mwkhrs > 0 & tpearn == 0 & msum == 0 & tptotinc == 0 & prftb == 0))
 ```
 
+
+# Saving out data 
+
+At this point we have multiple potential working datasets. All of the following restrict to working age population and those who we have at least two years of data on (ie can establish based on year 1 how they enter into SE, and then observe at least one year of earnings). Further, they all are also restricted to those individuals that we observe full years of data on, so if someone was missing month 11 in one wave then they get dropped. Put differently, we have to observe each person for all 12 months of the year every year for them to be included. The specific files are described as follows: 
+  -   se_sample: This file filters to those who were employed for all months post year 1 and who were SE each month after year 1 and who worked an average of at least 15 hours per month. 
+  -   se_sample.5: This file only differs from the se_sample in that we loosen the restriction that all months after year 1 had to be SE and allow for only half of the months post year 1 to be SE months for them to be considered in the sample. 
+  -   The se_sample_cleaned and se_sample.5_cleaned are built from the above two datasets, but handle the odd cases described immediately above by excluding those who reported months with working hours but no income of any sort as well as those who reported months with no work hours (even though they reported having a job that month since they had a jobid). 
+  
 ```{r}
-table(average_earnings$educ_fct)
-table(average_earnings$educ_fct, average_earnings$y1_status_v2)
-table(average_earnings$race_eth_fct_cpsd, average_earnings$y1_status_v2)
+saveRDS(se_sample, "se_sample.rds")
+saveRDS(se_sample.5, "se_sample_5.rds")
+saveRDS(se_sample_cleanest, "se_sample_cleanest.rds") 
+saveRDS(se_sample.5_cleanest, "se_sample_5_cleanest.rds")
 ```
+  
+  
+  
+  
+  
+  
+  
 
-To-dos: - look at annual earnings - test descriptives with weights included - look at regressions, - test regressions with weights included
