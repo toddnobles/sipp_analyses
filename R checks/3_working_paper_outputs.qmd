@@ -32,7 +32,8 @@ person_level <- se_sample %>%
     sex_fct = first(sex_fct),
     # here we take their highest education value ever observed 
     educ_fct = last(educ_fct),
-    tpearn_annual = sum(tpearn)) %>% 
+    tpearn_annual = sum(tpearn),
+    industry = first(industry_fct)) %>% 
   # summarizing to person-level 
   group_by(ssuid_spanel_pnum) %>% 
   summarize(
@@ -43,29 +44,102 @@ person_level <- se_sample %>%
     sex_fct = first(sex_fct),
     # here we take their highest education value ever observed 
     educ_fct = last(educ_fct),
+    industry = first(industry)
   ) %>%
   ungroup()
+
+
+
 ```
 
 
+```{r}
+se_sample_cleanest <- se_sample_cleanest %>% 
+  mutate(y1_status_v2 = fct_recode(as_factor(y1_status_v2), "Self-Emp" = "2", "Unemployed"="4", "W&S" = "1"))
 
+
+person_level_clean <- se_sample_cleanest %>%
+  arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
+  # getting to person-year level
+  group_by(ssuid_spanel_pnum, swave) %>%
+  summarize(# the following three are all constant within individuals so we just grab their first value
+    y1_status_v2 = first(y1_status_v2),
+    race_eth_fct_cpsd = first(race_eth_fct_cpsd),
+    sex_fct = first(sex_fct),
+    # here we take their highest education value ever observed 
+    educ_fct = last(educ_fct),
+    tpearn_annual = sum(tpearn),
+    industry = first(industry_fct)) %>% 
+  # summarizing to person-level 
+  group_by(ssuid_spanel_pnum) %>% 
+  summarize(
+    avg_earnings = mean(tpearn_annual),
+    median_earnings = quantile(tpearn_annual, .5),
+    y1_status_v2 = first(y1_status_v2),
+    race_eth_fct_cpsd = first(race_eth_fct_cpsd),
+    sex_fct = first(sex_fct),
+    # here we take their highest education value ever observed 
+    educ_fct = last(educ_fct),
+    industry = first(industry)
+  ) %>%
+  ungroup()
+
+
+```
+
+```{r, setting labels}
+# library(labelled)
+# person_level <- person_level %>%
+#   set_variable_labels(
+#     average_earnings = "Age (years)",
+#     sex = "Gender",
+#     bmi = "Body Mass Index (kg/m²)"
+#   )
+```
+
+
+## Table 1 
+Descriptive statistics for self-employed sample by initial employment status
+Person-level table
 ```{r}
 library(gtsummary)
 person_level %>%
-  select(avg_earnings, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct) %>% 
+  select(avg_earnings, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct, industry) %>% 
   tbl_summary(by = y1_status_v2,
              statistic = list(all_continuous() ~ "{mean} ({sd})")) %>% 
   add_overall()
 ```
 
 
+```{r}
+library(modelsummary)
+datasummary(avg_earnings*educ_fct ~ mean * y1_status_v2,
+            data = person_level,
+            fmt = fmt_sprintf("%.0f"))
 
+datasummary(avg_earnings*race_eth_fct_cpsd ~ mean * y1_status_v2,
+            data = person_level,
+            fmt = fmt_sprintf("%.0f"))
+
+datasummary(avg_earnings*sex_fct ~ mean * y1_status_v2,
+            data = person_level,
+            fmt = fmt_sprintf("%.0f"))
+```
 
 ```{r}
-table(average_earnings$educ_fct)
-table(average_earnings$educ_fct, average_earnings$y1_status_v2)
-table(average_earnings$race_eth_fct_cpsd, average_earnings$y1_status_v2)
+datasummary(avg_earnings*educ_fct ~ mean * y1_status_v2,
+            data = person_level_clean,
+            fmt = fmt_sprintf("%.0f"))
+
+datasummary(avg_earnings*race_eth_fct_cpsd ~ mean * y1_status_v2,
+            data = person_level_clean,
+            fmt = fmt_sprintf("%.0f"))
+
+datasummary(avg_earnings*sex_fct ~ mean * y1_status_v2,
+            data = person_level_clean,
+            fmt = fmt_sprintf("%.0f"))
 ```
+
 
 To-dos: 
 - look at annual earnings 
@@ -74,19 +148,13 @@ To-dos:
 - test regressions with weights included
 
 
-## Table 1 
-Descriptive statistics for self-employed sample by initial employment status
-Person-level table
 ```{r}
 
 ```
 
 
 
-## Table 2	Annual Earnings Comparisons by Race/Ethnicity and Initial Employment Status (Self-Employed Sample)
 
-**# Table 2. Sex: Annual Earnings Comparisons by Sex and Initial Employment Status (Self-Employed Sample)
-**# Table 2 Annual Earnings Comparisons by Education and Initial Employment Status 
 
 
 
@@ -94,32 +162,134 @@ Person-level table
 # Regressions for earnings
 Using person-year level data
 
+https://cran.r-project.org/web/packages/robustlmm/vignettes/rlmer.pdf 
+clubSandwich
+
+
+```{r function to log transform vars with negative values in them}
+# feed it a vector to convert to log transform that accounts for negative values 
+log_transform <- function(x) {
+  min_x <- min(x)*-1
+  log(x + min_x + 1)
+}
+```
+
+
 
 ```{r}
-log earnings 
+
+## getting down to a dataset that thas their demographci vars and yearly earnings at the person-year level
+temp <- se_sample %>% 
+  filter(monthcode %% 12 == 0) %>% 
+  select(ssuid_spanel_pnum, 
+         y1_status_v2, 
+         unemp_f12,
+         educ_fct, 
+         race_eth_fct_cpsd,
+         sex_fct,
+         immig_fct,
+         parent_std,
+         industry_fct,
+         tage,
+         calyear,
+         prftb, 
+         wpfinwgt,
+         val) %>% 
+  mutate(unemp_f12_6 = factor(ifelse(unemp_f12 >=6, 1,0), labels = c("Not Unemployed", "Unemployed")),
+         industry_fct = as_factor(industry_fct),
+         industry_num = as.numeric(industry_fct))
+
+temp_earnings <- se_sample %>% 
+  group_by(ssuid_spanel_pnum, calyear) %>% 
+  summarize(tpearn_annual= sum(tpearn)) %>% 
+  ungroup()
+
+
+person_year <- left_join(temp_earnings, temp, by = c("ssuid_spanel_pnum", "calyear")) %>% 
+  mutate(ln_tpearn_annual = log_transform(tpearn_annual))
 ```
 
 ```{r}
-#regression for full sample with unemployment
-global controls  = "i.sex age age2 i.immigrant  mode_industry_year calyear"
-global ctrl_nosex = "age age2 i.immigrant  mode_industry_year calyear"
-random_effects_model <- lmer(y ~ x1 + x2 + (1 | individual_id), data = mydata)
+library(lme4)
+
+m1_unemp <- lmer(ln_tpearn_annual ~ 
+                   unemp_f12_6  + 
+                   educ_fct + 
+                   tage + 
+                   I(tage^2) + 
+                   sex_fct + 
+                   immig_fct + 
+                   calyear + 
+                   industry_fct + 
+                   (1 | ssuid_spanel_pnum), 
+                 data = person_year)
+
+m2_unemp <- update(m1_unemp, . ~ .  + race_eth_fct_cpsd)
+m3_unemp <- update(m2_unemp, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
+m4_unemp <- update(m2_unemp, . ~ . + sex_fct:unemp_f12_6)
 
 
 
-
+#A more precise p-value can be computed using p.val = "kr"
 # regressions for full sample with y1_status_v2
 ```
 
 
 ```{r}
-# regression for se sample with unemployment
+# options for vcov.fun values https://jepusto.github.io/clubSandwich/reference/vcovCR.html
 
+sjPlot::tab_model( m1_unemp,
+                   m2_unemp,
+                   m3_unemp,
+                   m4_unemp,
+                  collapse.ci = TRUE,  
+                  p.style = "stars", 
+                  prefix.labels = "label", 
+                  vcov.args = list(cluster = person_year$ssuid_spanel_pnum), vcov.fun = "CR1" )
+```
+
+
+```{r}
+sjPlot::tab_model(m1_unemp,
+                   m2_unemp,
+                   m3_unemp,
+                   m4_unemp,
+                  collapse.ci = TRUE,  
+                  p.style = "stars", 
+                  prefix.labels = "label")
+```
+
+
+```{r}
 # regressions for se sample with y1_status_v2
+m1_status <- lmer(ln_tpearn_annual ~ 
+                   y1_status_v2  + 
+                   educ_fct + 
+                   tage + 
+                   I(tage^2) + 
+                   sex_fct + 
+                   immig_fct + 
+                   calyear + 
+                   industry_fct + 
+                   (1 | ssuid_spanel_pnum), 
+                 data = person_year)
+
+m2_status <- update(m1_status, . ~ .  + race_eth_fct_cpsd)
+m3_status <- update(m2_status, . ~ . + race_eth_fct_cpsd:y1_status_v2)
+m4_status <- update(m2_status, . ~ . + sex_fct:y1_status_v2)
+
+
+
 ```
 
 ```{r}
-# models for SE with house variables
+sjPlot::tab_model(m1_status,
+                   m2_status,
+                   m3_status,
+                   m4_status,
+                  collapse.ci = TRUE,  
+                  p.style = "stars", 
+                  prefix.labels = "label")
 ```
 
 
