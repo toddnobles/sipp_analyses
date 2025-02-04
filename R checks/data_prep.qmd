@@ -697,16 +697,12 @@ log_transform <- function(x) {
 ```{r}
 se_sample <- se_sample %>% 
   mutate(profposi = ifelse(prftb > 0, 1, 0),
-         prof10k = ifelse(prftb >= 10000, 1, 0),
-         ln_tpearn = log_transform(tpearn),
-         ln_msum = log(msum),
+         prof10k = ifelse(prftb >= 10000, 1, 0)
          )
 
 se_sample.5 <- se_sample.5 %>% 
   mutate(profposi = ifelse(prftb > 0, 1, 0),
-         prof10k = ifelse(prftb >= 10000, 1, 0),
-         ln_tpearn = log_transform(tpearn),
-         ln_msum = log(msum),
+         prof10k = ifelse(prftb >= 10000, 1, 0)
          )
 ```
 
