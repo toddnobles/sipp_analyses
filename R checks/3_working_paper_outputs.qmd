@@ -15,15 +15,13 @@ execute:
 
 Read in our working dataset created in data_prep.qmd
 
-
-
-
 ```{r}
 #| message: false
 rm(list = ls())
 library(tidyverse)
+library(lme4)
 
-se_sample <- readRDS("se_sample.rds") %>% ungroup()
+se_sample <- readRDS("se_sample_5_cleanest.rds") %>% ungroup()
 ```
 
 
@@ -186,6 +184,12 @@ person_year <- person_year %>%
     
 ```
 
+```{r writing out the person level files}
+write_csv(person_level, "person_level_se_clean_5.csv")
+write_csv(person_year, "person_year_se_clean_5.csv")
+haven::write_dta(person_year, "person_year_se_clean5.dta")
+```
+
 
 ### Table 2 Person-year level 
 Do we get similar results if we use person-year level dataset? 
@@ -285,13 +289,7 @@ writeData(wb, tbl2_person_year, sheet = "Table 2 Person Level Weighted")
 
 ## Earnings Unemployment models 
 ```{r unemployment earnings models }
-#| message: false
-#| warning: false
-
 # confirmed with checking plm version of the model that these warnings can be ignored but shifting to plm version anyways for ease of mind
-
-
-
 person_year <- person_year %>% 
   mutate(age_sq = tage^2) %>% 
   set_variable_labels(age_sq = "Age Squared")
@@ -321,60 +319,22 @@ unemp_m4_plm_wt <- update(unemp_m2_plm_wt, . ~. + sex_fct:unemp_f12_6)
 
 ```
 
-### Table 3 Unemployment Regression
-
-```{r table unemp earnings regular se}
-
-	
-sjPlot::tab_model(unemp_m1_plm,
-                                       unemp_m2_plm, 
-                                       unemp_m3_plm, 
-                                       unemp_m4_plm,
-                  collapse.ci = TRUE,  
-                  p.style = "stars", 
-                  prefix.labels = "label", 
-                  title = "Table 3 Unemployment Predicting log annual earnings")
-
-
-tbl3_unemp_models <- modelsummary(list(unemp_m1_plm,
-                                       unemp_m2_plm, 
-                                       unemp_m3_plm, 
-                                       unemp_m4_plm), 
-                                  coef_rename = TRUE, 
-                                  estimate = "{estimate} ({std.error}){stars}",
-                           statistic = NULL,
-                           title = "Table 3 Unemployment predciting Log Annual Earnings", 
-             output = "gt")
-addWorksheet(wb, "Tbl 3 Reg Unemp Earn")
-writeData(wb, tbl3_unemp_models, sheet = "Tbl 3 Reg Unemp Earn")
-
-
-```
 
 ### Table 3 Unemployment Robust SEs
 
 ```{r table unemp earnings robust se }
-sjPlot::tab_model(unemp_m1_plm,
-                  unemp_m2_plm, 
-                  unemp_m3_plm, 
-                  unemp_m4_plm,
-                  collapse.ci = TRUE,  
-                  p.style = "stars", 
-                  prefix.labels = "label",
-                  vcov.args = list(cluster = person_year$ssuid_spanel_pnum), vcov.fun = "CR1",
-                  title = "Table 3 RSE Unemployment Predicting log annual earnings")
 
 
 tbl3_unemp_models_rse <- modelsummary(list(unemp_m1_plm,
-                                       unemp_m2_plm, 
-                                       unemp_m3_plm, 
-                                       unemp_m4_plm), 
-                                  coef_rename = TRUE, 
-                                  estimate = "{estimate} ({std.error}){stars}",
-                                  vcov = "robust",
-                           statistic = NULL,
-                           title = "Table 3 Robust SE Unemployment predciting Log Annual Earnings", 
-             output = "gt")
+                                           unemp_m2_plm, 
+                                           unemp_m3_plm, 
+                                           unemp_m4_plm), 
+                                      coef_rename = TRUE, 
+                                      estimate = "{estimate} ({std.error}){stars}",
+                                      vcov = "robust",
+                                      statistic = NULL,
+                                      title = "Table 3 Robust SE Unemployment predciting Log Annual Earnings", 
+                                      output = "gt")
 
 tbl3_unemp_models_rse
 addWorksheet(wb, "Tbl 3 Reg Unemp Earn RSE")
@@ -385,16 +345,6 @@ writeData(wb, tbl3_unemp_models_rse, sheet = "Tbl 3 Reg Unemp Earn RSE")
 
 ### Table 3 Unemployment Weighted
 ```{r table unemp earnings regular se weighted}
-sjPlot::tab_model( unemp_m1_plm_wt,
-                   unemp_m2_plm_wt,
-                   unemp_m3_plm_wt,
-                   unemp_m4_plm_wt,
-                  collapse.ci = TRUE,
-                  p.style = "stars",
-                  prefix.labels = "label",
-                  title = "Table 3 Weights Unemployment and Log Annual Earnings")
-
-
 tbl3_unemp_models_wts <- modelsummary(list(unemp_m1_plm_wt,
                    unemp_m2_plm_wt,
                    unemp_m3_plm_wt,
@@ -404,10 +354,21 @@ tbl3_unemp_models_wts <- modelsummary(list(unemp_m1_plm_wt,
                            statistic = NULL,
                            title = "Table 3 Weights Unemployment predciting Log Annual Earnings", 
              output = "gt")
+tbl3_unemp_models_wts
 
 addWorksheet(wb, "Tbl 3 Reg Unemp Earn WT")
 writeData(wb, tbl3_unemp_models_wts, sheet = "Tbl 3 Reg Unemp Earn WT")
 
+```
+
+```{r}
+tbl3_unemp_models_wts <- modelsummary(list(test_plm), 
+                                  coef_rename = TRUE, 
+                                  estimate = "{estimate} ({std.error}){stars}",
+                                  vcov = "robust",
+                           statistic = NULL,
+                           title = "Table 3 Weights Unemployment predciting Log Annual Earnings", 
+             output = "gt")
 ```
 
 
@@ -437,14 +398,6 @@ status_m4_plm_wt <- update(status_m2_plm_wt, . ~. + sex_fct:y1_status_v2)
 
 ### Table 4 Y1 Status 
 ```{r table y1_status models}
-sjPlot::tab_model( status_m1_plm,
-                   status_m2_plm,
-                   status_m3_plm,
-                   status_m4_plm,
-                  collapse.ci = TRUE,
-                  p.style = "stars",
-                  prefix.labels = "label",
-                  title = "Table 4 Year 1 Status and Log Annual Earnings")
 tbl4_status_earn <- modelsummary(list(status_m1_plm,
                    status_m2_plm,
                    status_m3_plm,
@@ -452,24 +405,15 @@ tbl4_status_earn <- modelsummary(list(status_m1_plm,
                                   coef_rename = TRUE, 
                                   estimate = "{estimate} ({std.error}){stars}",
                            statistic = NULL,
-                           title = "Table 4  Y1 Status predciting Log Annual Earnings", 
+                           title = "Table 4  Y1 Status predicting Log Annual Earnings", 
              output = "gt")
-
-addWorksheet(wb, "Tbl 4 Reg Status Earn ")
+tbl4_status_earn
+addWorksheet(wb, "Tbl 4 Reg Status Earn")
 writeData(wb, tbl3_unemp_models_wts, sheet = "Tbl 4 Reg Status Earn")
 ```
 
 ### Table 4 Y1 Status Robust SE
 ```{r table y1 earnings robust se }
-sjPlot::tab_model( status_m1_plm,
-                   status_m2_plm,
-                   status_m3_plm,
-                   status_m4_plm,
-                  collapse.ci = TRUE,
-                  p.style = "stars",
-                  prefix.labels = "label",
-                  vcov.args = list(cluster = person_year$ssuid_spanel_pnum), vcov.fun = "CR1",
-                  title = "Table 4 Status  RSE and Log Annual Earnings")
 
 tbl4_status_earn_rse <- modelsummary(list(status_m1_plm,
                    status_m2_plm,
@@ -479,36 +423,26 @@ tbl4_status_earn_rse <- modelsummary(list(status_m1_plm,
                                   estimate = "{estimate} ({std.error}){stars}",
                    vcov = "robust",
                            statistic = NULL,
-                           title = "Table 4 RSE Y1 Status predciting Log Annual Earnings", 
+                           title = "Table 4 RSE Y1 Status predicting Log Annual Earnings", 
              output = "gt")
-
-addWorksheet(wb, "Tbl 4 Reg Status Earn RSE ")
+tbl4_status_earn_rse
+addWorksheet(wb, "Tbl 4 Reg Status Earn RSE")
 writeData(wb, tbl4_status_earn_rse, sheet = "Tbl 4 Reg Status Earn RSE")
 ```
 
 ### Table 4 Y1 Status Weights
 ```{r table y1 status earnings regular se weighted}
-sjPlot::tab_model( m1_status_wt,
-                   m2_status_wt,
-                   m3_status_wt,
-                   m4_status_wt,
-                  collapse.ci = TRUE,
-                  p.style = "stars",
-                  prefix.labels = "label",
-                  title = "Year 1 Status and Log Annual Earnings with weights")
-
 tbl4_status_earn_wts <- modelsummary(list(status_m1_plm_wt,
                    status_m2_plm_wt,
                    status_m3_plm_wt,
                    status_m4_plm_wt), 
                                   coef_rename = TRUE, 
                                   estimate = "{estimate} ({std.error}){stars}",
-                   vcov = "robust",
                            statistic = NULL,
                            title = "Table 4 Weights Y1 Status predciting Log Annual Earnings", 
              output = "gt")
-
-addWorksheet(wb, "Tbl 4 Reg Status Earn WT ")
+tbl4_status_earn_wts
+addWorksheet(wb, "Tbl 4 Reg Status Earn WT")
 writeData(wb, tbl4_status_earn_wts, sheet = "Tbl 4 Reg Status Earn WT")
 
 ```
@@ -517,9 +451,6 @@ writeData(wb, tbl4_status_earn_wts, sheet = "Tbl 4 Reg Status Earn WT")
 
 
 # Profits Unemployment
-
-
-
 ```{r models for positive profit}
 # models for profit
 m1_unemp_prftb <- glmer(profposi ~
@@ -542,7 +473,7 @@ m3_unemp_prftb <- update(m2_unemp_prftb, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
 m4_unemp_prftb <- update(m2_unemp_prftb, . ~ . + sex_fct:unemp_f12_6)
 
 
-m1_unemp_prftb <- glmer(profposi ~
+m1_unemp_prftb_wt <- glmer(profposi ~
                    unemp_f12_6  +
                    educ_fct +
                    tage +
@@ -591,7 +522,7 @@ m3_unemp_prftb10 <- update(m2_unemp_prftb10, . ~ . + race_eth_fct_cpsd:unemp_f12
 m4_unemp_prftb10 <- update(m2_unemp_prftb10, . ~ . + sex_fct:unemp_f12_6)
 
 
-m1_unemp_prftb10 <- glmer(prof10k ~
+m1_unemp_prftb10_wt <- glmer(prof10k ~
                    unemp_f12_6  +
                    educ_fct +
                    tage +
@@ -615,27 +546,40 @@ m4_unemp_prftb10_wt <- update(m2_unemp_prftb10_wt, . ~ . + sex_fct:unemp_f12_6)
 
 ### Table 5 Unemployment and Positive Profit
 ```{r}
-sjPlot::tab_model( m1_unemp_prftb,
+tbl5_unemp_posprof <- modelsummary(list(m1_unemp_prftb,
                    m2_unemp_prftb,
                    m3_unemp_prftb,
-                   m4_unemp_prftb,
-                  collapse.ci = TRUE,
-                  p.style = "stars",
-                  prefix.labels = "label",
-                  title = "Unemployment and Positive Profit Log odds")
+                   m4_unemp_prftb), 
+                                  coef_rename = TRUE, 
+                                  estimate = "{estimate} ({std.error}){stars}",
+                           statistic = NULL,
+                           title = "Table 5 Unemp Predicting Positive Profit", 
+             output = "gt")
+
+tbl5_unemp_posprof
+
+addWorksheet(wb, "Tbl 5 Reg Unemp Profit")
+writeData(wb, tbl5_unemp_posprof, sheet = "Tbl 5 Reg Unemp Profit")
 
 ```
 
 ### Table 5 Unemployment and Postive Profit with Weights 
 ```{r}
-sjPlot::tab_model( m1_unemp_prftb_wt,
+
+tbl5_unemp_posprof_wt <- modelsummary(list(m1_unemp_prftb_wt,
                    m2_unemp_prftb_wt,
                    m3_unemp_prftb_wt,
-                   m4_unemp_prftb_wt,
-                  collapse.ci = TRUE,
-                  p.style = "stars",
-                  prefix.labels = "label",
-                  title = "Unemployment and Positive Profit with weights Log odds")
+                   m4_unemp_prftb_wt), 
+                                  coef_rename = TRUE, 
+                                  estimate = "{estimate} ({std.error}){stars}",
+                           statistic = NULL,
+                           title = "Table 5 Weighted Unemp Predicting Positive Profit", 
+             output = "gt")
+
+tbl5_unemp_posprof_wt
+
+addWorksheet(wb, "Tbl 5 Reg Unemp Profit WTD")
+writeData(wb, tbl5_unemp_posprof_wt, sheet = "Tbl 5 Reg Unemp Profit WTD")
 ```
 
 
@@ -650,6 +594,21 @@ sjPlot::tab_model( m1_unemp_prftb10,
                   p.style = "stars",
                   prefix.labels = "label",
                   title = "Unemployment and 10k Profit log odds")
+
+tbl5_unemp_posprof_wt <- modelsummary(list(m1_unemp_prftb10,
+                   m2_unemp_prftb10,
+                   m3_unemp_prftb10,
+                   m4_unemp_prftb10), 
+                                  coef_rename = TRUE, 
+                                  estimate = "{estimate} ({std.error}){stars}",
+                           statistic = NULL,
+                           title = "Table 6 Unemp Predicting 10k Profit", 
+             output = "gt")
+
+addWorksheet(wb, "Tbl 6 Reg Unemp 10k Profit")
+writeData(wb, tbl5_unemp_posprof_wt, sheet = "Tbl 6 Reg Unemp 10k Profit")
+
+
 ```
 
 ### Table 6 Unemployment and 10k Profit with Weights 
@@ -663,5 +622,23 @@ sjPlot::tab_model( m1_unemp_prftb10_wt,
                   p.style = "stars",
                   prefix.labels = "label",
                   title = "Unemployment and 10k Profit log odds ")
+
+tbl6_unemp_prof10k_wt <- modelsummary(list(m1_unemp_prftb10_wt,
+                   m2_unemp_prftb10_wt,
+                   m3_unemp_prftb10_wt,
+                   m4_unemp_prftb10_wt), 
+                                  coef_rename = TRUE, 
+                                  estimate = "{estimate} ({std.error}){stars}",
+                           statistic = NULL,
+                           title = "Table 6 Weighted Unemp Predicting Positive Profit", 
+             output = "gt")
+
+addWorksheet(wb, "Tbl 6 Reg Unemp 10k Profit WTD")
+writeData(wb, tbl6_unemp_prof10k_wt, sheet = "Tbl 6 Reg Unemp 10k Profit WTD")
+```
+
+
+```{r}
+saveWorkbook(wb, paste0("working_paper_outputs",Sys.Date(),".xlsx"), overwrite = TRUE)
 ```
 
