@@ -9,7 +9,7 @@ format:
   pdf: 
     toc: true
 execute:
-  echo: false
+  echo: true
   
 ---
 
@@ -218,8 +218,6 @@ writeData(wb, tbl2_person_year, sheet = "Table 2 Person Year")
 What about if we incorporate weights? 
 
 ```{r creating survey object for yearly estimates}
-#| message: false
-
 library(survey)
 library(srvyr)
 py_svy <- person_year %>% as_survey_design(ids= ssuid_spanel_pnum, weights = wpfinwgt)
@@ -361,15 +359,6 @@ writeData(wb, tbl3_unemp_models_wts, sheet = "Tbl 3 Reg Unemp Earn WT")
 
 ```
 
-```{r}
-tbl3_unemp_models_wts <- modelsummary(list(test_plm), 
-                                  coef_rename = TRUE, 
-                                  estimate = "{estimate} ({std.error}){stars}",
-                                  vcov = "robust",
-                           statistic = NULL,
-                           title = "Table 3 Weights Unemployment predciting Log Annual Earnings", 
-             output = "gt")
-```
 
 
 ## Earnings Year One Status Models
@@ -453,45 +442,45 @@ writeData(wb, tbl4_status_earn_wts, sheet = "Tbl 4 Reg Status Earn WT")
 # Profits Unemployment
 ```{r models for positive profit}
 # models for profit
-m1_unemp_prftb <- glmer(profposi ~
-                   unemp_f12_6  +
-                   educ_fct +
-                   tage +
-                   age_sq +
-                   sex_fct +
-                   immig_fct +
-                   industry_fct +
-                   as.factor(calyear) +
-                   (1 | ssuid_spanel_pnum),
-                   control = glmerControl(optimizer = "nloptwrap", 
-                                          calc.derivs = FALSE),
-                 data = person_year, family = binomial)
+# m1_unemp_prftb <- glmer(profposi ~
+#                    unemp_f12_6  +
+#                    educ_fct +
+#                    tage +
+#                    age_sq +
+#                    sex_fct +
+#                    immig_fct +
+#                    industry_fct +
+#                    as.factor(calyear) +
+#                    (1 | ssuid_spanel_pnum),
+#                    control = glmerControl(optimizer = "nloptwrap", 
+#                                           calc.derivs = FALSE),
+#                  data = person_year, family = binomial)
+# 
+# 
+# m2_unemp_prftb <- update(m1_unemp_prftb, . ~ .  + race_eth_fct_cpsd)
+# m3_unemp_prftb <- update(m2_unemp_prftb, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
+# m4_unemp_prftb <- update(m2_unemp_prftb, . ~ . + sex_fct:unemp_f12_6)
 
 
-m2_unemp_prftb <- update(m1_unemp_prftb, . ~ .  + race_eth_fct_cpsd)
-m3_unemp_prftb <- update(m2_unemp_prftb, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
-m4_unemp_prftb <- update(m2_unemp_prftb, . ~ . + sex_fct:unemp_f12_6)
-
-
-m1_unemp_prftb_wt <- glmer(profposi ~
-                   unemp_f12_6  +
-                   educ_fct +
-                   tage +
-                   age_sq +
-                   sex_fct +
-                   immig_fct +
-                   industry_fct +
-                   as.factor(calyear) +
-                   (1 | ssuid_spanel_pnum),
-                   control = glmerControl(optimizer = "nloptwrap", 
-                                          calc.derivs = FALSE),
-                 data = person_year, family = binomial,
-                 weights = wpfinwgt)
-
-
-m2_unemp_prftb_wt <- update(m1_unemp_prftb_wt, . ~ .  + race_eth_fct_cpsd)
-m3_unemp_prftb_wt <- update(m2_unemp_prftb_wt, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
-m4_unemp_prftb_wt <- update(m2_unemp_prftb_wt, . ~ . + sex_fct:unemp_f12_6)
+# m1_unemp_prftb_wt <- glmer(profposi ~
+#                    unemp_f12_6  +
+#                    educ_fct +
+#                    tage +
+#                    age_sq +
+#                    sex_fct +
+#                    immig_fct +
+#                    industry_fct +
+#                    as.factor(calyear) +
+#                    (1 | ssuid_spanel_pnum),
+#                    control = glmerControl(optimizer = "nloptwrap", 
+#                                           calc.derivs = FALSE),
+#                  data = person_year, family = binomial,
+#                  weights = wpfinwgt)
+# 
+# 
+# m2_unemp_prftb_wt <- update(m1_unemp_prftb_wt, . ~ .  + race_eth_fct_cpsd)
+# m3_unemp_prftb_wt <- update(m2_unemp_prftb_wt, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
+# m4_unemp_prftb_wt <- update(m2_unemp_prftb_wt, . ~ . + sex_fct:unemp_f12_6)
 
 
 
@@ -502,43 +491,42 @@ m4_unemp_prftb_wt <- update(m2_unemp_prftb_wt, . ~ . + sex_fct:unemp_f12_6)
 
 
 ```{r models for 10k profit}
+# m1_unemp_prftb10 <- glmer(prof10k ~
+#                    unemp_f12_6  +
+#                    educ_fct +
+#                    tage +
+#                    age_sq +
+#                    sex_fct +
+#                    immig_fct +
+#                   as.factor(calyear) +
+#                    (1 | ssuid_spanel_pnum),
+#                    control = glmerControl(optimizer = "nloptwrap", 
+#                                           calc.derivs = FALSE),
+#                  data = person_year, family = binomial)
+# 
+# 
+# m2_unemp_prftb10 <- update(m1_unemp_prftb10, . ~ .  + race_eth_fct_cpsd)
+# m3_unemp_prftb10 <- update(m2_unemp_prftb10, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
+# m4_unemp_prftb10 <- update(m2_unemp_prftb10, . ~ . + sex_fct:unemp_f12_6)
 
-m1_unemp_prftb10 <- glmer(prof10k ~
-                   unemp_f12_6  +
-                   educ_fct +
-                   tage +
-                   age_sq +
-                   sex_fct +
-                   immig_fct +
-                  as.factor(calyear) +
-                   (1 | ssuid_spanel_pnum),
-                   control = glmerControl(optimizer = "nloptwrap", 
-                                          calc.derivs = FALSE),
-                 data = person_year, family = binomial)
-
-
-m2_unemp_prftb10 <- update(m1_unemp_prftb10, . ~ .  + race_eth_fct_cpsd)
-m3_unemp_prftb10 <- update(m2_unemp_prftb10, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
-m4_unemp_prftb10 <- update(m2_unemp_prftb10, . ~ . + sex_fct:unemp_f12_6)
-
-
-m1_unemp_prftb10_wt <- glmer(prof10k ~
-                   unemp_f12_6  +
-                   educ_fct +
-                   tage +
-                   age_sq +
-                   sex_fct +
-                   immig_fct +
-                  as.factor(calyear) +
-                   (1 | ssuid_spanel_pnum),
-                   control = glmerControl(optimizer = "nloptwrap", 
-                                          calc.derivs = FALSE),
-                 data = person_year, family = binomial,
-                 weights = wpfinwgt)
-
-m2_unemp_prftb10_wt <- update(m1_unemp_prftb10_wt, . ~ .  + race_eth_fct_cpsd)
-m3_unemp_prftb10_wt <- update(m2_unemp_prftb10_wt, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
-m4_unemp_prftb10_wt <- update(m2_unemp_prftb10_wt, . ~ . + sex_fct:unemp_f12_6)
+# 
+# m1_unemp_prftb10_wt <- glmer(prof10k ~
+#                    unemp_f12_6  +
+#                    educ_fct +
+#                    tage +
+#                    age_sq +
+#                    sex_fct +
+#                    immig_fct +
+#                   as.factor(calyear) +
+#                    (1 | ssuid_spanel_pnum),
+#                    control = glmerControl(optimizer = "nloptwrap", 
+#                                           calc.derivs = FALSE),
+#                  data = person_year, family = binomial,
+#                  weights = wpfinwgt)
+# 
+# m2_unemp_prftb10_wt <- update(m1_unemp_prftb10_wt, . ~ .  + race_eth_fct_cpsd)
+# m3_unemp_prftb10_wt <- update(m2_unemp_prftb10_wt, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
+# m4_unemp_prftb10_wt <- update(m2_unemp_prftb10_wt, . ~ . + sex_fct:unemp_f12_6)
 
 
 ```
@@ -546,67 +534,62 @@ m4_unemp_prftb10_wt <- update(m2_unemp_prftb10_wt, . ~ . + sex_fct:unemp_f12_6)
 
 ### Table 5 Unemployment and Positive Profit
 ```{r}
-tbl5_unemp_posprof <- modelsummary(list(m1_unemp_prftb,
-                   m2_unemp_prftb,
-                   m3_unemp_prftb,
-                   m4_unemp_prftb), 
-                                  coef_rename = TRUE, 
-                                  estimate = "{estimate} ({std.error}){stars}",
-                           statistic = NULL,
-                           title = "Table 5 Unemp Predicting Positive Profit", 
-             output = "gt")
-
-tbl5_unemp_posprof
-
-addWorksheet(wb, "Tbl 5 Reg Unemp Profit")
-writeData(wb, tbl5_unemp_posprof, sheet = "Tbl 5 Reg Unemp Profit")
+# tbl5_unemp_posprof <- modelsummary(list(m1_unemp_prftb,
+#                    m2_unemp_prftb,
+#                    m3_unemp_prftb,
+#                    m4_unemp_prftb), 
+#                                   coef_rename = TRUE, 
+#                                   estimate = "{estimate} ({std.error}){stars}",
+#                            statistic = NULL,
+#                    vcov = "robust", 
+#                            title = "Table 5 Unemp Predicting Positive Profit", 
+#              output = "gt")
+# 
+# tbl5_unemp_posprof
+# 
+# addWorksheet(wb, "Tbl 5 Reg Unemp Profit")
+# writeData(wb, tbl5_unemp_posprof, sheet = "Tbl 5 Reg Unemp Profit")
 
 ```
 
 ### Table 5 Unemployment and Postive Profit with Weights 
 ```{r}
-
-tbl5_unemp_posprof_wt <- modelsummary(list(m1_unemp_prftb_wt,
-                   m2_unemp_prftb_wt,
-                   m3_unemp_prftb_wt,
-                   m4_unemp_prftb_wt), 
-                                  coef_rename = TRUE, 
-                                  estimate = "{estimate} ({std.error}){stars}",
-                           statistic = NULL,
-                           title = "Table 5 Weighted Unemp Predicting Positive Profit", 
-             output = "gt")
-
-tbl5_unemp_posprof_wt
-
-addWorksheet(wb, "Tbl 5 Reg Unemp Profit WTD")
-writeData(wb, tbl5_unemp_posprof_wt, sheet = "Tbl 5 Reg Unemp Profit WTD")
+# 
+# tbl5_unemp_posprof_wt <- modelsummary(list(m1_unemp_prftb_wt,
+#                    m2_unemp_prftb_wt,
+#                    m3_unemp_prftb_wt,
+#                    m4_unemp_prftb_wt), 
+#                                   coef_rename = TRUE, 
+#                                   estimate = "{estimate} ({std.error}){stars}",
+#                            statistic = NULL,
+#                            title = "Table 5 Weighted Unemp Predicting Positive Profit", 
+#              output = "gt")
+# 
+# tbl5_unemp_posprof_wt
+# 
+# addWorksheet(wb, "Tbl 5 Reg Unemp Profit WTD")
+# writeData(wb, tbl5_unemp_posprof_wt, sheet = "Tbl 5 Reg Unemp Profit WTD")
 ```
 
 
 ### Table 6 Unemployment and 10k Profit 
 
 ```{r}
-sjPlot::tab_model( m1_unemp_prftb10,
-                   m2_unemp_prftb10,
-                   m3_unemp_prftb10,
-                   m4_unemp_prftb10,
-                  collapse.ci = TRUE,
-                  p.style = "stars",
-                  prefix.labels = "label",
-                  title = "Unemployment and 10k Profit log odds")
 
-tbl5_unemp_posprof_wt <- modelsummary(list(m1_unemp_prftb10,
-                   m2_unemp_prftb10,
-                   m3_unemp_prftb10,
-                   m4_unemp_prftb10), 
-                                  coef_rename = TRUE, 
-                                  estimate = "{estimate} ({std.error}){stars}",
-                           statistic = NULL,
-                           title = "Table 6 Unemp Predicting 10k Profit", 
-             output = "gt")
-
-addWorksheet(wb, "Tbl 6 Reg Unemp 10k Profit")
-writeData(wb, tbl5_unemp_posprof_wt, sheet = "Tbl 6 Reg Unemp 10k Profit")
+# tbl6_unemp_prof10k <- modelsummary(list(m1_unemp_prftb10,
+#                    m2_unemp_prftb10,
+#                    m3_unemp_prftb10,
+#                    m4_unemp_prftb10),
+#                                   coef_rename = TRUE,
+#                                   estimate = "{estimate} ({std.error}){stars}",
+#                  vcov = "robust",
+#                            statistic = NULL,
+#                            title = "Table 6 Unemp Predicting 10k Profit",
+#              output = "gt")
+# 
+# tbl6_unemp_prof10k
+# addWorksheet(wb, "Tbl 6 Reg Unemp 10k Profit")
+# writeData(wb, tbl5_unemp_posprof_wt, sheet = "Tbl 6 Reg Unemp 10k Profit")
 
 
 ```
@@ -614,27 +597,22 @@ writeData(wb, tbl5_unemp_posprof_wt, sheet = "Tbl 6 Reg Unemp 10k Profit")
 ### Table 6 Unemployment and 10k Profit with Weights 
 
 ```{r}
-sjPlot::tab_model( m1_unemp_prftb10_wt,
-                   m2_unemp_prftb10_wt,
-                   m3_unemp_prftb10_wt,
-                   m4_unemp_prftb10_wt,
-                  collapse.ci = TRUE,
-                  p.style = "stars",
-                  prefix.labels = "label",
-                  title = "Unemployment and 10k Profit log odds ")
 
-tbl6_unemp_prof10k_wt <- modelsummary(list(m1_unemp_prftb10_wt,
-                   m2_unemp_prftb10_wt,
-                   m3_unemp_prftb10_wt,
-                   m4_unemp_prftb10_wt), 
-                                  coef_rename = TRUE, 
-                                  estimate = "{estimate} ({std.error}){stars}",
-                           statistic = NULL,
-                           title = "Table 6 Weighted Unemp Predicting Positive Profit", 
-             output = "gt")
 
-addWorksheet(wb, "Tbl 6 Reg Unemp 10k Profit WTD")
-writeData(wb, tbl6_unemp_prof10k_wt, sheet = "Tbl 6 Reg Unemp 10k Profit WTD")
+# tbl6_unemp_prof10k_wt <- modelsummary(list(m1_unemp_prftb10_wt,
+#                    m2_unemp_prftb10_wt,
+#                    m3_unemp_prftb10_wt,
+#                    m4_unemp_prftb10_wt), 
+#                                   coef_rename = TRUE, 
+#                                   estimate = "{estimate} ({std.error}){stars}",
+#                            statistic = NULL,
+#                            title = "Table 6 Weighted Unemp Predicting Positive Profit", 
+#              output = "gt")
+# 
+# tbl6_unemp_prof10k_wt
+# 
+# addWorksheet(wb, "Tbl 6 Reg Unemp 10k Profit WTD")
+# writeData(wb, tbl6_unemp_prof10k_wt, sheet = "Tbl 6 Reg Unemp 10k Profit WTD")
 ```
 
 
