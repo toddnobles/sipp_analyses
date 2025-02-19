@@ -8,7 +8,7 @@ log using working_outputs_usingRprep_`logdate'.log, text replace
 **# Data import
 /// This reads in the person_year data that removed those with illogical earnings/hours values and includes those who were Self-employed at least 50% of the months from month 13 onwards. 
 
-use "person_year_se_clean5.dta", clear  
+use "R checks/person_year_se_clean5.dta", clear  
 
 list in 1/5
 
