@@ -521,7 +521,7 @@ joblevel_wide %>% filter(ssuid_spanel_pnum %in% almost_ft$ssuid_spanel_pnum) %>%
     contains("mwkhrs"),-contains("alt"),
     contains("jborse")
   ) %>%
-  View()
+  head()
 
 
 
@@ -548,7 +548,7 @@ temp_ft_equals_months %>% select(
   jobid,
   msum,
   mwkhrs
-) %>% View()
+) %>% head()
 ```
 
 What do we do about the people like ssuid_spanel_pnum == "292092406784182018101" who are in our data for 48 months, and we use their first year to establish their status, then during the following 36 months, we previously would've lost them due to their work-hours not always being \>= 15. But for this person, that decrease in work hours is only for one month. In other words, for 35 out of 36 months we're looking at their earnings they have a full-time job but only one where they work fewer than 15 hours.
@@ -577,6 +577,50 @@ se_sample <- long_wd %>%
   filter(mean_hrs >= 15) %>% 
   # now we need to filter to those who were only employed in SE 
   filter(se_months_py1 == months_after_y1)
+```
+
+```{r March 2025 update for descriptives comparing WS and SE}
+full_time_period_flags <- long_wd %>% 
+  arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
+  group_by(ssuid_spanel_pnum) %>%
+  summarize(ft_se_months = sum(ifelse(mwkhrs >= 15 & employment_type == 2,1,0), na.rm = TRUE),
+         pt_se_months = sum(ifelse(mwkhrs < 15 & employment_type == 2,1,0), na.rm = TRUE),
+         pt_months = sum(ifelse(mwkhrs < 15,1,0), na.rm = TRUE),
+         ft_months = sum(ifelse(mwkhrs >= 15, 1, 0), na.rm = TRUE),
+         ft_ws_months = sum(ifelse(mwkhrs >=15 & employment_type == 1,1,0), na.rm = TRUE),
+         pt_ws_months = sum(ifelse(mwkhrs < 15 & employment_type == 1,1,0), na.rm = TRUE),
+         months = max(row_number()),
+         pct_se_ft = ft_se_months/months,
+         pct_ws_ft = ft_ws_months/months,
+         months_employed = sum(ifelse(employment_type != 4,1,0)),
+         mean_hrs = mean(mwkhrs, na.rm = TRUE),
+         se_months = sum(ifelse(employment_type == 2, 1,0), na.rm = TRUE),
+         ws_months = sum(ifelse(employment_type == 1, 1, 0), na.rm = TRUE)
+         ) %>% 
+  ungroup() %>% 
+  tidylog::filter(months_employed == months) %>% 
+  ## now we know these people had at least some employment during each month of our data. So now we filter to those who had an average working hours of >=15 in each month. 
+  tidylog::filter(mean_hrs >=15) %>% 
+  ## now we need those who were continuously employed in WS or SE
+  tidylog::filter(se_months/months == 1 | ws_months/months == 1 ) %>% 
+  mutate(employment_group = case_when(se_months/months == 1 ~ "Self-Employed",
+                                      ws_months/months == 1 ~ "Wage & Salary"))
+
+## now with the left-join we'll keep only those we've identified above and get some summary stats on them. Could do this all above, but for clarity will keep it separated in case this gets moved to an analysis script later. 
+full_time_period_flags %>% 
+  left_join(long_wd, by = "ssuid_spanel_pnum") %>% 
+  group_by(ssuid_spanel_pnum, calyear, employment_group) %>% 
+  summarize(tpearn = sum(tpearn, na.rm = TRUE),
+            msum = sum(msum, na.rm = TRUE)) %>% 
+  # the above gets us to yearly values. now we move to person-level summary stats of yearly values 
+  ungroup() %>% 
+  gtsummary::tbl_summary(by = employment_group, include = c(tpearn, msum),
+             statistic = list( ~ "{mean} [{median}] ({sd})")) %>% 
+  gtsummary::add_overall() %>% 
+  gtsummary::modify_caption("Earnings Comparison, Full-time Workers (Person-Year level)") %>% 
+  gtsummary::as_hux_xlsx(file = paste0("earnings_comparison", Sys.Date(),".xlsx"))
+  
+  
 ```
 
 ```{r filtering to those with employment past month 12}
@@ -615,7 +659,7 @@ se_sample %>%
       max_consec_unemp,
       employment_type,
       tpearn, msum, prftb, val,
-      thval_home, tval_ast, tval_home, thval_ast) %>% 
+      thval_home, tval_ast, tval_home, thval_ast, eawbmort, eawbgas, rhlthmth) %>% 
   naniar::gg_miss_var()
 ```
 
@@ -644,7 +688,10 @@ se_sample <- se_sample %>%
       #val, 
       msum, 
       tpearn,
-      prftb
+      prftb, 
+      eawbmort, 
+      eawbgas,
+      rhlthmth
     ),
     ~ !is.na(.)
   )) 
@@ -677,7 +724,10 @@ se_sample.5 <- se_sample.5 %>%
       #val, 
       msum, 
       tpearn,
-      prftb
+      prftb, 
+      eawbmort, 
+      eawbgas,
+      rhlthmth
     ),
     ~ !is.na(.)
   )) 
