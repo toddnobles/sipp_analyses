@@ -21,7 +21,7 @@ rm(list = ls())
 library(tidyverse)
 library(lme4)
 
-se_sample <- readRDS("se_sample_5_cleanest.rds") %>% ungroup()
+se_sample <- readRDS("se_sample_5_cleanest.rds") 
 ```
 
 
@@ -40,7 +40,8 @@ person_level <- se_sample %>%
     # here we take their highest education value ever observed 
     educ_fct = last(educ_fct),
     tpearn_annual = sum(tpearn),
-    industry = first(industry_fct)) %>% 
+    industry = first(industry_fct),
+    prftb = last(prftb)) %>% 
   # summarizing to person-level 
   group_by(ssuid_spanel_pnum) %>% 
   summarize(
@@ -51,7 +52,9 @@ person_level <- se_sample %>%
     sex_fct = first(sex_fct),
     # here we take their highest education value ever observed 
     educ_fct = last(educ_fct),
-    industry = first(industry)
+    industry = first(industry),
+    avg_prftb = mean(prftb),
+    median_prftb = quantile(prftb, .5)
   ) %>%
   ungroup()
 
@@ -72,7 +75,9 @@ person_level <- person_level %>%
     y1_status_v2 = "Initial Status",
     race_eth_fct_cpsd = "Race/Ethnicity",
     educ_fct = "Education",
-    industry = "Industry")
+    industry = "Industry",
+    avg_prftb = "Avg profit",
+    median_prftb = "Median profit")
 ```
 
 
@@ -81,10 +86,15 @@ Descriptive statistics for self-employed sample by initial employment status
 Person-level table
 ```{r}
 library(gtsummary)
+
 tbl1 <- person_level %>%
-  select(avg_earnings, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct, industry) %>% 
+  select(avg_earnings, avg_prftb, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct, industry) %>% 
   tbl_summary(by = y1_status_v2,
-             statistic = list(all_continuous() ~ "{mean} [{median}] ({sd})")) %>% 
+             statistic = list(
+    all_continuous() ~ c("{mean} ({sd})", "{median}")
+  ),
+  type = all_continuous() ~ "continuous2"
+) %>% 
   add_overall()
 
 tbl1 
@@ -92,8 +102,10 @@ library(openxlsx)
 wb <- createWorkbook()
 addWorksheet(wb, "Table 1")
 writeData(wb, tbl1 , sheet = "Table 1")
-
 ```
+
+
+
 ## Table 2 (various versions) of descriptive statistics 
 
 ### Table 2 Summary Statistics for earnings by group
@@ -119,6 +131,24 @@ writeData(wb, tbl2, sheet = "Table 2")
 
 ```
 
+```{r}
+#| message: false
+
+tbl2_profit <- datasummary(
+    (` ` = avg_prftb * (Education =educ_fct)) +
+        (` `= avg_prftb * (Race = race_eth_fct_cpsd)) +
+        (` `= avg_prftb * (Sex = sex_fct)) ~ y1_status_v2* (mean+ sd + N) ,
+    data = person_level,
+    fmt = fmt_sprintf("%.0f"),
+    title = 'Profit Comparison by Demographic Characteristics', 
+    note = "This table displays the group-level averages and standard deviations for the person-level average profit",
+    output = "gt"
+)
+
+tbl2_profit
+addWorksheet(wb, "Table 2 Profit")
+writeData(wb, tbl2_profit, sheet = "Table 2 Profit")
+```
 
 
 ```{r function to log transform vars with negative values in them}
@@ -150,19 +180,28 @@ temp <- se_sample %>%
          wpfinwgt,
          val,
          profposi,
-         prof10k) %>% 
+         prof10k, 
+         eawbmort, 
+         eawbgas) %>% 
   mutate(unemp_f12_6 = factor(ifelse(unemp_f12 >=6, 1,0), labels = c("Not Unemployed", "Unemployed")),
+         unemp_f12_3 = factor(ifelse(unemp_f12 >=3, 1,0), labels = c("Not Unemployed", "Unemployed")),
          industry_fct = as_factor(industry_fct),
-         industry_num = as.numeric(industry_fct))
+         industry_num = as.numeric(industry_fct),
+         eawbmort_fct = factor(ifelse(eawbmort == 2, 0, eawbmort), , labels = c("Paid", "Unable to pay")),
+         eawbgas_fct = factor(ifelse(eawbgas ==2, 0, eawbgas), labels = c("Paid", "Unable to pay")))
 
 temp_earnings <- se_sample %>% 
   group_by(ssuid_spanel_pnum, calyear) %>% 
-  summarize(tpearn_annual= sum(tpearn)) %>% 
+  summarize(tpearn_annual= sum(tpearn),
+            ## rhlthmth is coded as 1 = yes had insurance, 2 = no, so we take their max here and capture any year where they had a month without insurance 
+            health_insurance = max(rhlthmth)) %>% 
   ungroup()
 
 
 person_year <- left_join(temp_earnings, temp, by = c("ssuid_spanel_pnum", "calyear")) %>% 
-    mutate(ln_tpearn_annual = log_transform(tpearn_annual))
+    mutate(ln_tpearn_annual = log_transform(tpearn_annual),
+           no_health_insurance_fct = factor(ifelse(health_insurance == 1,0,
+                                                   ifelse(health_insurance == 2, 1, NA)), labels = c("Insured", "Uninsured"))) 
 
 ```
 
@@ -179,14 +218,16 @@ person_year <- person_year %>%
     industry_fct = "Industry",
     tage = "Age",
     immig_fct = "Nativity",
-    calyear = "Year"
+    calyear = "Year",
+    eawbgas_fct = "Unable to Pay Utilities",
+    eawbmort_fct = "Unable to Pay Housing",
+    no_health_insurance_fct = "Health Insurance"
+    
   )
     
 ```
 
 ```{r writing out the person level files}
-write_csv(person_level, "person_level_se_clean_5.csv")
-write_csv(person_year, "person_year_se_clean_5.csv")
 haven::write_dta(person_year, "person_year_se_clean5.dta")
 ```
 
@@ -275,6 +316,9 @@ addWorksheet(wb, "Table 2 Person Level Weighted")
 writeData(wb, tbl2_person_year, sheet = "Table 2 Person Level Weighted")
 ```
 
+```{r}
+
+```
 
 
 # Regressions for earnings
@@ -591,14 +635,11 @@ writeData(wb, tbl4_status_earn_wts, sheet = "Tbl 4 Reg Status Earn WT")
 # addWorksheet(wb, "Tbl 6 Reg Unemp 10k Profit")
 # writeData(wb, tbl5_unemp_posprof_wt, sheet = "Tbl 6 Reg Unemp 10k Profit")
 
-
 ```
 
 ### Table 6 Unemployment and 10k Profit with Weights 
 
 ```{r}
-
-
 # tbl6_unemp_prof10k_wt <- modelsummary(list(m1_unemp_prftb10_wt,
 #                    m2_unemp_prftb10_wt,
 #                    m3_unemp_prftb10_wt,
@@ -613,6 +654,21 @@ writeData(wb, tbl4_status_earn_wts, sheet = "Tbl 4 Reg Status Earn WT")
 # 
 # addWorksheet(wb, "Tbl 6 Reg Unemp 10k Profit WTD")
 # writeData(wb, tbl6_unemp_prof10k_wt, sheet = "Tbl 6 Reg Unemp 10k Profit WTD")
+```
+
+## Investigating missed payments and health insurance 
+
+```{r}
+person_year %>%
+  select(tpearn_annual, prftb, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct, eawbmort_fct) %>% 
+  tbl_summary(by = eawbmort_fct,
+             statistic = list(
+    all_continuous() ~ c("{mean} ({sd})", "{median}")
+  ),
+  type = all_continuous() ~ "continuous2"
+) %>% 
+  add_overall() %>% 
+  modify_caption("Sample Characteristics by Ability to Pay Housing Bills") %>% 
 ```
 
 
