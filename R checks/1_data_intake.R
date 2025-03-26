@@ -18,7 +18,7 @@ for (x in ds) {
                       'TDEBT_HOME', 'THDEBT_HOME', 'TDEBT_BUS', 'TTHR401VAL', 'TIRAKEOVAL', 
                       'TVAL_AST', 'THVAL_AST', 'TNETWORTH', 'THNETWORTH', 'TVAL_HOME', 
                       'THVAL_HOME', 'TEQ_HOME', 'THEQ_HOME', 'TEQ_BUS', 'TPTOTINC', 
-                      'TPEARN', 'ENJFLAG', 'EPAR_SCRNR')
+                      'TPEARN', 'ENJFLAG', 'EPAR_SCRNR', "EAWBGAS", "EAWBMORT", "RHLTHMTH")
   
   # Match column names after coercing all to same case
   selected_columns <- cols[tolower(cols) %in% tolower(target_columns)]
