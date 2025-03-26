@@ -40,6 +40,7 @@ global controls  = "age age2 i.immig_fct i.industry_fct i.calyear"
 
 **# weighted unemp models 
 // none of these actually converge with weights included.
+/*
 mixed ln_tpearn i.unemp_f12_6 i.educ_fct $controls [pweight = wpfinwgt] || new_id:, iterate(15) vce(cluster new_id)
 eststo wt_se_earn_unemp_m1
 
@@ -51,6 +52,7 @@ eststo wt_se_earn_unemp_m3
 
 mixed ln_tpearn unemp_f12_6##sex_fct i.race_eth_fct_cpsd i.educ_fct $controls [pweight = wpfinwgt] || new_id:, iterate(15) vce(cluster new_id) 
 eststo wt_se_earn_unemp_m4
+*/
 
 **# non-weighted earnings ~ unemp models 
 mixed ln_tpearn i.unemp_f12_6 i.educ_fct $controls || new_id:, iterate(15) vce(cluster new_id) 
@@ -198,6 +200,47 @@ esttab prof*y1* using working_paper_outputs_`logdate'.rtf, ///
 	addnote("t statistics in parentheses. * p < 0.05, ** p < 0.01, *** p < 0.001") ///
 	compress onecell append  
 
+replace no_health_insurance_fct = 0 if no_health_insurance_fct == 1
+replace no_health_insurance_fct = 1 if no_health_insurance_fct == 2
+label drop no_health_insurance_fct
+label variable no_health_insurance_fct "No Health Insurance"
+label drop eawbgas_fct
+label drop eawbmort_fct
+
+replace eawbgas_fct = 0 if eawbgas_fct ==1
+replace eawbgas_fct = 1 if eawbgas_fct == 2
+
+replace eawbmort_fct = 0 if eawbmort_fct ==1
+replace eawbmort_fct = 1 if eawbmort_fct == 2
+
+
+	
+foreach y of varlist no_health_insurance_fct eawbgas_fct eawbmort_fct   {
+	foreach x of varlist unemp_f12_6  {
+		
+		local xname = substr("`x'",1,5)
+		local yname = substr("`y'", 1,9)
+		di "`yname'_`xname'"
+		
+		//unweighted logits 
+		melogit `y' i.`x' i.educ_fct age age2 i.immig_fct i.calyear  || new_id:, iterate(15) vce(cluster new_id) 
+		eststo `yname'_`xname'_1
+
+	    melogit `y' i.`x' i.educ_fct i.race_eth_fct_cpsd i.sex age age2 i.immig_fct i.calyear || new_id:, iterate(15) vce(cluster new_id)  
+		eststo `yname'_`xname'_2
+
+		}
+}
+
+
+**# Table 7 Logistic Regressions Predicting insecurity
+*------------------------------------------------------------------------------|
+esttab *health* *gas* *mort* using working_paper_outputs_`logdate'.rtf, ///
+	legend label ///
+	title(Table 7. Logistic Regressions Predicting Insecurity) ///
+	varlabels(_cons Constant)   ///
+	mtitles("No Health Ins" "" "Missed Utility" "" "Missed Housing"  "") ///
+	compress onecell append  
 	
 
 log close 
