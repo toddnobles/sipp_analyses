@@ -578,7 +578,7 @@ se_sample <- long_wd %>%
   # now we need to filter to those who were only employed in SE 
   filter(se_months_py1 == months_after_y1)
 ```
-
+## March 2025 updates for descriptives comparing WS and SE 
 ```{r March 2025 update for descriptives comparing WS and SE}
 full_time_period_flags <- long_wd %>% 
   arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
@@ -609,6 +609,7 @@ full_time_period_flags <- long_wd %>%
 ## now with the left-join we'll keep only those we've identified above and get some summary stats on them. Could do this all above, but for clarity will keep it separated in case this gets moved to an analysis script later. 
 full_time_period_flags %>% 
   left_join(long_wd, by = "ssuid_spanel_pnum") %>% 
+  #can group by employment_group here to bring it along since it's constant within individuals based on above restrictions
   group_by(ssuid_spanel_pnum, calyear, employment_group) %>% 
   summarize(tpearn = sum(tpearn, na.rm = TRUE),
             msum = sum(msum, na.rm = TRUE)) %>% 
@@ -620,7 +621,93 @@ full_time_period_flags %>%
   gtsummary::modify_caption("Earnings Comparison, Full-time Workers (Person-Year level)") %>% 
   gtsummary::as_hux_xlsx(file = paste0("earnings_comparison", Sys.Date(),".xlsx"))
   
-  
+
+# feed it a vector to convert to log transform that accounts for negative values 
+log_transform <- function(x) {
+  min_x <- min(x)*-1
+  log(x + min_x + 1)
+}
+
+
+ws_vs_se <- full_time_period_flags %>% 
+  left_join(long_wd, by = "ssuid_spanel_pnum") %>% 
+  group_by(ssuid_spanel_pnum, calyear) %>% 
+  summarize(tpearn = sum(tpearn, na.rm = TRUE),
+            msum = sum(msum, na.rm = TRUE),
+            employment_group = last(employment_group),
+            age = max(tage), 
+            educ_fct = last(educ_fct),
+            race_eth_fct_cpsd = last(race_eth_fct_cpsd),
+            sex_fct = last(sex_fct),
+            immig_fct = last(immig_fct),
+            parent_std = last(parent_std)) %>% 
+  # the above gets us to yearly values. now we move to person-level summary stats of yearly values 
+  ungroup() %>% 
+  mutate(employment_group_fct = factor(employment_group, levels = c("Wage & Salary", "Self-Employed")),
+         ln_tpearn = log_transform(tpearn),
+         ln_msum = log_transform(msum))
+
+library(plm)
+plm_msum <- plm(ln_msum ~ employment_group_fct  + 
+                   calyear , 
+                data = ws_vs_se,
+                   index = c("ssuid_spanel_pnum", "calyear"), 
+                   model = "random")
+
+plm_msum2 <- plm(ln_msum ~ employment_group_fct + 
+                   age + 
+                   I(age^2) + 
+                   educ_fct + 
+                   race_eth_fct_cpsd + 
+                   sex_fct + 
+                   immig_fct + 
+                   factor(parent_std) + 
+                   calyear, 
+                 data = ws_vs_se, 
+                 index = c("ssuid_spanel_pnum", "calyear"),
+                 model = "random")
+
+plm_tpearn <- plm(ln_tpearn ~ employment_group_fct  + 
+                   calyear , 
+                data = ws_vs_se,
+                   index = c("ssuid_spanel_pnum", "calyear"), 
+                   model = "random")
+
+plm_tpearn2 <- plm(ln_tpearn ~ employment_group_fct + 
+                   age + 
+                   I(age^2) + 
+                   educ_fct + 
+                   race_eth_fct_cpsd + 
+                   sex_fct + 
+                   immig_fct + 
+                   factor(parent_std) + 
+                   calyear, 
+                 data = ws_vs_se, 
+                 index = c("ssuid_spanel_pnum", "calyear"),
+                 model = "random") 
+
+library(modelsummary)
+
+ws_vs_se_table <- modelsummary(list(plm_msum,
+                                           plm_msum2, 
+                                           plm_tpearn, 
+                                           plm_tpearn2), 
+                                      coef_rename = TRUE, 
+                                      estimate = "{estimate} ({std.error}){stars}",
+                                      vcov = "robust",
+                                      statistic = NULL,
+                                      title = "Table XX Robust SE Employment Type predciting Log Annual Earnings", 
+                                      output = "gt")
+
+ws_vs_se_table 
+
+library(openxlsx)
+wb <- createWorkbook()
+addWorksheet(wb, "Wage vs SE earnings")
+writeData(wb, ws_vs_se_table, sheet = "Wage vs SE earnings")
+saveWorkbook(wb, paste0("working_paper_outputs_prep",Sys.Date(),".xlsx"), overwrite = TRUE)
+
+
 ```
 
 ```{r filtering to those with employment past month 12}
