@@ -669,6 +669,50 @@ person_year %>%
 ) %>% 
   add_overall() %>% 
   modify_caption("Sample Characteristics by Ability to Pay Housing Bills") %>% 
+  gtsummary::as_hux_xlsx(file = paste0("housing_payments", Sys.Date(),".xlsx"))
+
+
+person_year %>%
+  select(tpearn_annual, prftb, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct, eawbgas_fct) %>% 
+  tbl_summary(by = eawbgas_fct,
+             statistic = list(
+    all_continuous() ~ c("{mean} ({sd})", "{median}")
+  ),
+  type = all_continuous() ~ "continuous2"
+) %>% 
+  add_overall() %>% 
+  modify_caption("Sample Characteristics by Ability to Pay Utility Bills") %>% 
+  gtsummary::as_hux_xlsx(file = paste0("utility_payments", Sys.Date(),".xlsx"))
+
+
+
+person_year %>%
+  select(tpearn_annual, prftb, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct, no_health_insurance_fct) %>% 
+  tbl_summary(by = no_health_insurance_fct,
+             statistic = list(
+    all_continuous() ~ c("{mean} ({sd})", "{median}")
+  ),
+  type = all_continuous() ~ "continuous2"
+) %>% 
+  add_overall() %>% 
+  modify_caption("Sample Characteristics Health Insruance") %>% 
+  gtsummary::as_hux_xlsx(file = paste0("health_insurance", Sys.Date(),".xlsx"))
+```
+
+
+```{r}
+m1_health<- glmer(no_health_insurance_fct ~
+                   unemp_f12_6  +
+                   educ_fct +
+                   tage +
+                   age_sq +
+                   sex_fct +
+                   immig_fct +
+                  as.factor(calyear) +
+                   (1 | ssuid_spanel_pnum),
+                   control = glmerControl(optimizer = "nloptwrap",
+                                          calc.derivs = FALSE),
+                 data = person_year, family = binomial)
 ```
 
 
