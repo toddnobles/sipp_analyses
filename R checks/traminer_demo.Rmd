@@ -1,0 +1,205 @@
+---
+title: "traminer demo"
+author: "Todd Nobles"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<https://cran.r-project.org/web/packages/TraMineR/vignettes/TraMineR-state-sequence.pdf>
+
+```{r}
+library(TraMineR)
+library(tidyverse)
+library(bit64)
+```
+
+```{r}
+monthly <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_monthly_combined.rds")
+joblevel_wide <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_joblevel_combined_wide.rds") 
+```
+
+```{r create ids}
+monthly <- monthly %>% mutate(
+  ssuid = as.character.integer64(ssuid),
+  ssuid_spanel_pnum = paste0(
+        ssuid,
+        as.character(spanel),
+        as.character(pnum)
+      ))
+
+
+joblevel_wide <- joblevel_wide %>% mutate(
+  ssuid = as.character.integer64(ssuid),
+  ssuid_spanel_pnum = paste0(
+        ssuid,
+        as.character(spanel),
+        as.character(pnum)
+      )
+)
+```
+
+Next we combine the monthly level dataframe with the wide joblevel file.
+
+```{r combining to joblevel and monthly into dataframe}
+full_data_base <- tidylog::left_join(monthly, joblevel_wide, 
+                                     by = c("ssuid_spanel_pnum", "spanel", "swave", "monthcode"))
+```
+
+Then we filter to the working age population based on age at entry into dataset.
+
+```{r filtering to working age sample by age at entry}
+full_data <- full_data_base %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(age_entry = min(tage),
+         age_exit = max(tage)) %>% 
+  filter(age_entry >= 18 & age_entry <= 64) %>% ungroup()
+```
+
+They changed the coding of the unemployment flag (enjflag) between panels, so correcting for that here.
+
+```{r standardizing enjflag unemployment flag}
+# Unemployment flag is 0 = not unemployed and 1 = unemployed for 2014 panel. Then switches to 2 = not unemployed and 1 = unemployed for 2018 onwards. So recoding accordingly here 
+full_data <- full_data %>% 
+  mutate(enjflag_std = ifelse(spanel == 2014 & enjflag == 1, 1,
+                              ifelse(spanel >2014 & enjflag == 1, 1,
+                                     ifelse(enjflag == 0 | enjflag == 2, 0, NA)))) 
+```
+
+```{r}
+full_data <- full_data %>% 
+  tidylog::select(-ends_with(".y"), -starts_with("ajb")) %>% 
+  rename_with(
+    ~ gsub("^(tbsj\\d+)(val)$", "\\1_\\2", .), # adding in underscore to match the name formatting of tjb and ejb variables for easier reshaping
+    starts_with("tbsj")
+  ) 
+```
+
+Most basic analysis is monthly level using the enjflag for unemployment during that month and then the ejb_jborse variable for the type of work in that month. However, we can combine the ejb_jborse data with the rwkesr1-rwkesr5 to track employment at a weekly level.
+
+\
+1. With job/business - working
+
+-   2\. With job/business - not on layoff, absent without pay
+
+-   3\. With job/business - on layoff, absent without pay
+
+-   4\. No job/business - looking for work or on layoff
+
+-   5\. No job/business - not looking for work and not on layoff![](images/clipboard-4102659134.png)
+
+### Basic Monthly analysis 
+
+Need one row per individual with their employment status during that month.
+
+We'll handle multiple jobs at once using the grouped alphabet approach where
+
+R\> seq.ex1[, 10:25]
+
+Sequence
+
+[1] 000-000-000-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0WU-0WU-0WU-0WU
+
+[2] 000-000-000-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0
+
+For each state in the sequence, the first character stands for the number of children (0=no children, 1=1 children, etc...), the second character for the work status (0=not working, W=working) and the third character for the union status (0=not in union, U=in union). The alphabet contains 16 distinct states (see Table 1, page 376 in Aassve et al., 2007).
+
+So ours will be
+
+[1] 123456 - 123456 - 123456- 123456
+
+```{r}
+sipp_seq <- full_data %>% 
+  select(ssuid_spanel_pnum, swave, monthcode, enjflag_std, contains("jborse")) %>% 
+  arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
+  mutate(seq_month = case_when(
+    swave == 1 ~ monthcode,
+    swave == 2 ~ monthcode + 12,
+    swave == 3 ~ monthcode + 24,
+    swave == 4 ~ monthcode + 36,
+    .default  = NA 
+  )) %>% 
+  mutate(across(contains("jborse"), ~ case_when(
+    is.na(.) ~ 0,
+    .default = .
+  ))) %>% 
+  mutate(sequence = paste0(ejb1_jborse, ejb2_jborse, ejb3_jborse, ejb4_jborse))
+  
+```
+
+
+# To-dos
+*   still need to remove those without full years of data as they'll throw off the sequences 
+
+
+```{r}
+data(mvad)
+seqstatl(mvad[, 17:86])
+```
+
+```{r}
+mvad.alphabet <- c("employment", "FE", "HE", "joblessness", "school", 
+    "training")
+mvad.labels <- c("employment", "further education", "higher education", 
+    "joblessness", "school", "training")
+mvad.scodes <- c("EM", "FE", "HE", "JL", "SC", "TR")
+mvad.seq <- seqdef(mvad, 17:86, alphabet = mvad.alphabet, states = mvad.scodes, 
+    labels = mvad.labels, xtstep = 6)
+```
+
+```{r}
+par(mfrow = c(2, 2))
+seqiplot(mvad.seq, with.legend = FALSE, border = NA)
+seqIplot(mvad.seq, sortv = "from.start", with.legend = FALSE)
+seqIplot(mvad.seq, sortv = "from.end", with.legend = FALSE)
+seqfplot(mvad.seq, with.legend = FALSE, border = NA)
+
+```
+
+```{r}
+seqdplot(mvad.seq, with.legend = FALSE, border = NA)
+
+```
+
+Compute the optimal matching distances using substitution costs based on transition rates observed in the data and a 1 indel cost. The resulting distance matrix is stored in the dist.om1 object.
+
+```{r}
+dist.om1 <- seqdist(mvad.seq, method = "OM", indel = 1, sm = "TRATE")
+
+```
+
+Make a typology of the trajectories: load the cluster library, build a Ward hierarchical clustering of the sequences from the optimal matching distances and retrieve for each individual sequence the cluster membership of the 4 class solution. We do not show here the dendrogram produced by plot(clusterward1), which, indeed, is not a TraMineR feature.
+
+```{r}
+library(cluster)
+clusterward1 <- agnes(dist.om1, diss = TRUE, method = "ward")
+plot(clusterward1, which.plot = 2)
+cl1.4 <- cutree(clusterward1, k = 4)
+cl1.4fac <- factor(cl1.4, labels = paste("Type", 1:4))
+```
+
+Plot all the sequences within each cluster.
+
+```{r}
+seqIplot(mvad.seq, group = cl1.4fac, sortv = "from.start")
+
+```
+
+Plot the representative sequences of each cluster.
+
+```{r}
+seqrplot(mvad.seq, diss = dist.om1, group = cl1.4fac,
+    border = NA)
+
+```
+
+Resource to work on sequence commands <https://traminer.unige.ch/preview-event.shtml>
+
+<https://traminer.unige.ch/doc/seqMD.html>
+
+<https://stackoverflow.com/questions/17020023/multiple-events-in-traminer>
+
+SIPP resources: <https://www.census.gov/library/publications/2019/demo/p70br-163.html> (use this as a check for the share of people holding multiple jobs to make sure my calculations are okay. )
