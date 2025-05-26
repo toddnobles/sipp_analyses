@@ -167,7 +167,7 @@ full_data <- full_data %>%
 
 Now we need to mark their main job based on number of hours worked and keep only that row for the month.To do that we first do some renaming to make the reshaping easier. Then we reshape the job variables to long format. This is done once and then saved out as it's fairly computationally intensive.
 
-```{r marking main job}
+```{r }
 full_data <- full_data %>% 
   tidylog::select(-ends_with(".y"), -starts_with("ajb")) %>% 
   rename_with(
@@ -421,18 +421,16 @@ consec_unemp %>%
   select(ssuid_spanel_pnum, monthcode, mwkhrs, employment_type, enjflag_std, max_consec_unemp) %>%
   print(n = 100)
 
-consec_unemp <- consec_unemp %>% 
+consec_unemp_coll <- consec_unemp %>% 
   group_by(ssuid_spanel_pnum) %>% 
-  summarize(max_consec_unemp = first(max_consec_unemp, na.rm = TRUE))
+  summarize(max_consec_unemp = first(max_consec_unemp)) %>% 
+  ungroup()
 ```
 
-```{r}
-
-```
 
 ```{r merging in unemployment streak measure  }
 long_wd <- long_wd %>% 
-  left_join(consec_unemp, by = "ssuid_spanel_pnum")
+  left_join(consec_unemp_coll, by = "ssuid_spanel_pnum")
 ```
 
 We decided to exclud those in the military and those who were ever employed as "other" employment type. So I drop those here.
@@ -746,7 +744,8 @@ se_sample %>%
       max_consec_unemp,
       employment_type,
       tpearn, msum, prftb, val,
-      thval_home, tval_ast, tval_home, thval_ast, eawbmort, eawbgas, rhlthmth) %>% 
+      thval_home, tval_ast, tval_home, thval_ast, eawbmort, eawbgas, rhlthmth,
+      thcyincpov,thcyincpovt2 ) %>% 
   naniar::gg_miss_var()
 ```
 
@@ -778,7 +777,11 @@ se_sample <- se_sample %>%
       prftb, 
       eawbmort, 
       eawbgas,
-      rhlthmth
+      rhlthmth,
+      rfoods,
+      rfoodr,
+      thcyincpov,
+      thcyincpovt2
     ),
     ~ !is.na(.)
   )) 
@@ -814,7 +817,11 @@ se_sample.5 <- se_sample.5 %>%
       prftb, 
       eawbmort, 
       eawbgas,
-      rhlthmth
+      rhlthmth,
+      rfoodr,
+      rfoods,
+      thcyincpov,
+      thcyincpovt2
     ),
     ~ !is.na(.)
   )) 
