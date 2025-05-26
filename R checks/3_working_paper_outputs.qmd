@@ -182,7 +182,11 @@ temp <- se_sample %>%
          profposi,
          prof10k, 
          eawbmort, 
-         eawbgas) %>% 
+         eawbgas,
+         rfoodr,
+         rfoods, 
+         thcyincpov,
+      thcyincpovt2) %>% 
   mutate(unemp_f12_6 = factor(ifelse(unemp_f12 >=6, 1,0), labels = c("Not Unemployed", "Unemployed")),
          unemp_f12_3 = factor(ifelse(unemp_f12 >=3, 1,0), labels = c("Not Unemployed", "Unemployed")),
          industry_fct = as_factor(industry_fct),
@@ -221,7 +225,9 @@ person_year <- person_year %>%
     calyear = "Year",
     eawbgas_fct = "Unable to Pay Utilities",
     eawbmort_fct = "Unable to Pay Housing",
-    no_health_insurance_fct = "Health Insurance"
+    no_health_insurance_fct = "Health Insurance",
+    thcyincpov = "HH Income to Poverty Ratio",
+      thcyincpovt2 = "HH Income to Poverty Ratio t2"
     
   )
     
@@ -716,7 +722,164 @@ m1_health<- glmer(no_health_insurance_fct ~
 ```
 
 
+
+## Investigating food insecurity
+
 ```{r}
-saveWorkbook(wb, paste0("working_paper_outputs",Sys.Date(),".xlsx"), overwrite = TRUE)
+person_year <- person_year %>% 
+  mutate(food_insecurity = factor(rfoods, labels = c("Low", 
+                                                     "Medium",
+                                                     "High"), ordered = TRUE))
+```
+
+
+```{r}
+person_year %>%
+  select(tpearn_annual, prftb, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct, food_insecurity) %>% 
+  tbl_summary(by = food_insecurity,
+             statistic = list(
+    all_continuous() ~ c("{mean} ({sd})", "{median}")
+  ),
+  type = all_continuous() ~ "continuous2"
+) %>% 
+  add_overall() %>% 
+  modify_caption("Sample Characteristics by Food Insecurity") %>% 
+  gtsummary::as_hux_xlsx(file = paste0("food_insecurity", Sys.Date(),".xlsx"))
+
+
+```
+
+
+```{r}
+
+
+person_year <- person_year %>% 
+  mutate(food_insec_any = case_when(rfoodr > 0 ~ 1, 
+                                    rfoodr == 0 ~ 0, 
+                                    .default = NA))
+
+m00_food_ins <- glm(food_insec_any ~ unemp_f12_6, data = person_year, family = binomial)
+m01_food_ins <- glm(food_insec_any ~ unemp_f12_6 + race_eth_fct_cpsd, data = person_year, family = binomial)
+m02_food_ins <- update(m01_food_ins, . ~. + factor(calyear))
+m03_food_ins <- update(m02_food_ins, . ~. + educ_fct + sex_fct)
+
+food_models_glm <- modelsummary(list(m00_food_ins, m01_food_ins, m02_food_ins, m03_food_ins),
+                                  coef_rename = TRUE, 
+                                  estimate = "{estimate} ({std.error}){stars}",
+                           statistic = NULL,
+                           title = "Table XX Unemployment Food Insecurity", 
+             output = "gt")
+food_models_glm
+
+library(openxlsx)
+wb <- createWorkbook()
+addWorksheet(wb, "Table XX Unemp Food Insec")
+writeData(wb, food_models_glm , sheet = "Table XX Unemp Food Insec")
+```
+
+
+```{r}
+m0_food_ins <- glmer(food_insec_any ~ 
+                       unemp_f12_6 + (1|ssuid_spanel_pnum),
+                     data = person_year, 
+                     family = binomial )
+
+m1_food_ins<- glmer(food_insec_any ~
+                   unemp_f12_6  +
+                  factor(calyear) +
+                   (1 | ssuid_spanel_pnum),
+                   control = glmerControl(optimizer = "nloptwrap",
+                                          calc.derivs = FALSE),
+                 data = person_year, 
+                 family = binomial)
+
+m2_food_ins <- glmer(food_insec_any  ~ 
+                      unemp_f12_6 + 
+                       race_eth_fct_cpsd + 
+                       factor(calyear) +
+                   (1 | ssuid_spanel_pnum),
+                   control = glmerControl(optimizer = "nloptwrap",
+                                          calc.derivs = FALSE),
+                 data = person_year, 
+                 family = binomial)
+
+m3_food_ins <- update(m2_food_ins, . ~. + educ_fct + sex_fct)
+```
+
+```{r}
+food_models <- modelsummary(list(m0_food_ins, 
+                                 m1_food_ins,
+                                 m2_food_ins,
+                                 m3_food_ins),
+                                  coef_rename = TRUE, 
+                                  estimate = "{estimate} ({std.error}){stars}",
+                           statistic = NULL,
+                           title = "Table XX Unemployment Food Insecurity (Mixed Models)", 
+             output = "gt")
+food_models
+
+addWorksheet(wb, "Table XX Unemp Food Insec (RE)")
+writeData(wb, food_models , sheet = "Table XX Unemp Food Insec (RE)")
+saveWorkbook(wb, "food_inesec.xlsx", overwrite = TRUE)  ## save to working directory
+
+```
+
+## Poverty Threshold
+```{r}
+poverty_df <- person_year %>% 
+  mutate(hhpoverty = case_when(thcyincpov < 1 ~ 0, 
+                               thcyincpov == 1 ~ 1, 
+                               thcyincpov > 1 ~ 2, 
+                               .default = NA),  
+         hhpoverty = factor(hhpoverty, labels = c("Below Threshold", "At threshold", "Above Threshold")))
+           
+ratio_table <- datasummary(
+  y1_status_v2 * (mean + sd + N) ~ thcyincpov,
+  data = poverty_df,
+  fmt = fmt_sprintf("%.2f"),
+  title = 'HHIncome to Poverty Threshold Ratio by Initial Employment Status',
+  note = "",
+  output = "poverty.docx")
+
+ratio_table 
+wb2 <- createWorkbook()
+addWorksheet(wb2, "Poverty Ratio")
+writeData(wb2, ratio_table, sheet = "Poverty Ratio")
+saveWorkbook(wb2, "poverty.xlsx", overwrite = TRUE)  ## save to working directory
+
+```
+
+
+```{r}
+temp <- poverty_df %>% 
+  filter(hhpoverty!="At threshold") %>%
+  mutate(hhpoverty = fct_drop(hhpoverty)) 
+
+datasummary_crosstab(
+  hhpoverty ~ y1_status_v2  ,
+  statistic = 1 ~  ( Percent("col")),
+  data = temp,
+  fmt = fmt_sprintf("%.2f"),
+  title = '',
+  note = "",
+  output = "gt")
+
+datasummary_crosstab(
+  hhpoverty ~ y1_status_v2  ,
+  statistic = 1 ~  (N),
+  data = temp,
+  fmt = fmt_sprintf("%.2f"),
+  title = '',
+  note = "",
+  output = "gt")
+
+
+```
+
+
+
+
+```{r}
+
 ```
 
