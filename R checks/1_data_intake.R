@@ -1,4 +1,5 @@
 library(data.table)
+library(tidyverse)
 
 ds <- c("PU2014W1", "PU2014W2", "PU2014W3", "PU2014W4", "pu2018", "pu2019", "pu2020", "pu2021", "pu2022", "pu2023")
 
@@ -18,7 +19,8 @@ for (x in ds) {
                       'TDEBT_HOME', 'THDEBT_HOME', 'TDEBT_BUS', 'TTHR401VAL', 'TIRAKEOVAL', 
                       'TVAL_AST', 'THVAL_AST', 'TNETWORTH', 'THNETWORTH', 'TVAL_HOME', 
                       'THVAL_HOME', 'TEQ_HOME', 'THEQ_HOME', 'TEQ_BUS', 'TPTOTINC', 
-                      'TPEARN', 'ENJFLAG', 'EPAR_SCRNR', "EAWBGAS", "EAWBMORT", "RHLTHMTH")
+                      'TPEARN', 'ENJFLAG', 'EPAR_SCRNR', "EAWBGAS", "EAWBMORT", "RHLTHMTH", "RFOODR", "RFOODS", "THCYINCPOV", 
+                      "THCYINCPOVT2")
   
   # Match column names after coercing all to same case
   selected_columns <- cols[tolower(cols) %in% tolower(target_columns)]
