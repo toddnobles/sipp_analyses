@@ -130,8 +130,8 @@ Next we combine the monthly level dataframe with the wide joblevel file.
 full_data_base <- tidylog::left_join(monthly, joblevel_wide, 
                                      by = c("ssuid_spanel_pnum", "spanel", "swave", "monthcode"))
 ```
-
 Then we filter to the working age population based on age at entry into dataset.
+
 
 ```{r filtering to working age sample by age at entry}
 full_data <- full_data_base %>% 
@@ -212,6 +212,22 @@ long_wd <- long %>%
 
 
 ```
+
+
+
+
+## June 2025 update to add n-counts for all those who ever had any SE in the base SIPP
+So this is looking at main job but is already filtered by age to working age population 
+```{r}
+long_wd %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(some_se = sum(employment_type ==2, na.rm = TRUE),
+         ever_se = ifelse(some_se >0,1,0)) %>% 
+  ungroup() %>% 
+  group_by(ever_se) %>% distinct(ssuid_spanel_pnum) %>% count()
+  
+```
+
 
 In the Stata analysis I noticed some issues with the sipp data having inconsistent race/ethnicity variables. Here again, as in the Stata version, we correct for this and impute the first race/eth reported forwards.
 
@@ -342,6 +358,7 @@ long_wd <- long_wd %>%
   mutate(parent_std= parent,
          parent_std = cummax(parent_std)) %>% ungroup() 
 ```
+
 
 ## Filtering to those with full years of data.
 
@@ -563,19 +580,41 @@ long_wd %>% filter(ssuid_spanel_pnum == "292092406784182018101") %>% flextable::
 ```{r filtering to our SE sample}
 # here we filter to those with employment at least every month post month 12. But we relax the restriction on the need to be full-time employed 
 
-se_sample <- long_wd %>%
+# se_sample <- long_wd %>%
+#   left_join(se_quantified, by = "ssuid_spanel_pnum") %>%
+#   group_by(ssuid_spanel_pnum) %>%
+#   # getting rid of first year data as we don't need it for analysis since we already made the flags for their y1 statuses.
+#   filter(row_number() > 12) %>%
+#   ungroup() %>%
+#   # Here we want only those who were continuously employed from month 13 onwards.
+#   filter(months_employed_py1 == months_after_y1) %>%
+#   # at this point we are safe to use their mean hours worked during months employed to filter out people who were really only in side hustles
+#   filter(mean_hrs >= 15) %>% 
+#   # now we need to filter to those who were only employed in SE 
+#   filter(se_months_py1 == months_after_y1)
+
+
+
+se_sample <- long_wd %>% 
   left_join(se_quantified, by = "ssuid_spanel_pnum") %>%
-  group_by(ssuid_spanel_pnum) %>%
-  # getting rid of first year data as we don't need it for analysis since we already made the flags for their y1 statuses.
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(months_employed =sum(ifelse(employment_type != 4,1,0)) ) %>% 
   filter(row_number() > 12) %>%
-  ungroup() %>%
+  ungroup() %>% 
   # Here we want only those who were continuously employed from month 13 onwards.
   filter(months_employed_py1 == months_after_y1) %>%
   # at this point we are safe to use their mean hours worked during months employed to filter out people who were really only in side hustles
   filter(mean_hrs >= 15) %>% 
   # now we need to filter to those who were only employed in SE 
   filter(se_months_py1 == months_after_y1)
+
 ```
+
+
+
+
+
+
 ## March 2025 updates for descriptives comparing WS and SE 
 ```{r March 2025 update for descriptives comparing WS and SE}
 full_time_period_flags <- long_wd %>% 
@@ -618,6 +657,17 @@ full_time_period_flags %>%
   gtsummary::add_overall() %>% 
   gtsummary::modify_caption("Earnings Comparison, Full-time Workers (Person-Year level)") %>% 
   gtsummary::as_hux_xlsx(file = paste0("earnings_comparison", Sys.Date(),".xlsx"))
+
+
+
+full_time_period_flags %>% 
+  left_join(long_wd, by = "ssuid_spanel_pnum") %>% 
+  group_by(employment_group) %>% 
+  summarize(n_people = n_distinct(ssuid_spanel_pnum),
+            .groups = "drop")
+
+
+
   
 
 # feed it a vector to convert to log transform that accounts for negative values 
