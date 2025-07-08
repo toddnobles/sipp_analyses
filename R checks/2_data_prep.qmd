@@ -762,6 +762,7 @@ saveWorkbook(wb, paste0("working_paper_outputs_prep",Sys.Date(),".xlsx"), overwr
 se_sample.5 <- long_wd %>%
   left_join(se_quantified, by = "ssuid_spanel_pnum") %>%
   group_by(ssuid_spanel_pnum) %>%
+  mutate(months_employed =sum(ifelse(employment_type != 4,1,0)) ) %>%
   # getting rid of first year data as we don't need it for analysis since we already made the flags for their y1 statuses.
   filter(row_number() > 12) %>%
   ungroup() %>%
