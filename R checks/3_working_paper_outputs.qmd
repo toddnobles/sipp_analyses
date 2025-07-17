@@ -12,7 +12,7 @@ execute:
   echo: true
   
 ---
-
+# Read in and final data polishing for presentation
 Read in our working dataset created in data_prep.qmd
 
 ```{r}
@@ -23,6 +23,48 @@ library(lme4)
 
 se_sample <- readRDS("se_sample_5_cleanest.rds") 
 ```
+
+## Adjusting for inflation 
+```{r}
+se_sample <- se_sample %>% 
+  mutate(
+    tpearn = case_when(
+      calyear == 2014 ~ tpearn* 292.7/236.7,
+      calyear == 2015 ~ tpearn*292.7/237,
+      calyear == 2016 ~ tpearn*292.7/240.0,
+      calyear == 2018 ~ tpearn*292.7/251.1,
+      calyear == 2019 ~ tpearn*292.7/255.7,
+      calyear == 2020 ~ tpearn*292.7/258.8,
+      calyear == 2021 ~ tpearn*292.7/271,
+      calyear == 2022 ~ tpearn,
+      .default = NA
+  ),
+    msum = case_when(
+      calyear == 2014 ~ msum* 292.7/236.7,
+      calyear == 2015 ~ msum*292.7/237,
+      calyear == 2016 ~ msum*292.7/240.0,
+      calyear == 2018 ~ msum*292.7/251.1,
+      calyear == 2019 ~ msum*292.7/255.7,
+      calyear == 2020 ~ msum*292.7/258.8,
+      calyear == 2021 ~ msum*292.7/271,
+      calyear == 2022 ~ msum,
+      .default = NA
+    ),
+  prftb = case_when(
+      calyear == 2014 ~ prftb* 292.7/236.7,
+      calyear == 2015 ~ prftb*292.7/237,
+      calyear == 2016 ~ prftb*292.7/240.0,
+      calyear == 2018 ~ prftb*292.7/251.1,
+      calyear == 2019 ~ prftb*292.7/255.7,
+      calyear == 2020 ~ prftb*292.7/258.8,
+      calyear == 2021 ~ prftb*292.7/271,
+      calyear == 2022 ~ prftb,
+      .default = NA
+  )
+)
+```
+
+
 
 
 ```{r creating person-level file for summary stats}
@@ -41,7 +83,9 @@ person_level <- se_sample %>%
     educ_fct = last(educ_fct),
     tpearn_annual = sum(tpearn),
     industry = first(industry_fct),
-    prftb = last(prftb)) %>% 
+    prftb = last(prftb),
+    profposi = last(profposi),
+    prof10k = last(prof10k)) %>% 
   # summarizing to person-level 
   group_by(ssuid_spanel_pnum) %>% 
   summarize(
@@ -54,7 +98,9 @@ person_level <- se_sample %>%
     educ_fct = last(educ_fct),
     industry = first(industry),
     avg_prftb = mean(prftb),
-    median_prftb = quantile(prftb, .5)
+    median_prftb = quantile(prftb, .5),
+    profposi = mean(profposi),
+    prof10k = mean(prof10k)
   ) %>%
   ungroup()
 
@@ -77,18 +123,20 @@ person_level <- person_level %>%
     educ_fct = "Education",
     industry = "Industry",
     avg_prftb = "Avg profit",
-    median_prftb = "Median profit")
+    median_prftb = "Median profit",
+    profposi = "Positive Profit",
+    prof10k = "Profit >=10k")
 ```
 
 
-## Table 1 
+## Table 2-rep
 Descriptive statistics for self-employed sample by initial employment status
 Person-level table
 ```{r}
 library(gtsummary)
 
-tbl1 <- person_level %>%
-  select(avg_earnings, avg_prftb, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct, industry) %>% 
+tbl2 <- person_level %>%
+  select(avg_earnings, avg_prftb, y1_status_v2) %>% 
   tbl_summary(by = y1_status_v2,
              statistic = list(
     all_continuous() ~ c("{mean} ({sd})", "{median}")
@@ -97,25 +145,37 @@ tbl1 <- person_level %>%
 ) %>% 
   add_overall()
 
-tbl1 
+tbl2
 library(openxlsx)
 wb <- createWorkbook()
-addWorksheet(wb, "Table 1")
-writeData(wb, tbl1 , sheet = "Table 1")
+addWorksheet(wb, "Table 2")
+writeData(wb, tbl2 , sheet = "Table 2")
 ```
 
 
+## Table 2-rep side counts
+```{r}
+tbl2_counts <- person_level %>%
+  select(y1_status_v2, race_eth_fct_cpsd, sex_fct) %>% 
+  tbl_summary(by = y1_status_v2,
+             statistic = list(
+    all_categorical() ~ "{n} ({p}%)"
+  ),
+  type = all_categorical() ~ "categorical"
+) %>% 
+  add_overall()
+addWorksheet(wb, "Table 2 Counts")
+writeData(wb, tbl2_counts , sheet = "Table 2 Counts")
+```
 
-## Table 2 (various versions) of descriptive statistics 
+## Table 3
 
-### Table 2 Summary Statistics for earnings by group
 To create the table below, we use the same dataset as above and generate a person-level average of their annual earnings across years. 
 ```{r}
 #| message: false
 library(modelsummary)
 
-tbl2 <- datasummary(
-    (` ` = avg_earnings * (Education =educ_fct)) +
+tbl3 <- datasummary(
         (` `= avg_earnings * (Race = race_eth_fct_cpsd)) +
         (` `= avg_earnings * (Sex = sex_fct)) ~ y1_status_v2* (mean+ sd + N) ,
     data = person_level,
@@ -125,17 +185,16 @@ tbl2 <- datasummary(
     output = "gt"
 )
 
-tbl2 
-addWorksheet(wb, "Table 2")
-writeData(wb, tbl2, sheet = "Table 2")
+tbl3
+addWorksheet(wb, "Table 3")
+writeData(wb, tbl3, sheet = "Table 3")
 
 ```
 
 ```{r}
 #| message: false
 
-tbl2_profit <- datasummary(
-    (` ` = avg_prftb * (Education =educ_fct)) +
+tbl3_profit <- datasummary(
         (` `= avg_prftb * (Race = race_eth_fct_cpsd)) +
         (` `= avg_prftb * (Sex = sex_fct)) ~ y1_status_v2* (mean+ sd + N) ,
     data = person_level,
@@ -145,10 +204,18 @@ tbl2_profit <- datasummary(
     output = "gt"
 )
 
-tbl2_profit
-addWorksheet(wb, "Table 2 Profit")
-writeData(wb, tbl2_profit, sheet = "Table 2 Profit")
+tbl3_profit
+addWorksheet(wb, "Table 3 Profit")
+writeData(wb, tbl3_profit, sheet = "Table 3 Profit")
 ```
+
+```{r}
+person_level %>% group_by(y1_status_v2) %>% summarize(profposi = mean(profposi), prof10k = mean(prof10k), n = n())
+
+
+person_level %>% summarize(profposi = mean(profposi), prof10k = mean(prof10k), n = n())
+```
+
 
 
 ```{r function to log transform vars with negative values in them}
@@ -173,45 +240,46 @@ temp <- se_sample %>%
          sex_fct,
          immig_fct,
          parent_std,
-         industry_fct,
+         married,
+         industry_y1_mode,
          tage,
          calyear,
          prftb, 
          wpfinwgt,
          val,
          profposi,
-         prof10k, 
-         eawbmort, 
-         eawbgas,
-         rfoodr,
-         rfoods, 
-         thcyincpov,
-      thcyincpovt2) %>% 
+         prof10k) %>% 
   mutate(unemp_f12_6 = factor(ifelse(unemp_f12 >=6, 1,0), labels = c("Not Unemployed", "Unemployed")),
-         unemp_f12_3 = factor(ifelse(unemp_f12 >=3, 1,0), labels = c("Not Unemployed", "Unemployed")),
-         industry_fct = as_factor(industry_fct),
-         industry_num = as.numeric(industry_fct),
-         eawbmort_fct = factor(ifelse(eawbmort == 2, 0, eawbmort), , labels = c("Paid", "Unable to pay")),
-         eawbgas_fct = factor(ifelse(eawbgas ==2, 0, eawbgas), labels = c("Paid", "Unable to pay")))
+         unemp_f12_3 = factor(ifelse(unemp_f12 >=3, 1,0), labels = c("Not Unemployed", "Unemployed")))
 
+find_max_mode <- function(x) {
+  u <- unique(x)
+  tab <- tabulate(match(x, u))
+  max(u[tab == max(tab)]) 
+}
+
+## here we get their earnings in each calendar year as well as their most common industry in that year
 temp_earnings <- se_sample %>% 
   group_by(ssuid_spanel_pnum, calyear) %>% 
   summarize(tpearn_annual= sum(tpearn),
-            ## rhlthmth is coded as 1 = yes had insurance, 2 = no, so we take their max here and capture any year where they had a month without insurance 
-            health_insurance = max(rhlthmth)) %>% 
-  ungroup()
+            mode_industry = find_max_mode(industry_fct)) %>% 
+  ungroup() %>% 
+  mutate(ln_tpearn_annual = log_transform(tpearn_annual))
+
 
 
 person_year <- left_join(temp_earnings, temp, by = c("ssuid_spanel_pnum", "calyear")) %>% 
-    mutate(ln_tpearn_annual = log_transform(tpearn_annual),
-           no_health_insurance_fct = factor(ifelse(health_insurance == 1,0,
-                                                   ifelse(health_insurance == 2, 1, NA)), labels = c("Insured", "Uninsured"))) 
+  mutate(industry_experience = case_when(mode_industry == industry_y1_mode ~ 1,
+                                         .default = 0))
 
 ```
 
 
 ```{r setting variable labels for person_year df}
 person_year <- person_year %>%
+  mutate(married = factor(married, levels = c(0,1), labels = c( "Not Married", "Married")),
+         parent_std = factor(parent_std, levels = c(0,1), labels = c("Not Parent", "Parent")),
+         mode_industry = fct_infreq(mode_industry)) %>% 
   set_variable_labels(
     ln_tpearn_annual = "Log earnings (tpearn)",
     sex_fct = "Sex",
@@ -219,130 +287,73 @@ person_year <- person_year %>%
     race_eth_fct_cpsd = "Race",
     educ_fct = "Education",
     unemp_f12_6 = "Unemployed 6-months",
-    industry_fct = "Industry",
+    mode_industry = "Industry",
+    married = "Marital Status",
     tage = "Age",
     immig_fct = "Nativity",
     calyear = "Year",
-    eawbgas_fct = "Unable to Pay Utilities",
-    eawbmort_fct = "Unable to Pay Housing",
-    no_health_insurance_fct = "Health Insurance",
-    thcyincpov = "HH Income to Poverty Ratio",
-      thcyincpovt2 = "HH Income to Poverty Ratio t2"
-    
+    profposi = "Positive Profit",
+    prof10k = "Profit >=10k",
+    industry_experience = "Prior Industry Experience"
   )
     
 ```
 
-```{r writing out the person level files}
-haven::write_dta(person_year, "person_year_se_clean5.dta")
-```
+    
+Education, 
+industry categories, 
+year of survey, 
+immigrant status, 
+marital status,
+parental status
+race/eth
+sex
+industry_experience 
+age
+## Table 1 Descriptive Table of key variables
 
-
-### Table 2 Person-year level 
-Do we get similar results if we use person-year level dataset? 
-
-```{r, summary table with person-year level}
-
-tbl2_person_year <- datasummary(
-  (` ` = tpearn_annual * (Education = educ_fct)) +
-    (` ` = tpearn_annual * (Race = race_eth_fct_cpsd)) +
-    (` ` = tpearn_annual * (Sex = sex_fct)) ~ y1_status_v2 * (mean + sd + N) ,
+```{r}
+data_overview <- datasummary(
+  tpearn_annual + factor(profposi) + factor(prof10k) + sex_fct + race_eth_fct_cpsd + educ_fct + immig_fct + married + parent_std + tage + factor(calyear) + factor(industry_experience) ~ N + Percent()+ Mean + SD + Median,
   data = person_year,
-  fmt = fmt_sprintf("%.0f"),
-  title = 'Earnings Comparison by Demographic Characteristics',
-  note = "This table displays the group-level averages and standard deviations for the person-level average earnings.",
-  output = "gt"
+   fmt = fmt_sprintf("%.0f"),
+    title = 'Data Overview Table',
+    output = "gt"
 )
 
-tbl2_person_year
+data_overview
+addWorksheet(wb, "Data Overview")
+writeData(wb, data_overview, sheet = "Data Overview")
 
-addWorksheet(wb, "Table 2 Person Year")
-writeData(wb, tbl2_person_year, sheet = "Table 2 Person Year")
+  
 ```
 
-
-
-What about if we incorporate weights? 
-
-```{r creating survey object for yearly estimates}
-library(survey)
-library(srvyr)
-py_svy <- person_year %>% as_survey_design(ids= ssuid_spanel_pnum, weights = wpfinwgt)
-```
-
-### Table 2 Weighted
+## Correlation Table
 ```{r}
-wtd1<- py_svy %>% 
-  group_by(y1_status_v2,educ_fct) %>% 
-  summarize(earnings = survey_mean(tpearn_annual))  %>% 
-  select(-earnings_se) %>% 
-  pivot_wider(
-    names_from = y1_status_v2,
-    values_from = c(earnings),
-    names_sep = "_"
-  ) %>%
-  mutate(across(where(is.numeric), round, digits = 0))  %>%  
-  gt::gt()
+library(ggcorrplot)
 
+cor_df <- person_year %>% 
+  select(tpearn_annual, profposi, prof10k, sex_fct, race_eth_fct_cpsd, educ_fct, immig_fct, married, parent_std, tage, calyear, industry_experience)
+cor_matrix <- model.matrix(~0+., data=cor_df) %>% 
+  cor() %>% 
+  rstatix::pull_lower_triangle()
 
-wtd2 <- py_svy %>% 
-  group_by(y1_status_v2,race_eth_fct_cpsd) %>% 
-  summarize(earnings = survey_mean(tpearn_annual))  %>% 
-  select(-earnings_se) %>% 
-  pivot_wider(
-    names_from = y1_status_v2,
-    values_from = c(earnings),
-    names_sep = "_"
-  ) %>% 
-  mutate(across(where(is.numeric), round, digits = 0)) %>% 
-  gt::gt()
+print(cor_matrix)
 
-
-wtd3 <- py_svy %>% 
-  group_by(y1_status_v2,sex_fct) %>% 
-  summarize(earnings = survey_mean(tpearn_annual))  %>% 
-  select(-earnings_se) %>% 
-  pivot_wider(
-    names_from = y1_status_v2,
-    values_from = c(earnings),
-    names_sep = "_"
-  ) %>% 
-  mutate(across(where(is.numeric), round, digits = 0)) %>% 
-  gt::gt()
-
-
-tbl2_wtd <- gt::gt_group(wtd1, wtd2, wtd3)
-
-wtd1 
-wtd2
-wtd3
-
-
-addWorksheet(wb, "Table 2 Person Level Weighted")
-writeData(wb, tbl2_person_year, sheet = "Table 2 Person Level Weighted")
-```
-
-```{r}
+addWorksheet(wb, "Correlation Table")
+writeData(wb, cor_matrix, sheet = "Correlation Table")
 
 ```
+
 
 
 # Regressions for earnings
-<!-- Using person-year level data -->
-<!-- https://asdfree.com/survey-of-income-and-program-participation-sipp.html -->
-
-<!-- https://cran.r-project.org/web/packages/robustlmm/vignettes/rlmer.pdf  -->
-<!-- clubSandwich -->
-
-
 ## Earnings Unemployment models 
 ```{r unemployment earnings models }
-# confirmed with checking plm version of the model that these warnings can be ignored but shifting to plm version anyways for ease of mind
 person_year <- person_year %>% 
   mutate(age_sq = tage^2) %>% 
   set_variable_labels(age_sq = "Age Squared")
   
-
 
 library(plm)
 unemp_m1_plm <- plm(ln_tpearn_annual ~ unemp_f12_6  + 
@@ -351,32 +362,28 @@ unemp_m1_plm <- plm(ln_tpearn_annual ~ unemp_f12_6  +
                    age_sq + 
                    sex_fct + 
                    immig_fct + 
+                   married + 
+                   parent_std +
                    calyear + 
-                   industry_fct , data = person_year,
+                   mode_industry , data = person_year,
                    index = c("ssuid_spanel_pnum", "calyear"), 
                    model = "random")
 
 unemp_m2_plm <- update(unemp_m1_plm, . ~. + race_eth_fct_cpsd)
-unemp_m3_plm <- update(unemp_m2_plm, . ~. + race_eth_fct_cpsd:unemp_f12_6)
-unemp_m4_plm <- update(unemp_m2_plm, . ~. + sex_fct:unemp_f12_6)
+unemp_m1_plm_industry <- update(unemp_m1_plm, . ~. + industry_experience)
+unemp_m2_plm_industry <- update(unemp_m2_plm, . ~. + industry_experience)
 
-unemp_m1_plm_wt <- update(unemp_m1_plm, . ~. , weights = wpfinwgt)
-unemp_m2_plm_wt <- update(unemp_m1_plm_wt, . ~. + race_eth_fct_cpsd)
-unemp_m3_plm_wt <- update(unemp_m2_plm_wt, . ~. + race_eth_fct_cpsd:unemp_f12_6)
-unemp_m4_plm_wt <- update(unemp_m2_plm_wt, . ~. + sex_fct:unemp_f12_6)
+
 
 ```
 
 
-### Table 3 Unemployment Robust SEs
 
-```{r table unemp earnings robust se }
-
-
+```{r}
 tbl3_unemp_models_rse <- modelsummary(list(unemp_m1_plm,
                                            unemp_m2_plm, 
-                                           unemp_m3_plm, 
-                                           unemp_m4_plm), 
+                                           unemp_m1_plmm_industry, 
+                                           unemp_m2_plm_industry), 
                                       coef_rename = TRUE, 
                                       estimate = "{estimate} ({std.error}){stars}",
                                       vcov = "robust",
@@ -387,103 +394,6 @@ tbl3_unemp_models_rse <- modelsummary(list(unemp_m1_plm,
 tbl3_unemp_models_rse
 addWorksheet(wb, "Tbl 3 Reg Unemp Earn RSE")
 writeData(wb, tbl3_unemp_models_rse, sheet = "Tbl 3 Reg Unemp Earn RSE")
-
-
-```
-
-### Table 3 Unemployment Weighted
-```{r table unemp earnings regular se weighted}
-tbl3_unemp_models_wts <- modelsummary(list(unemp_m1_plm_wt,
-                   unemp_m2_plm_wt,
-                   unemp_m3_plm_wt,
-                   unemp_m4_plm_wt), 
-                                  coef_rename = TRUE, 
-                                  estimate = "{estimate} ({std.error}){stars}",
-                           statistic = NULL,
-                           title = "Table 3 Weights Unemployment predciting Log Annual Earnings", 
-             output = "gt")
-tbl3_unemp_models_wts
-
-addWorksheet(wb, "Tbl 3 Reg Unemp Earn WT")
-writeData(wb, tbl3_unemp_models_wts, sheet = "Tbl 3 Reg Unemp Earn WT")
-
-```
-
-
-
-## Earnings Year One Status Models
-```{r y1_status_models}
-library(plm)
-status_m1_plm <- plm(ln_tpearn_annual ~ y1_status_v2  + 
-                   educ_fct + 
-                   tage + 
-                   age_sq + 
-                   sex_fct + 
-                   immig_fct + 
-                   calyear + 
-                   industry_fct , data = person_year,
-                   index = c("ssuid_spanel_pnum", "calyear"), 
-                   model = "random")
-
-status_m2_plm <- update(status_m1_plm, . ~. + race_eth_fct_cpsd)
-status_m3_plm <- update(status_m2_plm, . ~. + race_eth_fct_cpsd:y1_status_v2)
-status_m4_plm <- update(status_m2_plm, . ~. + sex_fct:y1_status_v2)
-
-status_m1_plm_wt <- update(status_m1_plm, . ~. , weights = wpfinwgt)
-status_m2_plm_wt <- update(status_m1_plm_wt, . ~. + race_eth_fct_cpsd)
-status_m3_plm_wt <- update(status_m2_plm_wt, . ~. + race_eth_fct_cpsd:y1_status_v2)
-status_m4_plm_wt <- update(status_m2_plm_wt, . ~. + sex_fct:y1_status_v2)
-```
-
-### Table 4 Y1 Status 
-```{r table y1_status models}
-tbl4_status_earn <- modelsummary(list(status_m1_plm,
-                   status_m2_plm,
-                   status_m3_plm,
-                   status_m4_plm), 
-                                  coef_rename = TRUE, 
-                                  estimate = "{estimate} ({std.error}){stars}",
-                           statistic = NULL,
-                           title = "Table 4  Y1 Status predicting Log Annual Earnings", 
-             output = "gt")
-tbl4_status_earn
-addWorksheet(wb, "Tbl 4 Reg Status Earn")
-writeData(wb, tbl3_unemp_models_wts, sheet = "Tbl 4 Reg Status Earn")
-```
-
-### Table 4 Y1 Status Robust SE
-```{r table y1 earnings robust se }
-
-tbl4_status_earn_rse <- modelsummary(list(status_m1_plm,
-                   status_m2_plm,
-                   status_m3_plm,
-                   status_m4_plm), 
-                                  coef_rename = TRUE, 
-                                  estimate = "{estimate} ({std.error}){stars}",
-                   vcov = "robust",
-                           statistic = NULL,
-                           title = "Table 4 RSE Y1 Status predicting Log Annual Earnings", 
-             output = "gt")
-tbl4_status_earn_rse
-addWorksheet(wb, "Tbl 4 Reg Status Earn RSE")
-writeData(wb, tbl4_status_earn_rse, sheet = "Tbl 4 Reg Status Earn RSE")
-```
-
-### Table 4 Y1 Status Weights
-```{r table y1 status earnings regular se weighted}
-tbl4_status_earn_wts <- modelsummary(list(status_m1_plm_wt,
-                   status_m2_plm_wt,
-                   status_m3_plm_wt,
-                   status_m4_plm_wt), 
-                                  coef_rename = TRUE, 
-                                  estimate = "{estimate} ({std.error}){stars}",
-                           statistic = NULL,
-                           title = "Table 4 Weights Y1 Status predciting Log Annual Earnings", 
-             output = "gt")
-tbl4_status_earn_wts
-addWorksheet(wb, "Tbl 4 Reg Status Earn WT")
-writeData(wb, tbl4_status_earn_wts, sheet = "Tbl 4 Reg Status Earn WT")
-
 ```
 
 
@@ -491,48 +401,25 @@ writeData(wb, tbl4_status_earn_wts, sheet = "Tbl 4 Reg Status Earn WT")
 
 # Profits Unemployment
 ```{r models for positive profit}
-# models for profit
-# m1_unemp_prftb <- glmer(profposi ~
-#                    unemp_f12_6  +
-#                    educ_fct +
-#                    tage +
-#                    age_sq +
-#                    sex_fct +
-#                    immig_fct +
-#                    industry_fct +
-#                    as.factor(calyear) +
-#                    (1 | ssuid_spanel_pnum),
-#                    control = glmerControl(optimizer = "nloptwrap", 
-#                                           calc.derivs = FALSE),
-#                  data = person_year, family = binomial)
-# 
-# 
-# m2_unemp_prftb <- update(m1_unemp_prftb, . ~ .  + race_eth_fct_cpsd)
-# m3_unemp_prftb <- update(m2_unemp_prftb, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
-# m4_unemp_prftb <- update(m2_unemp_prftb, . ~ . + sex_fct:unemp_f12_6)
+m1_unemp_prftb <- glmer(profposi ~ unemp_f12_6  + 
+                   educ_fct + 
+                   tage + 
+                   age_sq + 
+                   sex_fct + 
+                   immig_fct + 
+                   married + 
+                   parent_std +
+                   as.factor(calyear) + 
+                   mode_industry +
+                   (1 | ssuid_spanel_pnum),
+                   control = glmerControl(optimizer = "nloptwrap",
+                                          calc.derivs = FALSE),
+                 data = person_year, family = binomial)
 
 
-# m1_unemp_prftb_wt <- glmer(profposi ~
-#                    unemp_f12_6  +
-#                    educ_fct +
-#                    tage +
-#                    age_sq +
-#                    sex_fct +
-#                    immig_fct +
-#                    industry_fct +
-#                    as.factor(calyear) +
-#                    (1 | ssuid_spanel_pnum),
-#                    control = glmerControl(optimizer = "nloptwrap", 
-#                                           calc.derivs = FALSE),
-#                  data = person_year, family = binomial,
-#                  weights = wpfinwgt)
-# 
-# 
-# m2_unemp_prftb_wt <- update(m1_unemp_prftb_wt, . ~ .  + race_eth_fct_cpsd)
-# m3_unemp_prftb_wt <- update(m2_unemp_prftb_wt, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
-# m4_unemp_prftb_wt <- update(m2_unemp_prftb_wt, . ~ . + sex_fct:unemp_f12_6)
-
-
+m2_unemp_prftb <- update(m1_unemp_prftb, . ~ .  + race_eth_fct_cpsd)
+m1_unemp_prftb_ind <- update(m1_unemp_prftb, . ~. + industry_experience)
+m2_unemp_prftb_ind <- update(m2_unemp_prftb, . ~. + industry_experience)
 
 ```
 
@@ -541,345 +428,72 @@ writeData(wb, tbl4_status_earn_wts, sheet = "Tbl 4 Reg Status Earn WT")
 
 
 ```{r models for 10k profit}
-# m1_unemp_prftb10 <- glmer(prof10k ~
-#                    unemp_f12_6  +
-#                    educ_fct +
-#                    tage +
-#                    age_sq +
-#                    sex_fct +
-#                    immig_fct +
-#                   as.factor(calyear) +
-#                    (1 | ssuid_spanel_pnum),
-#                    control = glmerControl(optimizer = "nloptwrap", 
-#                                           calc.derivs = FALSE),
-#                  data = person_year, family = binomial)
-# 
-# 
-# m2_unemp_prftb10 <- update(m1_unemp_prftb10, . ~ .  + race_eth_fct_cpsd)
-# m3_unemp_prftb10 <- update(m2_unemp_prftb10, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
-# m4_unemp_prftb10 <- update(m2_unemp_prftb10, . ~ . + sex_fct:unemp_f12_6)
+m1_unemp_prftb10 <- glmer(prof10k ~ unemp_f12_6  + 
+                   educ_fct + 
+                   tage + 
+                   age_sq + 
+                   sex_fct + 
+                   immig_fct + 
+                   married + 
+                   parent_std +
+                   mode_industry +
+                   as.factor(calyear) +
+                   (1 | ssuid_spanel_pnum),
+                   control = glmerControl(optimizer = "nloptwrap",
+                                          calc.derivs = FALSE),
+                 data = person_year, family = binomial)
 
-# 
-# m1_unemp_prftb10_wt <- glmer(prof10k ~
-#                    unemp_f12_6  +
-#                    educ_fct +
-#                    tage +
-#                    age_sq +
-#                    sex_fct +
-#                    immig_fct +
-#                   as.factor(calyear) +
-#                    (1 | ssuid_spanel_pnum),
-#                    control = glmerControl(optimizer = "nloptwrap", 
-#                                           calc.derivs = FALSE),
-#                  data = person_year, family = binomial,
-#                  weights = wpfinwgt)
-# 
-# m2_unemp_prftb10_wt <- update(m1_unemp_prftb10_wt, . ~ .  + race_eth_fct_cpsd)
-# m3_unemp_prftb10_wt <- update(m2_unemp_prftb10_wt, . ~ . + race_eth_fct_cpsd:unemp_f12_6)
-# m4_unemp_prftb10_wt <- update(m2_unemp_prftb10_wt, . ~ . + sex_fct:unemp_f12_6)
 
+m2_unemp_prftb10 <- update(m1_unemp_prftb10, . ~ .  + race_eth_fct_cpsd)
+m1_unemp_prftb10_ind <- update(m1_unemp_prftb10, . ~. + industry_experience)
+m2_unemp_prftb10_ind <- update(m2_unemp_prftb10, . ~. + industry_experience)
 
 ```
 
 
 ### Table 5 Unemployment and Positive Profit
 ```{r}
-# tbl5_unemp_posprof <- modelsummary(list(m1_unemp_prftb,
-#                    m2_unemp_prftb,
-#                    m3_unemp_prftb,
-#                    m4_unemp_prftb), 
-#                                   coef_rename = TRUE, 
-#                                   estimate = "{estimate} ({std.error}){stars}",
-#                            statistic = NULL,
-#                    vcov = "robust", 
-#                            title = "Table 5 Unemp Predicting Positive Profit", 
-#              output = "gt")
-# 
-# tbl5_unemp_posprof
-# 
-# addWorksheet(wb, "Tbl 5 Reg Unemp Profit")
-# writeData(wb, tbl5_unemp_posprof, sheet = "Tbl 5 Reg Unemp Profit")
+tbl5_unemp_posprof <- modelsummary(list(m1_unemp_prftb,
+                   m2_unemp_prftb,
+                   m1_unemp_prftb_ind,
+                   m2_unemp_prftb_ind),
+                                  coef_rename = TRUE,
+                                  estimate = "{estimate} ({std.error}){stars}",
+                           statistic = NULL,
+                           title = "Table 5 Unemp Predicting Positive Profit",
+             output = "gt")
+
+tbl5_unemp_posprof
+
+addWorksheet(wb, "Tbl 5 Reg Unemp Profit")
+writeData(wb, tbl5_unemp_posprof, sheet = "Tbl 5 Reg Unemp Profit")
 
 ```
-
-### Table 5 Unemployment and Postive Profit with Weights 
-```{r}
-# 
-# tbl5_unemp_posprof_wt <- modelsummary(list(m1_unemp_prftb_wt,
-#                    m2_unemp_prftb_wt,
-#                    m3_unemp_prftb_wt,
-#                    m4_unemp_prftb_wt), 
-#                                   coef_rename = TRUE, 
-#                                   estimate = "{estimate} ({std.error}){stars}",
-#                            statistic = NULL,
-#                            title = "Table 5 Weighted Unemp Predicting Positive Profit", 
-#              output = "gt")
-# 
-# tbl5_unemp_posprof_wt
-# 
-# addWorksheet(wb, "Tbl 5 Reg Unemp Profit WTD")
-# writeData(wb, tbl5_unemp_posprof_wt, sheet = "Tbl 5 Reg Unemp Profit WTD")
-```
-
 
 ### Table 6 Unemployment and 10k Profit 
 
 ```{r}
 
-# tbl6_unemp_prof10k <- modelsummary(list(m1_unemp_prftb10,
-#                    m2_unemp_prftb10,
-#                    m3_unemp_prftb10,
-#                    m4_unemp_prftb10),
-#                                   coef_rename = TRUE,
-#                                   estimate = "{estimate} ({std.error}){stars}",
-#                  vcov = "robust",
-#                            statistic = NULL,
-#                            title = "Table 6 Unemp Predicting 10k Profit",
-#              output = "gt")
-# 
-# tbl6_unemp_prof10k
-# addWorksheet(wb, "Tbl 6 Reg Unemp 10k Profit")
-# writeData(wb, tbl5_unemp_posprof_wt, sheet = "Tbl 6 Reg Unemp 10k Profit")
-
-```
-
-### Table 6 Unemployment and 10k Profit with Weights 
-
-```{r}
-# tbl6_unemp_prof10k_wt <- modelsummary(list(m1_unemp_prftb10_wt,
-#                    m2_unemp_prftb10_wt,
-#                    m3_unemp_prftb10_wt,
-#                    m4_unemp_prftb10_wt), 
-#                                   coef_rename = TRUE, 
-#                                   estimate = "{estimate} ({std.error}){stars}",
-#                            statistic = NULL,
-#                            title = "Table 6 Weighted Unemp Predicting Positive Profit", 
-#              output = "gt")
-# 
-# tbl6_unemp_prof10k_wt
-# 
-# addWorksheet(wb, "Tbl 6 Reg Unemp 10k Profit WTD")
-# writeData(wb, tbl6_unemp_prof10k_wt, sheet = "Tbl 6 Reg Unemp 10k Profit WTD")
-```
-
-## Investigating missed payments and health insurance 
-
-```{r}
-person_year %>%
-  select(tpearn_annual, prftb, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct, eawbmort_fct) %>% 
-  tbl_summary(by = eawbmort_fct,
-             statistic = list(
-    all_continuous() ~ c("{mean} ({sd})", "{median}")
-  ),
-  type = all_continuous() ~ "continuous2"
-) %>% 
-  add_overall() %>% 
-  modify_caption("Sample Characteristics by Ability to Pay Housing Bills") %>% 
-  gtsummary::as_hux_xlsx(file = paste0("housing_payments", Sys.Date(),".xlsx"))
-
-
-person_year %>%
-  select(tpearn_annual, prftb, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct, eawbgas_fct) %>% 
-  tbl_summary(by = eawbgas_fct,
-             statistic = list(
-    all_continuous() ~ c("{mean} ({sd})", "{median}")
-  ),
-  type = all_continuous() ~ "continuous2"
-) %>% 
-  add_overall() %>% 
-  modify_caption("Sample Characteristics by Ability to Pay Utility Bills") %>% 
-  gtsummary::as_hux_xlsx(file = paste0("utility_payments", Sys.Date(),".xlsx"))
-
-
-
-person_year %>%
-  select(tpearn_annual, prftb, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct, no_health_insurance_fct) %>% 
-  tbl_summary(by = no_health_insurance_fct,
-             statistic = list(
-    all_continuous() ~ c("{mean} ({sd})", "{median}")
-  ),
-  type = all_continuous() ~ "continuous2"
-) %>% 
-  add_overall() %>% 
-  modify_caption("Sample Characteristics Health Insruance") %>% 
-  gtsummary::as_hux_xlsx(file = paste0("health_insurance", Sys.Date(),".xlsx"))
-```
-
-
-```{r}
-m1_health<- glmer(no_health_insurance_fct ~
-                   unemp_f12_6  +
-                   educ_fct +
-                   tage +
-                   age_sq +
-                   sex_fct +
-                   immig_fct +
-                  as.factor(calyear) +
-                   (1 | ssuid_spanel_pnum),
-                   control = glmerControl(optimizer = "nloptwrap",
-                                          calc.derivs = FALSE),
-                 data = person_year, family = binomial)
-```
-
-
-
-## Investigating food insecurity
-
-```{r}
-person_year <- person_year %>% 
-  mutate(food_insecurity = factor(rfoods, labels = c("Low", 
-                                                     "Medium",
-                                                     "High"), ordered = TRUE))
-```
-
-
-```{r}
-person_year %>%
-  select(tpearn_annual, prftb, race_eth_fct_cpsd, y1_status_v2, educ_fct, sex_fct, food_insecurity) %>% 
-  tbl_summary(by = food_insecurity,
-             statistic = list(
-    all_continuous() ~ c("{mean} ({sd})", "{median}")
-  ),
-  type = all_continuous() ~ "continuous2"
-) %>% 
-  add_overall() %>% 
-  modify_caption("Sample Characteristics by Food Insecurity") %>% 
-  gtsummary::as_hux_xlsx(file = paste0("food_insecurity", Sys.Date(),".xlsx"))
-
-
-```
-
-
-```{r}
-
-
-person_year <- person_year %>% 
-  mutate(food_insec_any = case_when(rfoodr > 0 ~ 1, 
-                                    rfoodr == 0 ~ 0, 
-                                    .default = NA))
-
-m00_food_ins <- glm(food_insec_any ~ unemp_f12_6, data = person_year, family = binomial)
-m01_food_ins <- glm(food_insec_any ~ unemp_f12_6 + race_eth_fct_cpsd, data = person_year, family = binomial)
-m02_food_ins <- update(m01_food_ins, . ~. + factor(calyear))
-m03_food_ins <- update(m02_food_ins, . ~. + educ_fct + sex_fct)
-
-food_models_glm <- modelsummary(list(m00_food_ins, m01_food_ins, m02_food_ins, m03_food_ins),
-                                  coef_rename = TRUE, 
+tbl6_unemp_prof10k <- modelsummary(list(m1_unemp_prftb10,
+                   m2_unemp_prftb10,
+                   m1_unemp_prftb10_ind,
+                   m2_unemp_prftb10_ind
+              ),
+                                  coef_rename = TRUE,
                                   estimate = "{estimate} ({std.error}){stars}",
                            statistic = NULL,
-                           title = "Table XX Unemployment Food Insecurity", 
+                           title = "Table 6 Unemp Predicting 10k Profit",
              output = "gt")
-food_models_glm
 
-library(openxlsx)
-wb <- createWorkbook()
-addWorksheet(wb, "Table XX Unemp Food Insec")
-writeData(wb, food_models_glm , sheet = "Table XX Unemp Food Insec")
-```
-
-
-```{r}
-m0_food_ins <- glmer(food_insec_any ~ 
-                       unemp_f12_6 + (1|ssuid_spanel_pnum),
-                     data = person_year, 
-                     family = binomial )
-
-m1_food_ins<- glmer(food_insec_any ~
-                   unemp_f12_6  +
-                  factor(calyear) +
-                   (1 | ssuid_spanel_pnum),
-                   control = glmerControl(optimizer = "nloptwrap",
-                                          calc.derivs = FALSE),
-                 data = person_year, 
-                 family = binomial)
-
-m2_food_ins <- glmer(food_insec_any  ~ 
-                      unemp_f12_6 + 
-                       race_eth_fct_cpsd + 
-                       factor(calyear) +
-                   (1 | ssuid_spanel_pnum),
-                   control = glmerControl(optimizer = "nloptwrap",
-                                          calc.derivs = FALSE),
-                 data = person_year, 
-                 family = binomial)
-
-m3_food_ins <- update(m2_food_ins, . ~. + educ_fct + sex_fct)
-```
-
-```{r}
-food_models <- modelsummary(list(m0_food_ins, 
-                                 m1_food_ins,
-                                 m2_food_ins,
-                                 m3_food_ins),
-                                  coef_rename = TRUE, 
-                                  estimate = "{estimate} ({std.error}){stars}",
-                           statistic = NULL,
-                           title = "Table XX Unemployment Food Insecurity (Mixed Models)", 
-             output = "gt")
-food_models
-
-addWorksheet(wb, "Table XX Unemp Food Insec (RE)")
-writeData(wb, food_models , sheet = "Table XX Unemp Food Insec (RE)")
-saveWorkbook(wb, "food_inesec.xlsx", overwrite = TRUE)  ## save to working directory
-
-```
-
-## Poverty Threshold
-```{r}
-poverty_df <- person_year %>% 
-  mutate(hhpoverty = case_when(thcyincpov < 1 ~ 0, 
-                               thcyincpov == 1 ~ 1, 
-                               thcyincpov > 1 ~ 2, 
-                               .default = NA),  
-         hhpoverty = factor(hhpoverty, labels = c("Below Threshold", "At threshold", "Above Threshold")))
-           
-ratio_table <- datasummary(
-  y1_status_v2 * (mean + sd + N) ~ thcyincpov,
-  data = poverty_df,
-  fmt = fmt_sprintf("%.2f"),
-  title = 'HHIncome to Poverty Threshold Ratio by Initial Employment Status',
-  note = "",
-  output = "poverty.docx")
-
-ratio_table 
-wb2 <- createWorkbook()
-addWorksheet(wb2, "Poverty Ratio")
-writeData(wb2, ratio_table, sheet = "Poverty Ratio")
-saveWorkbook(wb2, "poverty.xlsx", overwrite = TRUE)  ## save to working directory
+tbl6_unemp_prof10k
+addWorksheet(wb, "Tbl 6 Reg Unemp 10k Profit")
+writeData(wb, tbl6_unemp_prof10k, sheet = "Tbl 6 Reg Unemp 10k Profit")
 
 ```
 
 
 ```{r}
-temp <- poverty_df %>% 
-  filter(hhpoverty!="At threshold") %>%
-  mutate(hhpoverty = fct_drop(hhpoverty)) 
-
-datasummary_crosstab(
-  hhpoverty ~ y1_status_v2  ,
-  statistic = 1 ~  ( Percent("col")),
-  data = temp,
-  fmt = fmt_sprintf("%.2f"),
-  title = '',
-  note = "",
-  output = "gt")
-
-datasummary_crosstab(
-  hhpoverty ~ y1_status_v2  ,
-  statistic = 1 ~  (N),
-  data = temp,
-  fmt = fmt_sprintf("%.2f"),
-  title = '',
-  note = "",
-  output = "gt")
-
-
+saveWorkbook(wb, "working_paper_outputs_20250716.xlsx", overwrite = TRUE)
 ```
 
-
-
-
-```{r}
-
-```
 
