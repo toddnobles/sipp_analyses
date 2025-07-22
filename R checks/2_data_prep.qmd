@@ -59,7 +59,38 @@ monthly %>% group_by(spanel, swave) %>% distinct(ssuid, pnum) %>% count()
 
 joblevel_wide %>% group_by(spanel, swave) %>% distinct(ssuid_spanel_pnum) %>% count()
 ```
+Confirming person-months counts match. The ones that should match here do. The 2014 waves all match exactly and then the later panel,waves don't show the exact numbers because the table we're comparing to does it by calendar yer
+```{r}
+monthly %>% group_by(swave,spanel) %>% count() %>% arrange(spanel)
 
+monthly %>% mutate(calyear = case_when(spanel == 2014 & swave == 1 ~ 2013, 
+                             spanel == 2014 & swave == 2 ~ 2014,
+                             spanel == 2014 & swave == 3 ~ 2015, 
+                             spanel == 2014 & swave == 4 ~ 2016, 
+                             
+                             spanel == 2018 & swave == 1 ~ 2017,
+                             spanel == 2018 & swave == 2 ~ 2018,
+                             spanel == 2018 & swave == 3 ~ 2019, 
+                             spanel == 2018 & swave == 4 ~ 2020, 
+                             
+                             spanel == 2019 & swave == 1 ~ 2018,
+                             
+                             spanel == 2020 & swave == 1 ~ 2019,
+                             spanel == 2020 & swave == 2 ~ 2020,
+                             spanel == 2020 & swave == 3 ~ 2021, 
+                             spanel == 2020 & swave == 4 ~ 2022,
+                             
+                             spanel == 2021 & swave == 1 ~ 2020,
+                             spanel == 2021 & swave == 2 ~ 2021,
+                             spanel == 2021 & swave == 3 ~ 2022,
+                             
+                             spanel == 2022 & swave == 1 ~ 2021,
+                             spanel == 2022 & swave == 2 ~ 2022,
+                             
+                             spanel == 2023 & swave == 1 ~ 2022,
+                             .default = NA)) %>% 
+  group_by(calyear) %>% count() 
+```
 
 
 ## Imputing Job IDs
