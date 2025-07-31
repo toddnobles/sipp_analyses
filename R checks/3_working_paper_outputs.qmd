@@ -4,6 +4,7 @@ author: "Todd Nobles"
 format: 
   html:
     toc: true
+    embed-resources: true 
   docx:
     toc: true
   pdf: 
@@ -26,9 +27,12 @@ se_sample <- readRDS("se_sample_5_cleanest.rds")
 
 ## Adjusting for inflation 
 ```{r}
+
+table(se_sample$calyear)
+
 se_sample <- se_sample %>% 
   mutate(
-    tpearn = case_when(
+    tpearn_inf = case_when(
       calyear == 2014 ~ tpearn* 292.7/236.7,
       calyear == 2015 ~ tpearn*292.7/237,
       calyear == 2016 ~ tpearn*292.7/240.0,
@@ -39,7 +43,7 @@ se_sample <- se_sample %>%
       calyear == 2022 ~ tpearn,
       .default = NA
   ),
-    msum = case_when(
+    msum_inf = case_when(
       calyear == 2014 ~ msum* 292.7/236.7,
       calyear == 2015 ~ msum*292.7/237,
       calyear == 2016 ~ msum*292.7/240.0,
@@ -50,7 +54,7 @@ se_sample <- se_sample %>%
       calyear == 2022 ~ msum,
       .default = NA
     ),
-  prftb = case_when(
+  prftb_inf = case_when(
       calyear == 2014 ~ prftb* 292.7/236.7,
       calyear == 2015 ~ prftb*292.7/237,
       calyear == 2016 ~ prftb*292.7/240.0,
@@ -81,9 +85,9 @@ person_level <- se_sample %>%
     sex_fct = first(sex_fct),
     # here we take their highest education value ever observed 
     educ_fct = last(educ_fct),
-    tpearn_annual = sum(tpearn),
+    tpearn_annual = sum(tpearn_inf),
     industry = first(industry_fct),
-    prftb = last(prftb),
+    prftb = last(prftb_inf),
     profposi = last(profposi),
     prof10k = last(prof10k)) %>% 
   # summarizing to person-level 
@@ -182,7 +186,7 @@ tbl3 <- datasummary(
     fmt = fmt_sprintf("%.0f"),
     title = 'Earnings Comparison by Demographic Characteristics', 
     note = "This table displays the group-level averages and standard deviations for the person-level average earnings.",
-    output = "gt"
+    output = "huxtable"
 )
 
 tbl3
@@ -201,7 +205,7 @@ tbl3_profit <- datasummary(
     fmt = fmt_sprintf("%.0f"),
     title = 'Profit Comparison by Demographic Characteristics', 
     note = "This table displays the group-level averages and standard deviations for the person-level average profit",
-    output = "gt"
+    output = "huxtable"
 )
 
 tbl3_profit
@@ -261,7 +265,7 @@ find_max_mode <- function(x) {
 ## here we get their earnings in each calendar year as well as their most common industry in that year
 temp_earnings <- se_sample %>% 
   group_by(ssuid_spanel_pnum, calyear) %>% 
-  summarize(tpearn_annual= sum(tpearn),
+  summarize(tpearn_annual= sum(tpearn_inf),
             mode_industry = find_max_mode(industry_fct)) %>% 
   ungroup() %>% 
   mutate(ln_tpearn_annual = log_transform(tpearn_annual))
@@ -310,6 +314,7 @@ race/eth
 sex
 industry_experience 
 age
+
 ## Table 1 Descriptive Table of key variables
 
 ```{r}
@@ -318,7 +323,7 @@ data_overview <- datasummary(
   data = person_year,
    fmt = fmt_sprintf("%.0f"),
     title = 'Data Overview Table',
-    output = "gt"
+    output = "huxtable"
 )
 
 data_overview
@@ -353,7 +358,7 @@ writeData(wb, cor_matrix, sheet = "Correlation Table")
 person_year <- person_year %>% 
   mutate(age_sq = tage^2) %>% 
   set_variable_labels(age_sq = "Age Squared")
-  
+
 
 library(plm)
 unemp_m1_plm <- plm(ln_tpearn_annual ~ unemp_f12_6  + 
@@ -370,25 +375,102 @@ unemp_m1_plm <- plm(ln_tpearn_annual ~ unemp_f12_6  +
                    model = "random")
 
 unemp_m2_plm <- update(unemp_m1_plm, . ~. + race_eth_fct_cpsd)
+
+## Adding in industry experience
 unemp_m1_plm_industry <- update(unemp_m1_plm, . ~. + industry_experience)
 unemp_m2_plm_industry <- update(unemp_m2_plm, . ~. + industry_experience)
 
+## removing mode_industry 
+unemp_m1_plm_exp <- update(unemp_m1_plm,. ~. + industry_experience -mode_industry)
+unemp_m2_plm_exp <- update(unemp_m2_plm,.~. + industry_experience - mode_industry)
 
 
 ```
 
 
+Setting up renaming conventions for subsequent model tables 
+```{r}
+mapping <- c(
+  # Main Variables of Interest
+  "unemp_f12_6Unemployed" = "Unemployed 6+",
+  "race_eth_fct_cpsdNon_white" = "Non-White",
+  "industry_experience" = "Prior Industry Experience: Yes",
+  
+  # Demographic Variables
+  "sex_fctFemale" = "Female",
+  "tage" = "Age", 
+  "age_sq" = "Age sq",
+  "immig_fctImmigrant" = "Immigrant",
+  "marriedMarried" = "Married",
+  "parent_stdParent" = "Parent",
+  
+  # Education 
+  "educ_fctSome College or Assoc" = "Educ: Some College or Assoc",
+  "educ_fct4-year Degree or More" = "Educ: 4-Year Degree +",
+  
+  # Year Effects
+  "calyear2015" = "2015",
+  "calyear2016" = "2016",
+  "calyear2018" = "2018",
+  "calyear2019" = "2019",
+  "calyear2020" = "2020",
+  "calyear2021" = "2021",
+  "calyear2022" = "2022",
+  
+  # Industry Effects
+  "mode_industryConstruction" = "Industry: Construction",
+  "mode_industryOther Services, Except Public Administration" = "Industry: Other Services",
+  "mode_industryEducational Services, and Health Care and Social Assistance" = "Industry: Educ. & Health",
+  "mode_industryFinance and Insurance, and Real Estate, and Rental and Leasing" = "Industry: Finance & Real Estate",
+  "mode_industryRetail Trade" = "Industry: Retail Trade",
+  "mode_industryArts, Entertainment, and Recreation, and Accommodation and Food Services" = "Industry: Arts & Food Services",
+  "mode_industryForestry, Farming, Fishing, Hunting, & Mining" = "Industry: Forestry, Farming, & Mining",
+  "mode_industryTransportation, Warehousing & Utilities" = "Industry: Transport. & Utilities",
+  "mode_industryManufacturing" = "Industry: Manufacturing",
+  "mode_industryWholesale Trade" = "Industry: Wholesale Trade",
+  "mode_industryInformation" = "Industry: Information",
+  "mode_industryPublic Administration" = "Industry: Public Administration",
+  
+  "(Intercept)" = "(Intercept)",
+  # catch-all 
+  "..." = "..." 
+  
+)
+```
+
+Adding reference category rows
+```{r}
+rows_to_add <- tribble(
+  ~term, ~m1, ~m2, ~m3, ~m4, ~m5, ~m6,
+  "Employed (Reference)", "", "", "", "", "", "", #1
+  "White (Reference)", "", "", "", "", "", "", #3
+  "Prior Industry Experience: No (Reference)", "", "", "", "", "", "", #5
+  "Male (Reference)", "", "", "", "", "", "", # 7
+  "US Born (Reference)", "", "", "", "", "", "", #11
+  "Not Married (Reference)", "", "", "", "", "", "", #13
+  "Not Parent(Reference)", "", "", "", "", "", "", #15
+  "High School or Less (Reference)", "", "", "", "", "", "", # 17
+  "Calendar Year: 2014 (Reference)", "", "", "", "", "", "", # 20
+  "Professional, Scientific, and Management, and Administrative, and Waste Management Services 
+ (Reference)", "", "", "", "", "", "" # 28
+)
+attr(rows_to_add, 'position') <- c(1, 3, 5, 7, 11, 13, 15, 17, 20,28)
+```
+
 
 ```{r}
 tbl3_unemp_models_rse <- modelsummary(list(unemp_m1_plm,
                                            unemp_m2_plm, 
-                                           unemp_m1_plmm_industry, 
-                                           unemp_m2_plm_industry), 
-                                      coef_rename = TRUE, 
+                                           unemp_m1_plm_industry, 
+                                           unemp_m2_plm_industry,
+                                           unemp_m1_plm_exp, 
+                                           unemp_m2_plm_exp), 
+                                      coef_map = mapping,
+                                      add_rows = rows_to_add,
                                       estimate = "{estimate} ({std.error}){stars}",
                                       vcov = "robust",
                                       statistic = NULL,
-                                      title = "Table 3 Robust SE Unemployment predciting Log Annual Earnings", 
+                                      title = "Table 3 Robust SE Unemployment predicting Log Annual Earnings", 
                                       output = "gt")
 
 tbl3_unemp_models_rse
@@ -418,8 +500,14 @@ m1_unemp_prftb <- glmer(profposi ~ unemp_f12_6  +
 
 
 m2_unemp_prftb <- update(m1_unemp_prftb, . ~ .  + race_eth_fct_cpsd)
+
+## adding industry experience
 m1_unemp_prftb_ind <- update(m1_unemp_prftb, . ~. + industry_experience)
 m2_unemp_prftb_ind <- update(m2_unemp_prftb, . ~. + industry_experience)
+
+## removing mode_industry
+m1_unemp_prftb_exp <- update(m1_unemp_prftb, . ~. +industry_experience -mode_industry)
+m2_unemp_prftb_exp <- update(m2_unemp_prftb,. ~. + industry_experience - mode_industry)
 
 ```
 
@@ -442,22 +530,81 @@ m1_unemp_prftb10 <- glmer(prof10k ~ unemp_f12_6  +
                    control = glmerControl(optimizer = "nloptwrap",
                                           calc.derivs = FALSE),
                  data = person_year, family = binomial)
-
-
 m2_unemp_prftb10 <- update(m1_unemp_prftb10, . ~ .  + race_eth_fct_cpsd)
+
+## adding in experience variable 
 m1_unemp_prftb10_ind <- update(m1_unemp_prftb10, . ~. + industry_experience)
 m2_unemp_prftb10_ind <- update(m2_unemp_prftb10, . ~. + industry_experience)
 
+## just new experience variable 
+m1_unemp_prftb10_exp <- update(m1_unemp_prftb10, . ~. + industry_experience -mode_industry)
+m2_unemp_prftb10_exp <- update(m2_unemp_prftb10, . ~. + industry_experience - mode_industry)
 ```
 
 
 ### Table 5 Unemployment and Positive Profit
+
+Need slightly different variable mapping due to how the model types handle the calyear variable. Above plm dummies it out by default. Here we do it manually. 
 ```{r}
+mapping <- c(
+  # Main Variables of Interest
+  "unemp_f12_6Unemployed" = "Unemployed 6+",
+  "race_eth_fct_cpsdNon_white" = "Non-White",
+  "industry_experience" = "Prior Industry Experience: Yes",
+  
+  # Demographic Variables
+  "sex_fctFemale" = "Female",
+  "tage" = "Age", 
+  "age_sq" = "Age sq",
+  "immig_fctImmigrant" = "Immigrant",
+  "marriedMarried" = "Married",
+  "parent_stdParent" = "Parent",
+  
+  # Education 
+  "educ_fctSome College or Assoc" = "Educ: Some College or Assoc",
+  "educ_fct4-year Degree or More" = "Educ: 4-Year Degree +",
+  
+  # Year Effects
+  "as.factor(calyear)2015" = "2015",
+  "as.factor(calyear)2016" = "2016",
+  "as.factor(calyear)2018" = "2018",
+  "as.factor(calyear)2019" = "2019",
+  "as.factor(calyear)2020" = "2020",
+  "as.factor(calyear)2021" = "2021",
+  "as.factor(calyear)2022" = "2022",
+  
+  # Industry Effects
+  "mode_industryConstruction" = "Industry: Construction",
+  "mode_industryOther Services, Except Public Administration" = "Industry: Other Services",
+  "mode_industryEducational Services, and Health Care and Social Assistance" = "Industry: Educ. & Health",
+  "mode_industryFinance and Insurance, and Real Estate, and Rental and Leasing" = "Industry: Finance & Real Estate",
+  "mode_industryRetail Trade" = "Industry: Retail Trade",
+  "mode_industryArts, Entertainment, and Recreation, and Accommodation and Food Services" = "Industry: Arts & Food Services",
+  "mode_industryForestry, Farming, Fishing, Hunting, & Mining" = "Industry: Forestry, Farming, & Mining",
+  "mode_industryTransportation, Warehousing & Utilities" = "Industry: Transport. & Utilities",
+  "mode_industryManufacturing" = "Industry: Manufacturing",
+  "mode_industryWholesale Trade" = "Industry: Wholesale Trade",
+  "mode_industryInformation" = "Industry: Information",
+  "mode_industryPublic Administration" = "Industry: Public Administration",
+  
+  "(Intercept)" = "(Intercept)",
+  # catch-all 
+  "..." = "..." 
+  
+)
+```
+
+```{r}
+
+
 tbl5_unemp_posprof <- modelsummary(list(m1_unemp_prftb,
                    m2_unemp_prftb,
                    m1_unemp_prftb_ind,
-                   m2_unemp_prftb_ind),
-                                  coef_rename = TRUE,
+                   m2_unemp_prftb_ind,
+                   m1_unemp_prftb_exp,
+                   m2_unemp_prftb_exp),
+                                      coef_map = mapping,
+                   add_rows = rows_to_add,
                                   estimate = "{estimate} ({std.error}){stars}",
                            statistic = NULL,
                            title = "Table 5 Unemp Predicting Positive Profit",
@@ -473,13 +620,15 @@ writeData(wb, tbl5_unemp_posprof, sheet = "Tbl 5 Reg Unemp Profit")
 ### Table 6 Unemployment and 10k Profit 
 
 ```{r}
-
 tbl6_unemp_prof10k <- modelsummary(list(m1_unemp_prftb10,
                    m2_unemp_prftb10,
                    m1_unemp_prftb10_ind,
-                   m2_unemp_prftb10_ind
+                   m2_unemp_prftb10_ind,
+                   m1_unemp_prftb10_exp,
+                   m2_unemp_prftb10_exp
               ),
-                                  coef_rename = TRUE,
+                                      coef_map = mapping,
+              add_rows = rows_to_add,
                                   estimate = "{estimate} ({std.error}){stars}",
                            statistic = NULL,
                            title = "Table 6 Unemp Predicting 10k Profit",
@@ -493,7 +642,9 @@ writeData(wb, tbl6_unemp_prof10k, sheet = "Tbl 6 Reg Unemp 10k Profit")
 
 
 ```{r}
-saveWorkbook(wb, "working_paper_outputs_20250716.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "working_paper_outputs_20250731.xlsx", overwrite = TRUE)
 ```
+
+
 
 
