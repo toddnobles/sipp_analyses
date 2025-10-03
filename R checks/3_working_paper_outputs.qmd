@@ -83,7 +83,7 @@ se_sample <- se_sample %>%
 se_sample <- se_sample %>% 
   mutate(y1_status_v2 = factor(y1_status_v2, labels = c("W&S", "Self-Employed", "Unemployed")),
          unemp_f12_6 = factor(ifelse(unemp_f12 >=6, 1,0), labels = c("Not Unemployed", "Unemployed")),
-         unemp_f12_3 = factor(ifelse(unemp_f12 >= 3, 1,0), labels = c("Not Unemployed", "Unemployed 3+")))
+         unemp_f12_3 = factor(ifelse(unemp_f12 >= 3, 1,0), labels = c("Not Unemployed", "Unemployed")))
 
 person_level <- se_sample %>%
   arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
@@ -603,11 +603,13 @@ Setting up renaming conventions for subsequent model tables
 mapping <- c(
   # Main Variables of Interest
   "unemp_f12_6Unemployed" = "Unemployed 6+",
+  "unemp_f12_3Unemployed" = "Unemployed 3+",
   "y1_status_v2Self-Employed" = "Self-Employed",
   "y1_status_v2Unemployed" = "Unemployed",
   "race_eth_fct_cpsdNon_white" = "Non-White",
   "industry_experience" = "Prior Industry Experience: Yes",
   "unemp_f12_6Unemployed:industry_experience" = "Unemployed*Prior Industry Experience",
+  "unemp_f12_3Unemployed:industry_experience" = "Unemployed*Prior Industry Experience",
   "y1_status_v2Self-Employed:industry_experience" = "Self-Employed*Prior Industry Experience",
   "y1_status_v2Unemployed:industry_experience" = "Unemployed*Prior Industry Experience",
   
@@ -702,11 +704,13 @@ build_coef_map_ordered <- function(models, custom, order) {
 desired_order <- c( 
   # Main Variables of Interest
   "unemp_f12_6Unemployed",
+  "unemp_f12_3Unemployed",
   "y1_status_v2Self-Employed",
   "y1_status_v2Unemployed",
   "race_eth_fct_cpsdNon_white" ,
   "industry_experience",
   "unemp_f12_6Unemployed:industry_experience",
+  "unemp_f12_3Unemployed:industry_experience",
   "y1_status_v2Self-Employed:industry_experience",
   "y1_status_v2Unemployed:industry_experience",
   
@@ -952,82 +956,28 @@ unemp3_m3_plm <- update(unemp3_m2_plm, . ~. + industry_numeric)
 unemp3_m4_plm <- update(unemp3_m3_plm, . ~ . + industry_experience)
 unemp3_m5_plm <- update(unemp3_m4_plm, . ~ . + industry_experience*unemp_f12_3)
 unemp3_m6_plm <- update(unemp3_m4_plm, . ~ . + ln_thnetworth)
+unemp3_m7_plm <- update(unemp_m7_plm, . ~ .  -unemp_f12_6 + unemp_f12_3 )
+unemp3_m8_plm <- update(unemp_m8_plm, . ~ .  -unemp_f12_6 + unemp_f12_3 )
+unemp3_m9_plm <- update(unemp_m9_plm, . ~ .  -unemp_f12_6 + unemp_f12_3 )
+unemp3_m10_plm <- update(unemp_m10_plm, . ~ .  -unemp_f12_6 + unemp_f12_3 )
+
+
 
 
 ```
 
 
-Setting up renaming conventions for subsequent model tables 
 ```{r}
-mapping <- c(
-  # Main Variables of Interest
-  "unemp_f12_3Unemployed 3+" = "Unemployed 3+",
-  "race_eth_fct_cpsdNon_white" = "Non-White",
-  "industry_experience" = "Prior Industry Experience: Yes",
-  "unemp_f12_3Unemployed 3+:industry_experience" = "Unemployed*Prior Industry Experience",
-  
-  # Demographic Variables
-  "sex_fctFemale" = "Female",
-  "tage" = "Age", 
-  "age_sq" = "Age sq",
-  "immig_fctImmigrant" = "Immigrant",
-  "marriedMarried" = "Married",
-  "parent_stdParent" = "Parent",
-  
-  # Education 
-  "educ_fctSome College or Assoc" = "Some College or Assoc",
-  "educ_fct4-year Degree or More" = "4-Year Degree +",
-  
-  # Year Effects
-  "calyear2015" = "2015",
-  "calyear2016" = "2016",
-  "calyear2018" = "2018",
-  "calyear2019" = "2019",
-  "calyear2020" = "2020",
-  "calyear2021" = "2021",
-  "calyear2022" = "2022",
-  "calyear2023" = "2023",
-  
-  # Industry Effects
-  "industry_numeric" = "Industry" ,
-  # "mode_industryConstruction" = "Construction",
-  # "mode_industryOther Services, Except Public Administration" = "Other Services",
-  # "mode_industryEducational Services, and Health Care and Social Assistance" = "Educ. & Health",
-  # "mode_industryFinance and Insurance, and Real Estate, and Rental and Leasing" = "Finance & Real Estate",
-  # "mode_industryRetail Trade" = "Retail Trade",
-  # "mode_industryArts, Entertainment, and Recreation, and Accommodation and Food Services" = "Arts & Food Services",
-  # "mode_industryForestry, Farming, Fishing, Hunting, & Mining" = "Forestry, Farming, & Mining",
-  # "mode_industryTransportation, Warehousing & Utilities" = "Transport. & Utilities",
-  # "mode_industryManufacturing" = "Manufacturing",
-  # "mode_industryWholesale Trade" = "Wholesale Trade",
-  # "mode_industryInformation" = "Information",
-  # "mode_industryPublic Administration" = "Public Administration",
-  # 
-  
-  "ln_thnetworth" = "Household Net Worth (log)",
-  "(Intercept)" = "(Intercept)",
-  # catch-all 
-  "..." = "..." 
-  
-)
-```
-
-Adding reference category rows
-```{r}
-rows_to_add <- tribble(
-  ~term, ~m1, ~m2, ~m3, ~m4, ~m5, ~m6,
-  "Employed (Reference)", "", "", "", "", "", "", #1
-  "White (Reference)", "", "", "", "", "", "", #3
-  "Prior Industry Experience: No (Reference)", "", "", "", "", "", "", #5
-  "Male (Reference)", "", "", "", "", "", "", # 7
-  "US Born (Reference)", "", "", "", "", "", "", #11
-  "Not Married (Reference)", "", "", "", "", "", "", #13
-  "Not Parent(Reference)", "", "", "", "", "", "", #15
-  "High School or Less (Reference)", "", "", "", "", "", "", # 17
-  "Calendar Year: 2014 (Reference)", "", "", "", "", "", "" # 20
- #  "Professional, Scientific, and Management, and Administrative, and Waste Management Services (Reference)", "", "", "", "", "", "" # 28
-)
-attr(rows_to_add, 'position') <- c(1, 3, 5, 8, 12, 14, 16, 18, 21)
+coef_map_unemp3 <- build_coef_map_ordered(list(unemp3_m1_plm,
+                                           unemp3_m2_plm, 
+                                           unemp3_m3_plm, 
+                                           unemp3_m4_plm,
+                                           unemp3_m5_plm, 
+                                           unemp3_m6_plm,
+                                           unemp3_m7_plm, 
+                                           unemp3_m8_plm,
+                                           unemp3_m9_plm,
+                                           unemp3_m10_plm), mapping, desired_order)
 ```
 
 
@@ -1037,9 +987,13 @@ tbl6_unemp_models_rse <- modelsummary(list(unemp3_m1_plm,
                                            unemp3_m3_plm, 
                                            unemp3_m4_plm,
                                            unemp3_m5_plm, 
-                                           unemp3_m6_plm), 
-                                      coef_map = mapping,
-                                      add_rows = rows_to_add,
+                                           unemp3_m6_plm,
+                                           unemp3_m7_plm, 
+                                           unemp3_m8_plm,
+                                           unemp3_m9_plm,
+                                           unemp3_m10_plm), 
+                                      coef_map = coef_map_unemp3,
+                                      add_rows = rows_to_add, # safe to use the original rows here 
                                       estimate = "{estimate} ({std.error}){stars}",
                                       vcov = "robust",
                                       statistic = NULL,
@@ -1069,81 +1023,24 @@ unemp_ws_m3 <- update(unemp_m3_plm, . ~. , data = tbl7_df)
 unemp_ws_m4 <- update(unemp_m4_plm, . ~. , data = tbl7_df)
 unemp_ws_m5 <- update(unemp_m5_plm, . ~. , data = tbl7_df)
 unemp_ws_m6 <- update(unemp_m6_plm, . ~. , data = tbl7_df)
+unemp_ws_m7 <- update(unemp_m7_plm, . ~. , data = tbl7_df)
+unemp_ws_m8 <- update(unemp_m8_plm, . ~. , data = tbl7_df)
+unemp_ws_m9 <- update(unemp_m9_plm, . ~. , data = tbl7_df)
+unemp_ws_m10 <- update(unemp_m10_plm, . ~. , data = tbl7_df)
 
-mapping <- c(
-  # Main Variables of Interest
-  "unemp_f12_6Unemployed" = "Unemployed 6+",
-  "race_eth_fct_cpsdNon_white" = "Non-White",
-  "industry_experience" = "Prior Industry Experience: Yes",
-  "unemp_f12_6Unemployed:industry_experience" = "Unemployed*Prior Industry Experience",
-  
-  # Demographic Variables
-  "sex_fctFemale" = "Female",
-  "tage" = "Age", 
-  "age_sq" = "Age sq",
-  "immig_fctImmigrant" = "Immigrant",
-  "marriedMarried" = "Married",
-  "parent_stdParent" = "Parent",
-  
-  # Education 
-  "educ_fctSome College or Assoc" = "Some College or Assoc",
-  "educ_fct4-year Degree or More" = "4-Year Degree +",
-  
-  # Year Effects
-  "calyear2015" = "2015",
-  "calyear2016" = "2016",
-  "calyear2018" = "2018",
-  "calyear2019" = "2019",
-  "calyear2020" = "2020",
-  "calyear2021" = "2021",
-  "calyear2022" = "2022",
-  "calyear2023" = "2023",
-  
-  # Industry Effects
-  "industry_numeric" = "Industry" ,
-  # "mode_industryConstruction" = "Construction",
-  # "mode_industryOther Services, Except Public Administration" = "Other Services",
-  # "mode_industryEducational Services, and Health Care and Social Assistance" = "Educ. & Health",
-  # "mode_industryFinance and Insurance, and Real Estate, and Rental and Leasing" = "Finance & Real Estate",
-  # "mode_industryRetail Trade" = "Retail Trade",
-  # "mode_industryArts, Entertainment, and Recreation, and Accommodation and Food Services" = "Arts & Food Services",
-  # "mode_industryForestry, Farming, Fishing, Hunting, & Mining" = "Forestry, Farming, & Mining",
-  # "mode_industryTransportation, Warehousing & Utilities" = "Transport. & Utilities",
-  # "mode_industryManufacturing" = "Manufacturing",
-  # "mode_industryWholesale Trade" = "Wholesale Trade",
-  # "mode_industryInformation" = "Information",
-  # "mode_industryPublic Administration" = "Public Administration",
-  # 
-  
-  "ln_thnetworth" = "Household Net Worth (log)",
-  "(Intercept)" = "(Intercept)",
-  # catch-all 
-  "..." = "..." 
-  
-)
-
-rows_to_add <- tribble(
-  ~term, ~m1, ~m2, ~m3, ~m4, ~m5, ~m6,
-  "Employed (Reference)", "", "", "", "", "", "", #1
-  "White (Reference)", "", "", "", "", "", "", #3
-  "Prior Industry Experience: No (Reference)", "", "", "", "", "", "", #5
-  "Male (Reference)", "", "", "", "", "", "", # 7
-  "US Born (Reference)", "", "", "", "", "", "", #11
-  "Not Married (Reference)", "", "", "", "", "", "", #13
-  "Not Parent(Reference)", "", "", "", "", "", "", #15
-  "High School or Less (Reference)", "", "", "", "", "", "", # 17
-  "Calendar Year: 2014 (Reference)", "", "", "", "", "", "" # 20
- #  "Professional, Scientific, and Management, and Administrative, and Waste Management Services (Reference)", "", "", "", "", "", "" # 28
-)
-attr(rows_to_add, 'position') <- c(1, 3, 5, 8, 12, 14, 16, 18, 21)
 
 tbl7_unemp_ws_models <- modelsummary(list(unemp_ws_m1,
                                            unemp_ws_m2, 
                                            unemp_ws_m3, 
                                            unemp_ws_m4,
                                            unemp_ws_m5, 
-                                           unemp_ws_m6), 
-                                      coef_map = mapping,
+                                           unemp_ws_m6,
+                                          unemp_ws_m7,
+                                          unemp_ws_m8,
+                                          unemp_ws_m9,
+                                          unemp_ws_m10), 
+                                     ## safe to use the original coef_map and rows_to add since only the sample has changed for this one
+                                      coef_map = coef_map,
                                       add_rows = rows_to_add,
                                       estimate = "{estimate} ({std.error}){stars}",
                                       vcov = "robust",
