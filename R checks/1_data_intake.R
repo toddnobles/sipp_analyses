@@ -1,7 +1,7 @@
 library(data.table)
 library(tidyverse)
 
-ds <- c("PU2014W1", "PU2014W2", "PU2014W3", "PU2014W4", "pu2018", "pu2019", "pu2020", "pu2021", "pu2022", "pu2023")
+ds <- c("PU2014W1", "PU2014W2", "PU2014W3", "PU2014W4", "pu2018", "pu2019", "pu2020", "pu2021", "pu2022", "pu2023", "pu2024")
 
 for (x in ds) {
   # at some point add in to only run this chunk if the data file date/time has changed. 
@@ -20,7 +20,7 @@ for (x in ds) {
                       'TVAL_AST', 'THVAL_AST', 'TNETWORTH', 'THNETWORTH', 'TVAL_HOME', 
                       'THVAL_HOME', 'TEQ_HOME', 'THEQ_HOME', 'TEQ_BUS', 'TPTOTINC', 
                       'TPEARN', 'ENJFLAG', 'EPAR_SCRNR', "EAWBGAS", "EAWBMORT", "RHLTHMTH", "RFOODR", "RFOODS", "THCYINCPOV", 
-                      "THCYINCPOVT2")
+                      "THCYINCPOVT2",paste0("RPNCHILD",1:11))
   
   # Match column names after coercing all to same case
   selected_columns <- cols[tolower(cols) %in% tolower(target_columns)]
@@ -91,7 +91,8 @@ sipp_monthly_combined <- bind_rows(pu2014w1_monthly %>% select(-eresidenceid),
                                    pu2020_monthly %>% select(-eresidenceid),
                                    pu2021_monthly %>% select(-eresidenceid),
                                    pu2022_monthly %>% select(-eresidenceid),
-                                   pu2023_monthly %>% select(-eresidenceid)
+                                   pu2023_monthly %>% select(-eresidenceid),
+                                   pu2024_monthly %>% select(-eresidenceid)
                                    )
 saveRDS(sipp_monthly_combined, "/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_monthly_combined.rds")
 
@@ -106,7 +107,8 @@ sipp_joblevel_combined_wide <- bind_rows(pu2014w1_joblevel,
                                    pu2020_joblevel,
                                    pu2021_joblevel,
                                    pu2022_joblevel,
-                                   pu2023_joblevel)
+                                   pu2023_joblevel,
+                                   pu2024_joblevel)
 
 
 saveRDS(sipp_joblevel_combined_wide, "/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_joblevel_combined_wide.rds")
