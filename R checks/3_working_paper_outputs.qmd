@@ -322,6 +322,7 @@ log_transform <- function(x) {
 temp <- se_sample %>% 
   filter(monthcode %% 12 == 0) %>% 
   select(ssuid_spanel_pnum, 
+         shhadid,
          y1_status_v2, 
          unemp_f12_6,
          unemp_f12_3,
@@ -653,8 +654,9 @@ mapping <- c(
   
   "ln_thnetworth" = "Household Net Worth (log)",
   "(Intercept)" = "(Intercept)",
-  # catch-all 
-  "..." = "..." 
+  "SD (Intercept ssuid_spanel_pnum)" = "SD (Intercept Individual ID)",
+  "SD (Intercept shhadid)" = "SD (Intercept Household)",
+  "SD (Observations)" = "SD (Observations)"
   
 )
 ```
@@ -671,7 +673,7 @@ mapping <- c(
 #   }))))
 # }
 # 
-# collect_coef_names(list(unemp_m1_plm, unemp_m2_plm))
+# collect_coef_names(list(unemp_m3_hlm))
 
 ```
 
@@ -755,7 +757,13 @@ desired_order <- c(
   "calyear2020",
   "calyear2021",
   "calyear2022",
-  "calyear2023"
+  "calyear2023",
+  
+  "SD (Intercept ssuid_spanel_pnum)" ,
+  "SD (Intercept shhadid)",
+  "SD (Observations)"
+  
+  
   )
 ```
 
@@ -810,7 +818,7 @@ tbl4_unemp_models_rse <- modelsummary(list(unemp_m1_plm,
                                       vcov = "robust",
                                       statistic = NULL,
                                       title = "Table 4 Robust SE Unemployment predicting Log Annual Earnings", 
-                                      output = "gt",
+                                      output = "huxtable",
                                        notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
 
 tbl4_unemp_models_rse
@@ -913,7 +921,7 @@ tbl5_status_models_rse <- modelsummary(list(status_m1_plm,
                                       vcov = "robust",
                                       statistic = NULL,
                                       title = "Table 5 Robust SE Y1 Status predicting Log Annual Earnings", 
-                                      output = "gt",
+                                      output = "huxtable",
                                       notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
 
 tbl5_status_models_rse
@@ -998,7 +1006,7 @@ tbl6_unemp_models_rse <- modelsummary(list(unemp3_m1_plm,
                                       vcov = "robust",
                                       statistic = NULL,
                                       title = "Table 6 Robust SE Unemployment 3+ predicting Log Annual Earnings", 
-                                      output = "gt",
+                                      output = "huxtable",
                                        notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
 
 tbl6_unemp_models_rse
@@ -1046,7 +1054,7 @@ tbl7_unemp_ws_models <- modelsummary(list(unemp_ws_m1,
                                       vcov = "robust",
                                       statistic = NULL,
                                       title = "Table 7 Unemployment predicting Log Annual Earnings", 
-                                      output = "gt",
+                                      output = "huxtable",
                                        notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
 
 tbl7_unemp_ws_models
@@ -1058,7 +1066,195 @@ addWorksheet(wb, "Tbl 7 Reg Unemp Earn WS")
 writeData(wb, tbl7_unemp_ws_models, sheet = "Tbl 7 Reg Unemp Earn WS")
 ```
 
+Testing VIF of all models 
 
+```{r} 
+objs <- ls(pattern = "^unemp|^status")
+
+library(car)
+
+vif_df <- map_dfr(objs, function(m) {
+  model <- get(m)
+  
+  tryCatch(
+    {
+    as.data.frame(vif(model)) %>%
+    mutate(variable = rownames(.),
+           model = m, .before = 1)
+    },
+    error = function(e) {
+      message("VIF failed for:", m)
+    }
+  )
+})
+```
+
+
+
+## HLMS
+### unemp6
+```{r}
+## HLM Unemployment Models
+library(lme4)
+person_year <- person_year %>% 
+  mutate(calyear = as.factor(calyear))
+# Base model with random intercepts for Household and Person
+unemp_m1_hlm <- lmer(ln_tpearn_annual ~ unemp_f12_6 + (1 | shhadid) + (1 | ssuid_spanel_pnum), 
+                     data = person_year)
+
+# Full Control Model
+unemp_m2_hlm <- lmer(ln_tpearn_annual ~ unemp_f12_6  + 
+                    race_eth_fct_cpsd + 
+                    educ_fct + 
+                    tage + 
+                    age_sq + 
+                    sex_fct + 
+                    immig_fct + 
+                    married + 
+                    parent_std +
+                    calyear + 
+                    (1 | shhadid) + (1 | ssuid_spanel_pnum), 
+                    data = person_year)
+
+# Updating to match other model strucure
+unemp_m3_hlm <- update(unemp_m2_hlm, . ~. + industry_numeric)
+unemp_m4_hlm <- update(unemp_m3_hlm, . ~ . + industry_experience)
+unemp_m5_hlm <- update(unemp_m4_hlm, . ~ . + industry_experience*unemp_f12_6)
+unemp_m6_hlm <- update(unemp_m4_hlm, . ~ . + ln_thnetworth) 
+unemp_m7_hlm <- update(unemp_m2_hlm, . ~ . + industry_experience)
+unemp_m8_hlm <- update(unemp_m2_hlm, . ~ . + mode_industry)
+unemp_m9_hlm <- update(unemp_m8_hlm, . ~ . + industry_experience)
+unemp_m10_hlm <- update(unemp_m9_hlm, . ~. + ln_thnetworth)
+
+# Generate Table
+tbl4_unemp_hlm <- modelsummary(list(unemp_m1_hlm,
+                                    unemp_m2_hlm, 
+                                    unemp_m3_hlm, 
+                                    unemp_m4_hlm,
+                                    unemp_m5_hlm, 
+                                    unemp_m6_hlm,
+                                    unemp_m7_hlm, 
+                                    unemp_m8_hlm,
+                                    unemp_m9_hlm,
+                                    unemp_m10_hlm), 
+                               coef_map = coef_map, 
+                               add_rows = rows_to_add, 
+                               estimate = "{estimate} ({std.error}){stars}",
+                               statistic = NULL,
+                               title = "Table 4 HLM: Unemployment predicting Log Annual Earnings", 
+                               output = "huxtable",
+                               notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
+
+# Add to workbook
+addWorksheet(wb, "Tbl 4 HLM Unemp")
+writeData(wb, tbl4_unemp_hlm, sheet = "Tbl 4 HLM Unemp")
+```
+
+### status
+```{r}
+## HLM Status Models
+status_m1_hlm <- lmer(ln_tpearn_annual ~ y1_status_v2 + (1 | shhadid) + (1 | ssuid_spanel_pnum),
+                     data = person_year)
+
+status_m2_hlm <- lmer(ln_tpearn_annual ~ y1_status_v2  + 
+                    race_eth_fct_cpsd + 
+                    educ_fct + 
+                    tage + 
+                    age_sq + 
+                    sex_fct + 
+                    immig_fct + 
+                    married + 
+                    parent_std +
+                    calyear +
+                    (1 | shhadid) + (1 | ssuid_spanel_pnum), 
+                    data = person_year)
+
+status_m3_hlm <- update(status_m2_hlm, . ~ . + industry_numeric)
+status_m4_hlm <- update(status_m3_hlm, . ~ . + industry_experience)
+status_m5_hlm <- update(status_m4_hlm, . ~ . + industry_experience*y1_status_v2)
+status_m6_hlm <- update(status_m4_hlm, . ~ . + ln_thnetworth)
+status_m7_hlm <- update(status_m2_hlm, . ~ . + industry_experience)
+status_m8_hlm <- update(status_m2_hlm, . ~ . + mode_industry)
+status_m9_hlm <- update(status_m8_hlm, . ~ . + industry_experience)
+status_m10_hlm <- update(status_m9_hlm, . ~ . + ln_thnetworth)
+
+# Generate Table
+tbl5_status_hlm <- modelsummary(list(status_m1_hlm,
+                                     status_m2_hlm, 
+                                     status_m3_hlm, 
+                                     status_m4_hlm,
+                                     status_m5_hlm, 
+                                     status_m6_hlm,
+                                     status_m7_hlm, 
+                                     status_m8_hlm,
+                                     status_m9_hlm,
+                                     status_m10_hlm), 
+                                coef_map = coef_map_status, 
+                                add_rows = rows_to_add_status,
+                                estimate = "{estimate} ({std.error}){stars}",
+                                statistic = NULL,
+                                title = "Table 5 HLM: Y1 Status predicting Log Annual Earnings", 
+                                output = "huxtable",
+                                notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
+
+# Add to workbook
+addWorksheet(wb, "Tbl 5 HLM Status")
+writeData(wb, tbl5_status_hlm, sheet = "Tbl 5 HLM Status")
+```
+
+
+### unemp3
+```{r}
+unemp3_m1_hlm <- lmer(ln_tpearn_annual ~ unemp_f12_3 + (1 | shhadid) + (1 | ssuid_spanel_pnum),
+                     data = person_year)
+
+
+unemp3_m2_hlm <- lmer(ln_tpearn_annual ~ unemp_f12_3  + 
+                    race_eth_fct_cpsd + 
+                    educ_fct + 
+                    tage + 
+                    age_sq + 
+                    sex_fct + 
+                    immig_fct + 
+                    married + 
+                    parent_std +
+                    calyear +
+                    (1 | shhadid) + (1 | ssuid_spanel_pnum), 
+                    data = person_year)
+
+
+unemp3_m3_hlm <- update(unemp3_m2_hlm, . ~. + industry_numeric)
+unemp3_m4_hlm <- update(unemp3_m3_hlm, . ~ . + industry_experience)
+unemp3_m5_hlm <- update(unemp3_m4_hlm, . ~ . + industry_experience*unemp_f12_3)
+unemp3_m6_hlm <- update(unemp3_m4_hlm, . ~ . + ln_thnetworth) 
+unemp3_m7_hlm <- update(unemp3_m2_hlm, . ~ . + industry_experience)
+unemp3_m8_hlm <- update(unemp3_m2_hlm, . ~ . + mode_industry)
+unemp3_m9_hlm <- update(unemp3_m8_hlm, . ~ . + industry_experience)
+unemp3_m10_hlm <- update(unemp3_m9_hlm, . ~. + ln_thnetworth)
+
+tbl6_unemp3_hlm <- modelsummary(list(unemp3_m1_hlm,
+                                    unemp3_m2_hlm, 
+                                    unemp3_m3_hlm, 
+                                    unemp3_m4_hlm,
+                                    unemp3_m5_hlm, 
+                                    unemp3_m6_hlm,
+                                    unemp3_m7_hlm, 
+                                    unemp3_m8_hlm,
+                                    unemp3_m9_hlm,
+                                    unemp3_m10_hlm), 
+                               coef_map = coef_map_unemp3, 
+                               add_rows = rows_to_add, 
+                               estimate = "{estimate} ({std.error}){stars}",
+                               statistic = NULL,
+                               title = "Table 6 HLM: 3-month Unemployment predicting Log Annual Earnings", 
+                               output = "huxtable",
+                               notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
+
+# Add to workbook
+addWorksheet(wb, "Tbl 6 HLM Unemp3")
+writeData(wb, tbl6_unemp3_hlm, sheet = "Tbl 6 HLM Unemp3")
+
+```
 
 
 
