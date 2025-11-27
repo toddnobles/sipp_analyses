@@ -5,3 +5,5 @@
 ._*.do
 *.DS_Store
 *.dta 
+.Rproj.user
+scripts/_archive/
