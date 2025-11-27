@@ -1,0 +1,1246 @@
+---
+title: "Self-Employed Sample Outputs 10hrs"
+author: "Todd Nobles"
+format: 
+  html:
+    toc: true
+    embed-resources: true 
+  docx:
+    toc: true
+  pdf: 
+    toc: true
+execute:
+  echo: true
+  
+---
+# Read in and final data polishing for presentation
+Read in our working dataset created in data_prep.qmd
+
+```{r}
+#| message: false
+rm(list = ls())
+library(tidyverse)
+library(lme4)
+
+se_sample <- readRDS("se_sample_5_10hrs_cleanest.rds") 
+```
+
+
+## Adjusting for inflation 
+```{r}
+
+table(se_sample$calyear)
+
+se_sample <- se_sample %>% 
+  mutate(
+    tpearn_inf = case_when(
+     calyear == 2013 ~ tpearn*304.7/233.0,
+     calyear == 2014 ~ tpearn*304.7/236.7,
+     calyear == 2015 ~ tpearn*304.7/237,
+     calyear == 2016 ~ tpearn*304.7/240.0,
+     calyear == 2018 ~ tpearn*304.7/251.1,
+     calyear == 2019 ~ tpearn*304.7/255.7,
+     calyear == 2020 ~ tpearn*304.7/258.8,
+     calyear == 2021 ~ tpearn*304.7/271,
+     calyear == 2022 ~ tpearn*304.7/292.7,
+     calyear == 2023 ~ tpearn,
+      .default = NA
+  ),
+    msum_inf = case_when(
+     calyear == 2013 ~ tpearn*304.7/233.0,
+     calyear == 2014 ~ tpearn*304.7/236.7,
+     calyear == 2015 ~ tpearn*304.7/237,
+     calyear == 2016 ~ tpearn*304.7/240.0,
+     calyear == 2018 ~ tpearn*304.7/251.1,
+     calyear == 2019 ~ tpearn*304.7/255.7,
+     calyear == 2020 ~ tpearn*304.7/258.8,
+     calyear == 2021 ~ tpearn*304.7/271,
+     calyear == 2022 ~ tpearn*304.7/292.7,
+     calyear == 2023 ~ tpearn,
+      .default = NA
+    ),
+  prftb_inf = case_when(
+     calyear == 2013 ~ tpearn*304.7/233.0,
+     calyear == 2014 ~ tpearn*304.7/236.7,
+     calyear == 2015 ~ tpearn*304.7/237,
+     calyear == 2016 ~ tpearn*304.7/240.0,
+     calyear == 2018 ~ tpearn*304.7/251.1,
+     calyear == 2019 ~ tpearn*304.7/255.7,
+     calyear == 2020 ~ tpearn*304.7/258.8,
+     calyear == 2021 ~ tpearn*304.7/271,
+     calyear == 2022 ~ tpearn*304.7/292.7,
+     calyear == 2023 ~ tpearn,
+      .default = NA
+  )
+)
+```
+
+
+
+
+```{r creating person-level file for summary stats}
+se_sample <- se_sample %>% 
+  mutate(y1_status_v2 = factor(y1_status_v2, labels = c("W&S", "Self-Employed", "Unemployed")),
+         unemp_f12_6 = factor(ifelse(unemp_f12 >=6, 1,0), labels = c("Not Unemployed", "Unemployed")),
+         unemp_f12_3 = factor(ifelse(unemp_f12 >= 3, 1,0), labels = c("Not Unemployed", "Unemployed")))
+
+person_level <- se_sample %>%
+  arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
+  # getting to person-year level
+  group_by(ssuid_spanel_pnum, swave) %>%
+  summarize(# the following three are all constant within individuals so we just grab their first value
+    y1_status_v2 = first(y1_status_v2),
+    unemp_f12_6 = first(unemp_f12_6),
+    unemp_f12_3 = first(unemp_f12_3),
+    race_eth_fct_cpsd = first(race_eth_fct_cpsd),
+    sex_fct = first(sex_fct),
+    # here we take their highest education value ever observed 
+    educ_fct = last(educ_fct),
+    tpearn_annual = sum(tpearn_inf),
+    industry = first(industry_fct),
+    prftb = last(prftb_inf),
+    profposi = last(profposi),
+    prof10k = last(prof10k)) %>% 
+  # summarizing to person-level 
+  group_by(ssuid_spanel_pnum) %>% 
+  summarize(
+    avg_earnings = mean(tpearn_annual),
+    median_earnings = quantile(tpearn_annual, .5),
+    y1_status_v2 = first(y1_status_v2),
+    unemp_f12_6 = first(unemp_f12_6),
+    unemp_f12_3 = first(unemp_f12_3),
+    race_eth_fct_cpsd = first(race_eth_fct_cpsd),
+    sex_fct = first(sex_fct),
+    # here we take their highest education value ever observed 
+    educ_fct = last(educ_fct),
+    industry = first(industry),
+    avg_prftb = mean(prftb),
+    median_prftb = quantile(prftb, .5),
+    profposi = mean(profposi),
+    prof10k = mean(prof10k)
+  ) %>%
+  ungroup()
+
+
+
+```
+
+
+
+
+```{r, setting labels for person-level file}
+#| message: false
+library(labelled)
+person_level <- person_level %>%
+  set_variable_labels(
+    avg_earnings = "Avg earnings (tpearn)",
+    unemp_f12_6 = "Unemployed 6+ Months",
+    unemp_f12_3 = "Unemployed 3+ Months",
+    sex_fct = "Sex",
+    y1_status_v2 = "Initial Status",
+    race_eth_fct_cpsd = "Race/Ethnicity",
+    educ_fct = "Education",
+    industry = "Industry",
+    avg_prftb = "Avg profit",
+    median_prftb = "Median profit",
+    profposi = "Positive Profit",
+    prof10k = "Profit >=10k")
+```
+
+
+## Table 2-rep
+Descriptive statistics for self-employed sample by initial employment status
+Person-level table
+```{r}
+library(gtsummary)
+
+tbl2 <- person_level %>%
+  select(avg_earnings, avg_prftb, unemp_f12_6) %>% 
+  tbl_summary(by = unemp_f12_6,
+             statistic = list(
+    all_continuous() ~ c("{mean} ({sd})", "{median}")
+  ),
+  type = all_continuous() ~ "continuous2"
+) %>% 
+  add_overall()
+
+tbl2
+library(openxlsx)
+wb <- createWorkbook()
+addWorksheet(wb, "Table 2")
+writeData(wb, tbl2 , sheet = "Table 2")
+```
+
+
+## Table 2-rep side counts
+```{r}
+tbl2_counts <- person_level %>%
+  select(unemp_f12_6, race_eth_fct_cpsd, sex_fct) %>% 
+  tbl_summary(by = unemp_f12_6,
+             statistic = list(
+    all_categorical() ~ "{n} ({p}%)"
+  ),
+  type = all_categorical() ~ "categorical"
+) %>% 
+  add_overall()
+addWorksheet(wb, "Table 2 Counts")
+writeData(wb, tbl2_counts , sheet = "Table 2 Counts")
+```
+
+## Table 2-status
+Descriptive statistics for self-employed sample by initial employment status
+Person-level table
+```{r}
+
+tbl2_status <- person_level %>%
+  select(avg_earnings, avg_prftb, y1_status_v2) %>% 
+  tbl_summary(by = y1_status_v2,
+             statistic = list(
+    all_continuous() ~ c("{mean} ({sd})", "{median}")
+  ),
+  type = all_continuous() ~ "continuous2"
+) %>% 
+  add_overall()
+
+tbl2_status
+addWorksheet(wb, "Table 2 status")
+writeData(wb, tbl2_status , sheet = "Table 2 status")
+```
+
+
+## Table 2-status side counts
+```{r}
+tbl2_status_counts <- person_level %>%
+  select(y1_status_v2, race_eth_fct_cpsd, sex_fct) %>% 
+  tbl_summary(by = y1_status_v2,
+             statistic = list(
+    all_categorical() ~ "{n} ({p}%)"
+  ),
+  type = all_categorical() ~ "categorical"
+) %>% 
+  add_overall()
+addWorksheet(wb, "Table 2 status Counts")
+writeData(wb, tbl2_status_counts , sheet = "Table 2 status Counts")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Table 3
+
+To create the table below, we use the same dataset as above and generate a person-level average of their annual earnings across years. 
+```{r}
+#| message: false
+library(modelsummary)
+
+tbl3 <- datasummary(
+        (` `= avg_earnings * (Race = race_eth_fct_cpsd)) +
+        (` `= avg_earnings * (Sex = sex_fct)) ~ unemp_f12_6* (mean+ sd + N) ,
+    data = person_level,
+    fmt = fmt_sprintf("%.0f"),
+    title = 'Earnings Comparison by Demographic Characteristics', 
+    note = "This table displays the group-level averages and standard deviations for the person-level average earnings.",
+    output = "huxtable"
+)
+
+tbl3
+addWorksheet(wb, "Table 3")
+writeData(wb, tbl3, sheet = "Table 3")
+
+```
+
+```{r}
+#| message: false
+
+tbl3_profit <- datasummary(
+        (` `= avg_prftb * (Race = race_eth_fct_cpsd)) +
+        (` `= avg_prftb * (Sex = sex_fct)) ~ unemp_f12_6* (mean+ sd + N) ,
+    data = person_level,
+    fmt = fmt_sprintf("%.0f"),
+    title = 'Profit Comparison by Demographic Characteristics', 
+    note = "This table displays the group-level averages and standard deviations for the person-level average profit",
+    output = "huxtable"
+)
+
+tbl3_profit
+addWorksheet(wb, "Table 3 Profit")
+writeData(wb, tbl3_profit, sheet = "Table 3 Profit")
+```
+
+```{r}
+person_level %>% group_by(y1_status_v2) %>% summarize(profposi = mean(profposi), prof10k = mean(prof10k), n = n())
+
+
+person_level %>% summarize(profposi = mean(profposi), prof10k = mean(prof10k), n = n())
+```
+
+## Table 3 Status
+```{r}
+
+tbl3_status <- datasummary(
+        (` `= avg_earnings * (Race = race_eth_fct_cpsd)) +
+        (` `= avg_earnings * (Sex = sex_fct)) ~ y1_status_v2* (mean+ sd + N) ,
+    data = person_level,
+    fmt = fmt_sprintf("%.0f"),
+    title = 'Earnings Comparison by Demographic Characteristics', 
+    note = "This table displays the group-level averages and standard deviations for the person-level average earnings.",
+    output = "huxtable"
+)
+
+tbl3_status
+addWorksheet(wb, "Table 3 Status")
+writeData(wb, tbl3_status, sheet = "Table 3 Status")
+```
+
+
+
+
+```{r function to log transform vars with negative values in them}
+# feed it a vector to convert to log transform that accounts for negative values 
+log_transform <- function(x) {
+  min_x <- min(x)*-1
+  log(x + min_x + 1)
+}
+```
+
+
+```{r creating person-year level df }
+
+## getting down to a dataset that has their demographic vars and yearly earnings at the person-year level
+temp <- se_sample %>% 
+  filter(monthcode %% 12 == 0) %>% 
+  select(ssuid_spanel_pnum, 
+         y1_status_v2, 
+         unemp_f12_6,
+         unemp_f12_3,
+         unemp_f12,
+         shhadid,
+         educ_fct, 
+         race_eth_fct_cpsd,
+         sex_fct,
+         immig_fct,
+         parent_std,
+         married,
+         industry_y1_mode,
+         tage,
+         calyear,
+         prftb, 
+         wpfinwgt,
+         val,
+         profposi,
+         prof10k, 
+         thnetworth,
+         swave, spanel
+         ) 
+
+find_max_mode <- function(x) {
+  u <- unique(x)
+  tab <- tabulate(match(x, u))
+  max(u[tab == max(tab)]) 
+}
+
+## here we get their earnings in each calendar year as well as their most common industry in that year
+temp_earnings <- se_sample %>% 
+  group_by(ssuid_spanel_pnum, calyear) %>% 
+  summarize(tpearn_annual= sum(tpearn_inf),
+            mode_industry = find_max_mode(industry_fct)) %>% 
+  ungroup() %>% 
+  mutate(ln_tpearn_annual = log_transform(tpearn_annual))
+
+
+
+person_year <- left_join(temp_earnings, temp, by = c("ssuid_spanel_pnum", "calyear")) %>% 
+  mutate(industry_experience = case_when(mode_industry == industry_y1_mode ~ 1,
+                                         .default = 0),
+         ln_thnetworth = log_transform(thnetworth))
+
+```
+
+
+```{r setting variable labels for person_year df}
+person_year <- person_year %>%
+  mutate(married = factor(married, levels = c(0,1), labels = c( "Not Married", "Married")),
+         parent_std = factor(parent_std, levels = c(0,1), labels = c("Not Parent", "Parent")),
+         mode_industry = fct_infreq(mode_industry)) %>% 
+  set_variable_labels(
+    ln_tpearn_annual = "Log earnings (tpearn)",
+    sex_fct = "Sex",
+    y1_status_v2 = "Initial Status",
+    race_eth_fct_cpsd = "Race",
+    educ_fct = "Education",
+    unemp_f12_6 = "Unemployed 6-months",
+    unemp_f12_3 = "Unemployed 3-months",
+    mode_industry = "Industry",
+    married = "Marital Status",
+    tage = "Age",
+    immig_fct = "Nativity",
+    calyear = "Year",
+    profposi = "Positive Profit",
+    prof10k = "Profit >=10k",
+    industry_experience = "Prior Industry Experience",
+    ln_thnetworth = "Log HH Net Worth",
+  )
+    
+```
+
+```{r}
+haven::write_dta(person_year, "person_year.dta")
+```
+   
+Education, 
+industry categories, 
+year of survey, 
+immigrant status, 
+marital status,
+parental status
+race/eth
+sex
+industry_experience 
+age
+
+## Table 1 Descriptive Table of key variables
+
+```{r}
+data_overview <- datasummary(
+  tpearn_annual + sex_fct + race_eth_fct_cpsd + educ_fct + immig_fct + married + parent_std + tage + thnetworth + factor(calyear) + factor(industry_experience) ~ N + Percent()+ Mean + SD + Median,
+  data = person_year,
+   fmt = fmt_sprintf("%.0f"),
+    title = 'Data Overview Table',
+    output = "huxtable"
+)
+
+data_overview
+addWorksheet(wb, "Data Overview")
+writeData(wb, data_overview, sheet = "Data Overview")
+
+  
+```
+
+## Correlation Table
+```{r}
+library(ggcorrplot)
+
+cor_df <- person_year %>% 
+  select(tpearn_annual, unemp_f12_6, sex_fct, race_eth_fct_cpsd, educ_fct, immig_fct, married, parent_std, tage, calyear, industry_experience)
+cor_matrix <- model.matrix(~0+., data=cor_df) %>% 
+  cor() %>% 
+  rstatix::pull_lower_triangle()
+
+print(cor_matrix)
+
+addWorksheet(wb, "Correlation Table")
+writeData(wb, cor_matrix, sheet = "Correlation Table")
+
+```
+
+## Earnings by parental status
+```{r}
+monthly <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_monthly_combined.rds")
+
+monthly <- monthly %>% mutate(
+  ssuid = as.character.integer64(ssuid),
+  ssuid_spanel_pnum = paste0(
+        ssuid,
+        as.character(spanel),
+        as.character(pnum)
+        )
+  )
+
+yearly <- monthly %>% 
+    filter(monthcode %% 12 == 0) %>% 
+    mutate(
+      num_kids = rowSums(!is.na(across(matches("^rpnchild"))))
+    )  
+
+  
+
+parent_stats <- left_join(person_year, yearly, by = c("ssuid_spanel_pnum", "swave", "spanel")) 
+
+```
+
+### Table 8 Parental earnings
+```{r}
+tbl8_status_nokids <- parent_stats %>%
+  filter()
+  select(avg_earnings, avg_prftb, y1_status_v2) %>% 
+  tbl_summary(by = y1_status_v2,
+             statistic = list(
+    all_continuous() ~ c("{mean} ({sd})", "{median}")
+  ),
+  type = all_continuous() ~ "continuous2"
+) %>% 
+  add_overall()
+
+tbl8_status <- parent_stats %>%
+  filter(num_kids==0 | num_kids == 1) %>% 
+  mutate(num_kids_fct = factor(num_kids, labels = c("No children", "1 Child"))) %>% 
+  select(y1_status_v2, tpearn_annual, num_kids_fct) %>% 
+  tbl_strata(
+    strata = num_kids_fct,
+    .tbl_fun = ~ .x %>%
+      tbl_summary(
+        by = y1_status_v2,
+        statistic = list(
+          all_continuous() ~ c("{mean} ({sd})", "{median}")
+        ),
+        type = all_continuous() ~ "continuous2"
+      ) %>%
+      add_overall()
+  ) %>% 
+  as_hux_table()
+
+
+tbl8_status
+addWorksheet(wb, "Table 8 Status")
+writeData(wb, tbl8_status, sheet = "Table 8 Status")
+
+
+
+
+tbl8_unemp <- parent_stats %>%
+  filter(num_kids==0 | num_kids == 1) %>% 
+  mutate(num_kids_fct = factor(num_kids, labels = c("No children", "1 Child"))) %>% 
+  select(unemp_f12_6, tpearn_annual, num_kids_fct) %>% 
+  tbl_strata(
+    strata = num_kids_fct,
+    .tbl_fun = ~ .x %>%
+      tbl_summary(
+        by = unemp_f12_6,
+        statistic = list(
+          all_continuous() ~ c("{mean} ({sd})", "{median}")
+        ),
+        type = all_continuous() ~ "continuous2"
+      ) %>%
+      add_overall()
+  ) %>% 
+  as_hux_table()
+
+
+tbl8_unemp 
+addWorksheet(wb, "Table 8 Unemp")
+writeData(wb, tbl8_unemp, sheet = "Table 8 Unemp")
+
+
+```
+
+# Regressions for earnings
+
+## Table 4 Earnings Unemployment models 
+```{r unemployment earnings models }
+person_year <- person_year %>% 
+  mutate(age_sq = tage^2,
+         industry_numeric = as.numeric(mode_industry)) %>% 
+  set_variable_labels(age_sq = "Age Squared",
+                      industry_numeric = "Industry") 
+
+
+library(plm)
+unemp_m1_plm <- plm(ln_tpearn_annual ~ unemp_f12_6, 
+                    data = person_year, 
+                    index = c("ssuid_spanel_pnum", "calyear"),
+                    model = "random",
+                    random.method = "walhus")
+
+
+unemp_m2_plm <- plm(ln_tpearn_annual ~ unemp_f12_6  + 
+                   race_eth_fct_cpsd + 
+                   educ_fct + 
+                   tage + 
+                   age_sq + 
+                   sex_fct + 
+                   immig_fct + 
+                   married + 
+                   parent_std +
+                   calyear , data = person_year,
+                   index = c("ssuid_spanel_pnum", "calyear"), 
+                   model = "random",random.method = "walhus")
+
+
+
+## checking that using the walhus from above produces same estimates. IF we don't use walhus above it won't estimate the model for the one-variable model 
+# unemp_m2_plmtest <- plm(ln_tpearn_annual ~ unemp_f12_6  + 
+#                    race_eth_fct_cpsd + 
+#                    educ_fct + 
+#                    tage + 
+#                    age_sq + 
+#                    sex_fct + 
+#                    immig_fct + 
+#                    married + 
+#                    parent_std +
+#                    calyear + 
+#                    mode_industry , data = person_year,
+#                    index = c("ssuid_spanel_pnum", "calyear"), 
+#                    model = "random")
+
+
+unemp_m3_plm <- update(unemp_m2_plm, . ~. + industry_numeric)
+unemp_m4_plm <- update(unemp_m3_plm, . ~ . + industry_experience)
+unemp_m5_plm <- update(unemp_m4_plm, . ~ . + industry_experience*unemp_f12_6)
+unemp_m6_plm <- update(unemp_m4_plm, . ~ . + ln_thnetworth) 
+unemp_m7_plm <- update(unemp_m2_plm, . ~ . + industry_experience)
+unemp_m8_plm <- update(unemp_m2_plm, . ~ . + mode_industry)
+unemp_m9_plm <- update(unemp_m8_plm, . ~ . + industry_experience)
+unemp_m10_plm <- update(unemp_m9_plm, . ~. + ln_thnetworth)
+
+
+```
+
+
+
+Setting up renaming conventions for subsequent model tables 
+```{r}
+mapping <- c(
+  # Main Variables of Interest
+  "unemp_f12_6Unemployed" = "Unemployed 6+",
+  "unemp_f12_3Unemployed" = "Unemployed 3+",
+  "y1_status_v2Self-Employed" = "Self-Employed",
+  "y1_status_v2Unemployed" = "Unemployed",
+  "race_eth_fct_cpsdNon_white" = "Non-White",
+  "industry_experience" = "Prior Industry Experience: Yes",
+  "unemp_f12_6Unemployed:industry_experience" = "Unemployed*Prior Industry Experience",
+  "unemp_f12_3Unemployed:industry_experience" = "Unemployed*Prior Industry Experience",
+  "y1_status_v2Self-Employed:industry_experience" = "Self-Employed*Prior Industry Experience",
+  "y1_status_v2Unemployed:industry_experience" = "Unemployed*Prior Industry Experience",
+  
+  # Demographic Variables
+  "sex_fctFemale" = "Female",
+  "tage" = "Age", 
+  "age_sq" = "Age sq",
+  "immig_fctImmigrant" = "Immigrant",
+  "marriedMarried" = "Married",
+  "parent_stdParent" = "Parent",
+  
+  # Education 
+  "educ_fctSome College or Assoc" = "Some College or Assoc",
+  "educ_fct4-year Degree or More" = "4-Year Degree +",
+  
+  # Year Effects
+  "calyear2015" = "2015",
+  "calyear2016" = "2016",
+  "calyear2018" = "2018",
+  "calyear2019" = "2019",
+  "calyear2020" = "2020",
+  "calyear2021" = "2021",
+  "calyear2022" = "2022",
+  "calyear2023" = "2023",
+  
+  # Industry Effects
+  "industry_numeric" = "Industry" ,
+  "mode_industryConstruction" = "Construction",
+  "mode_industryOther Services, Except Public Administration" = "Other Services",
+  "mode_industryEducational Services, and Health Care and Social Assistance" = "Educ. & Health",
+  "mode_industryFinance and Insurance, and Real Estate, and Rental and Leasing" = "Finance & Real Estate",
+  "mode_industryRetail Trade" = "Retail Trade",
+  "mode_industryArts, Entertainment, and Recreation, and Accommodation and Food Services" = "Arts & Food Services",
+  "mode_industryForestry, Farming, Fishing, Hunting, & Mining" = "Forestry, Farming, & Mining",
+  "mode_industryTransportation, Warehousing & Utilities" = "Transport. & Utilities",
+  "mode_industryManufacturing" = "Manufacturing",
+  "mode_industryWholesale Trade" = "Wholesale Trade",
+  "mode_industryInformation" = "Information",
+  "mode_industryPublic Administration" = "Public Administration",
+
+  
+  "ln_thnetworth" = "Household Net Worth (log)",
+  "(Intercept)" = "(Intercept)",
+  "SD (Intercept ssuid_spanel_pnum)" = "SD (Intercept Individual ID)",
+  "SD (Intercept shhadid)" = "SD (Intercept Household)",
+  "SD (Observations)" = "SD (Observations)"
+  
+)
+```
+
+```{r}
+# collect_coef_names <- function(models) {
+#   sort(unique(unlist(lapply(models, function(m){
+#     ch <- tryCatch(names(coef(m)), error = function(e) NULL)
+#     if (is.null(ch)) {
+#       td <- tryCatch(tidy(m)$term, error = function(e) NULL)
+#       ch <- if (!is.null(td)) as.character(td) else character(0)
+#     }
+#     ch
+#   }))))
+# }
+# 
+# collect_coef_names(list(unemp_m1_plm, unemp_m2_plm))
+
+```
+
+```{r}
+library(broom)  
+
+# Helper to build coef_map with custom labels & order
+build_coef_map_ordered <- function(models, custom, order) {
+  # Get all coefficient names across models
+  all_coefs <- unique(unlist(lapply(models, function(m) {
+    ch <- tryCatch(names(coef(m)), error = function(e) NULL)
+    if (is.null(ch)) {
+      td <- tryCatch(tidy(m)$term, error = function(e) NULL)
+      ch <- if (!is.null(td)) as.character(td) else character(0)
+    }
+    ch
+  })))
+  
+  # Default map: each coef name maps to itself
+  map <- setNames(all_coefs, all_coefs)
+  
+  # Overwrite custom names
+  map[names(custom)] <- custom
+  
+  # Reorder: put variables listed in 'order' first, then the rest
+  ordered_names <- c(order, setdiff(names(map), order))
+  map[ordered_names]
+}
+
+desired_order <- c( 
+  # Main Variables of Interest
+  "unemp_f12_6Unemployed",
+  "unemp_f12_3Unemployed",
+  "y1_status_v2Self-Employed",
+  "y1_status_v2Unemployed",
+  "race_eth_fct_cpsdNon_white" ,
+  "industry_experience",
+  "unemp_f12_6Unemployed:industry_experience",
+  "unemp_f12_3Unemployed:industry_experience",
+  "y1_status_v2Self-Employed:industry_experience",
+  "y1_status_v2Unemployed:industry_experience",
+  
+  # Demographic Variables
+  "sex_fctFemale",
+  "tage" , 
+  "age_sq",
+  "immig_fctImmigrant",
+  "marriedMarried",
+  "parent_stdParent",
+  
+  # Education 
+  "educ_fctSome College or Assoc",
+  "educ_fct4-year Degree or More",
+  
+  "ln_thnetworth",
+  
+  # Industry Effects
+  "industry_numeric",
+  
+  "mode_industryConstruction",
+  "mode_industryOther Services, Except Public Administration",
+  "mode_industryEducational Services, and Health Care and Social Assistance",
+  "mode_industryFinance and Insurance, and Real Estate, and Rental and Leasing",
+  "mode_industryRetail Trade",
+  "mode_industryArts, Entertainment, and Recreation, and Accommodation and Food Services",
+  "mode_industryForestry, Farming, Fishing, Hunting, & Mining",
+  "mode_industryTransportation, Warehousing & Utilities",
+  "mode_industryManufacturing",
+  "mode_industryWholesale Trade",
+  "mode_industryInformation",
+  "mode_industryPublic Administration",
+
+  
+  
+  
+    # Year Effects
+  "calyear2015",
+  "calyear2016",
+  "calyear2018",
+  "calyear2019",
+  "calyear2020",
+  "calyear2021",
+  "calyear2022",
+  "calyear2023",
+  
+  
+  "SD (Intercept ssuid_spanel_pnum)" ,
+  "SD (Intercept shhadid)",
+  "SD (Observations)"
+  
+  
+  )
+```
+
+
+```{r}
+coef_map <- build_coef_map_ordered(list(unemp_m1_plm,
+                                           unemp_m2_plm, 
+                                           unemp_m3_plm, 
+                                           unemp_m4_plm,
+                                           unemp_m5_plm, 
+                                           unemp_m6_plm,
+                                           unemp_m7_plm, 
+                                           unemp_m8_plm,
+                                           unemp_m9_plm,
+                                           unemp_m10_plm), mapping, desired_order)
+```
+
+
+Adding reference category rows
+```{r}
+rows_to_add <- tribble(
+  ~term, ~m1, ~m2, ~m3, ~m4, ~m5, ~m6, ~m7, ~m8, ~m9, ~m10,
+  "Employed (Reference)", "", "", "", "", "", "", "", "", "", "", #1
+  "White (Reference)", "", "", "", "", "", "", "", "", "", "", #3
+  "Prior Industry Experience: No (Reference)", "", "", "", "", "", "", "", "", "", "", #5
+  "Male (Reference)", "", "", "", "", "", "", "", "", "", "", # 8
+  "US Born (Reference)", "", "", "", "", "", "", "", "", "", "", #12
+  "Not Married (Reference)", "", "", "", "", "", "", "", "", "", "", #14
+  "Not Parent(Reference)", "", "", "", "", "", "", "", "", "", "", #16
+  "High School or Less (Reference)", "", "", "", "", "", "", "", "", "", "", # 18
+  "Professional, Scientific, and Management, and Administrative, and Waste Management Services (Reference)", "", "", "", "", "", "", "", "", "", "", 
+  "Calendar Year: 2014 (Reference)", "", "", "", "", "", "", "", "", "", "" 
+  )
+attr(rows_to_add, 'position') <- c(1, 3, 5, 8, 12, 14, 16, 18, 23, 36)
+```
+
+
+```{r}
+tbl4_unemp_models_rse <- modelsummary(list(unemp_m1_plm,
+                                           unemp_m2_plm, 
+                                           unemp_m3_plm, 
+                                           unemp_m4_plm,
+                                           unemp_m5_plm, 
+                                           unemp_m6_plm,
+                                           unemp_m7_plm, 
+                                           unemp_m8_plm,
+                                           unemp_m9_plm,
+                                           unemp_m10_plm), 
+                                      coef_map = coef_map,
+                                      add_rows = rows_to_add,
+                                      estimate = "{estimate} ({std.error}){stars}",
+                                      vcov = "robust",
+                                      statistic = NULL,
+                                      title = "Table 4 Robust SE Unemployment predicting Log Annual Earnings", 
+                                      output = "huxtable",
+                                       notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
+
+tbl4_unemp_models_rse
+```
+
+
+```{r}
+addWorksheet(wb, "Tbl 4 Reg Unemp Earn RSE")
+writeData(wb, tbl4_unemp_models_rse, sheet = "Tbl 4 Reg Unemp Earn RSE")
+```
+
+
+
+
+
+## Table 5 Earnings Y1_Status models 
+```{r unemployment earnings models }
+
+
+library(plm)
+status_m1_plm <- plm(ln_tpearn_annual ~ y1_status_v2,
+                    data = person_year, 
+                    index = c("ssuid_spanel_pnum", "calyear"),
+                    model = "random",
+                    random.method = "walhus")
+
+
+status_m2_plm <- plm(ln_tpearn_annual ~ y1_status_v2  + 
+                   race_eth_fct_cpsd + 
+                   educ_fct + 
+                   tage + 
+                   age_sq + 
+                   sex_fct + 
+                   immig_fct + 
+                   married + 
+                   parent_std +
+                   calyear  , data = person_year,
+                   index = c("ssuid_spanel_pnum", "calyear"), 
+                   model = "random",random.method = "walhus")
+
+
+status_m3_plm <- update(status_m2_plm, . ~ . + industry_numeric)
+status_m4_plm <- update(status_m3_plm, . ~ . + industry_experience)
+status_m5_plm <- update(status_m4_plm, . ~ . + industry_experience*y1_status_v2)
+status_m6_plm <- update(status_m4_plm, . ~ . + ln_thnetworth)
+status_m7_plm <- update(status_m2_plm, . ~ . + industry_experience)
+status_m8_plm <- update(status_m2_plm, . ~ . + mode_industry)
+status_m9_plm <- update(status_m8_plm, . ~ . + industry_experience)
+status_m10_plm <- update(status_m9_plm, . ~ . + ln_thnetworth)
+
+```
+
+```{r}
+coef_map_status <- build_coef_map_ordered(list(status_m1_plm,
+                                           status_m2_plm, 
+                                           status_m3_plm, 
+                                           status_m4_plm,
+                                           status_m5_plm, 
+                                           status_m6_plm,
+                                           status_m7_plm, 
+                                           status_m8_plm,
+                                           status_m9_plm,
+                                           status_m10_plm), mapping, desired_order)
+```
+
+
+Adding reference category rows
+```{r}
+rows_to_add_status <- tribble(
+  ~term, ~m1, ~m2, ~m3, ~m4, ~m5, ~m6, ~m7, ~m8, ~m9, ~m10,
+  "Wage & Salary (Reference)", "", "", "", "", "", "", "", "", "", "", #1
+  "White (Reference)", "", "", "", "", "", "", "", "", "", "", #3
+  "Prior Industry Experience: No (Reference)", "", "", "", "", "", "", "", "", "", "", #5
+  "Male (Reference)", "", "", "", "", "", "", "", "", "", "", # 8
+  "US Born (Reference)", "", "", "", "", "", "", "", "", "", "", #12
+  "Not Married (Reference)", "", "", "", "", "", "", "", "", "", "", #14
+  "Not Parent(Reference)", "", "", "", "", "", "", "", "", "", "", #16
+  "High School or Less (Reference)", "", "", "", "", "", "", "", "", "", "", # 18
+  "Professional, Scientific, and Management, and Administrative, and Waste Management Services (Reference)", "", "", "", "", "", "", "", "", "", "", 
+  "Calendar Year: 2014 (Reference)", "", "", "", "", "", "", "", "", "", "" 
+  )
+attr(rows_to_add_status, 'position') <- c(1, 4, 6, 10, 14, 16, 18, 20, 25, 38)
+```
+
+
+```{r}
+tbl5_status_models_rse <- modelsummary(list(status_m1_plm,
+                                           status_m2_plm, 
+                                           status_m3_plm, 
+                                           status_m4_plm,
+                                           status_m5_plm, 
+                                           status_m6_plm,
+                                           status_m7_plm,
+                                           status_m8_plm,
+                                           status_m9_plm,
+                                           status_m10_plm), 
+                                      coef_map = coef_map_status,
+                                      add_rows = rows_to_add_status,
+                                      estimate = "{estimate} ({std.error}){stars}",
+                                      vcov = "robust",
+                                      statistic = NULL,
+                                      title = "Table 5 Robust SE Y1 Status predicting Log Annual Earnings", 
+                                      output = "huxtable",
+                                      notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
+
+tbl5_status_models_rse
+```
+
+
+```{r}
+addWorksheet(wb, "Tbl 5 Reg Status Earn RSE")
+writeData(wb, tbl5_status_models_rse, sheet = "Tbl 5 Reg Status Earn RSE")
+```
+
+
+# Robustness checks
+
+## Table 6 3-month unemployment 
+```{r}
+unemp3_m1_plm <- plm(ln_tpearn_annual ~ unemp_f12_3, 
+                    data = person_year, 
+                    index = c("ssuid_spanel_pnum", "calyear"),
+                    model = "random",
+                    random.method = "walhus")
+
+
+unemp3_m2_plm <- plm(ln_tpearn_annual ~ unemp_f12_3  + 
+                   race_eth_fct_cpsd + 
+                   educ_fct + 
+                   tage + 
+                   age_sq + 
+                   sex_fct + 
+                   immig_fct + 
+                   married + 
+                   parent_std +
+                   calyear , data = person_year,
+                   index = c("ssuid_spanel_pnum", "calyear"), 
+                   model = "random",random.method = "walhus")
+
+
+
+unemp3_m3_plm <- update(unemp3_m2_plm, . ~. + industry_numeric)
+unemp3_m4_plm <- update(unemp3_m3_plm, . ~ . + industry_experience)
+unemp3_m5_plm <- update(unemp3_m4_plm, . ~ . + industry_experience*unemp_f12_3)
+unemp3_m6_plm <- update(unemp3_m4_plm, . ~ . + ln_thnetworth)
+unemp3_m7_plm <- update(unemp_m7_plm, . ~ .  -unemp_f12_6 + unemp_f12_3 )
+unemp3_m8_plm <- update(unemp_m8_plm, . ~ .  -unemp_f12_6 + unemp_f12_3 )
+unemp3_m9_plm <- update(unemp_m9_plm, . ~ .  -unemp_f12_6 + unemp_f12_3 )
+unemp3_m10_plm <- update(unemp_m10_plm, . ~ .  -unemp_f12_6 + unemp_f12_3 )
+
+
+
+
+```
+
+
+```{r}
+coef_map_unemp3 <- build_coef_map_ordered(list(unemp3_m1_plm,
+                                           unemp3_m2_plm, 
+                                           unemp3_m3_plm, 
+                                           unemp3_m4_plm,
+                                           unemp3_m5_plm, 
+                                           unemp3_m6_plm,
+                                           unemp3_m7_plm, 
+                                           unemp3_m8_plm,
+                                           unemp3_m9_plm,
+                                           unemp3_m10_plm), mapping, desired_order)
+```
+
+
+```{r}
+tbl6_unemp_models_rse <- modelsummary(list(unemp3_m1_plm,
+                                           unemp3_m2_plm, 
+                                           unemp3_m3_plm, 
+                                           unemp3_m4_plm,
+                                           unemp3_m5_plm, 
+                                           unemp3_m6_plm,
+                                           unemp3_m7_plm, 
+                                           unemp3_m8_plm,
+                                           unemp3_m9_plm,
+                                           unemp3_m10_plm), 
+                                      coef_map = coef_map_unemp3,
+                                      add_rows = rows_to_add, # safe to use the original rows here 
+                                      estimate = "{estimate} ({std.error}){stars}",
+                                      vcov = "robust",
+                                      statistic = NULL,
+                                      title = "Table 6 Robust SE Unemployment 3+ predicting Log Annual Earnings", 
+                                      output = "huxtable",
+                                       notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
+
+tbl6_unemp_models_rse
+```
+
+
+```{r}
+addWorksheet(wb, "Tbl 6 Reg Unemp3 Earn RSE")
+writeData(wb, tbl6_unemp_models_rse, sheet = "Tbl 6 Reg Unemp3 Earn RSE")
+```
+
+
+
+
+## Table 7 Removing SE
+```{r}
+tbl7_df <- person_year %>% filter(y1_status_v2 != "Self-Employed")
+
+unemp_ws_m1 <- update(unemp_m1_plm, . ~., data = tbl7_df)
+unemp_ws_m2 <- update(unemp_m2_plm, . ~. , data = tbl7_df)
+unemp_ws_m3 <- update(unemp_m3_plm, . ~. , data = tbl7_df)
+unemp_ws_m4 <- update(unemp_m4_plm, . ~. , data = tbl7_df)
+unemp_ws_m5 <- update(unemp_m5_plm, . ~. , data = tbl7_df)
+unemp_ws_m6 <- update(unemp_m6_plm, . ~. , data = tbl7_df)
+unemp_ws_m7 <- update(unemp_m7_plm, . ~. , data = tbl7_df)
+unemp_ws_m8 <- update(unemp_m8_plm, . ~. , data = tbl7_df)
+unemp_ws_m9 <- update(unemp_m9_plm, . ~. , data = tbl7_df)
+unemp_ws_m10 <- update(unemp_m10_plm, . ~. , data = tbl7_df)
+
+
+tbl7_unemp_ws_models <- modelsummary(list(unemp_ws_m1,
+                                           unemp_ws_m2, 
+                                           unemp_ws_m3, 
+                                           unemp_ws_m4,
+                                           unemp_ws_m5, 
+                                           unemp_ws_m6,
+                                          unemp_ws_m7,
+                                          unemp_ws_m8,
+                                          unemp_ws_m9,
+                                          unemp_ws_m10), 
+                                     ## safe to use the original coef_map and rows_to add since only the sample has changed for this one
+                                      coef_map = coef_map,
+                                      add_rows = rows_to_add,
+                                      estimate = "{estimate} ({std.error}){stars}",
+                                      vcov = "robust",
+                                      statistic = NULL,
+                                      title = "Table 7 Unemployment predicting Log Annual Earnings", 
+                                      output = "huxtable",
+                                       notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
+
+tbl7_unemp_ws_models
+
+```
+
+```{r}
+addWorksheet(wb, "Tbl 7 Reg Unemp Earn WS")
+writeData(wb, tbl7_unemp_ws_models, sheet = "Tbl 7 Reg Unemp Earn WS")
+```
+
+
+
+
+
+## HLMS
+### unemp6
+```{r}
+## HLM Unemployment Models
+library(lme4)
+person_year <- person_year %>% 
+  mutate(calyear = as.factor(calyear))
+# Base model with random intercepts for Household and Person
+unemp_m1_hlm <- lmer(ln_tpearn_annual ~ unemp_f12_6 + (1 | shhadid) + (1 | ssuid_spanel_pnum), 
+                     data = person_year)
+
+# Full Control Model
+unemp_m2_hlm <- lmer(ln_tpearn_annual ~ unemp_f12_6  + 
+                    race_eth_fct_cpsd + 
+                    educ_fct + 
+                    tage + 
+                    age_sq + 
+                    sex_fct + 
+                    immig_fct + 
+                    married + 
+                    parent_std +
+                    calyear + 
+                    (1 | shhadid) + (1 | ssuid_spanel_pnum), 
+                    data = person_year)
+
+# Updating to match other model structure
+unemp_m3_hlm <- update(unemp_m2_hlm, . ~. + industry_numeric)
+unemp_m4_hlm <- update(unemp_m3_hlm, . ~ . + industry_experience)
+unemp_m5_hlm <- update(unemp_m4_hlm, . ~ . + industry_experience*unemp_f12_6)
+unemp_m6_hlm <- update(unemp_m4_hlm, . ~ . + ln_thnetworth) 
+unemp_m7_hlm <- update(unemp_m2_hlm, . ~ . + industry_experience)
+unemp_m8_hlm <- update(unemp_m2_hlm, . ~ . + mode_industry)
+unemp_m9_hlm <- update(unemp_m8_hlm, . ~ . + industry_experience)
+unemp_m10_hlm <- update(unemp_m9_hlm, . ~. + ln_thnetworth)
+
+# Generate Table
+tbl4_unemp_hlm <- modelsummary(list(unemp_m1_hlm,
+                                    unemp_m2_hlm, 
+                                    unemp_m3_hlm, 
+                                    unemp_m4_hlm,
+                                    unemp_m5_hlm, 
+                                    unemp_m6_hlm,
+                                    unemp_m7_hlm, 
+                                    unemp_m8_hlm,
+                                    unemp_m9_hlm,
+                                    unemp_m10_hlm), 
+                               coef_map = coef_map, 
+                               add_rows = rows_to_add, 
+                               estimate = "{estimate} ({std.error}){stars}",
+                               statistic = NULL,
+                               title = "Table 4 HLM: Unemployment predicting Log Annual Earnings", 
+                               output = "huxtable",
+                               notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
+
+# Add to workbook
+addWorksheet(wb, "Tbl 4 HLM Unemp")
+writeData(wb, tbl4_unemp_hlm, sheet = "Tbl 4 HLM Unemp")
+```
+
+### status
+```{r}
+## HLM Status Models
+status_m1_hlm <- lmer(ln_tpearn_annual ~ y1_status_v2 + (1 | shhadid) + (1 | ssuid_spanel_pnum),
+                     data = person_year)
+
+status_m2_hlm <- lmer(ln_tpearn_annual ~ y1_status_v2  + 
+                    race_eth_fct_cpsd + 
+                    educ_fct + 
+                    tage + 
+                    age_sq + 
+                    sex_fct + 
+                    immig_fct + 
+                    married + 
+                    parent_std +
+                    calyear +
+                    (1 | shhadid) + (1 | ssuid_spanel_pnum), 
+                    data = person_year)
+
+status_m3_hlm <- update(status_m2_hlm, . ~ . + industry_numeric)
+status_m4_hlm <- update(status_m3_hlm, . ~ . + industry_experience)
+status_m5_hlm <- update(status_m4_hlm, . ~ . + industry_experience*y1_status_v2)
+status_m6_hlm <- update(status_m4_hlm, . ~ . + ln_thnetworth)
+status_m7_hlm <- update(status_m2_hlm, . ~ . + industry_experience)
+status_m8_hlm <- update(status_m2_hlm, . ~ . + mode_industry)
+status_m9_hlm <- update(status_m8_hlm, . ~ . + industry_experience)
+status_m10_hlm <- update(status_m9_hlm, . ~ . + ln_thnetworth)
+
+# Generate Table
+tbl5_status_hlm <- modelsummary(list(status_m1_hlm,
+                                     status_m2_hlm, 
+                                     status_m3_hlm, 
+                                     status_m4_hlm,
+                                     status_m5_hlm, 
+                                     status_m6_hlm,
+                                     status_m7_hlm, 
+                                     status_m8_hlm,
+                                     status_m9_hlm,
+                                     status_m10_hlm), 
+                                coef_map = coef_map_status, 
+                                add_rows = rows_to_add_status,
+                                estimate = "{estimate} ({std.error}){stars}",
+                                statistic = NULL,
+                                title = "Table 5 HLM: Y1 Status predicting Log Annual Earnings", 
+                                output = "huxtable",
+                                notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
+
+# Add to workbook
+addWorksheet(wb, "Tbl 5 HLM Status")
+writeData(wb, tbl5_status_hlm, sheet = "Tbl 5 HLM Status")
+```
+
+
+### unemp3
+```{r}
+unemp3_m1_hlm <- lmer(ln_tpearn_annual ~ unemp_f12_3 + (1 | shhadid) + (1 | ssuid_spanel_pnum),
+                     data = person_year)
+
+
+unemp3_m2_hlm <- lmer(ln_tpearn_annual ~ unemp_f12_3  + 
+                    race_eth_fct_cpsd + 
+                    educ_fct + 
+                    tage + 
+                    age_sq + 
+                    sex_fct + 
+                    immig_fct + 
+                    married + 
+                    parent_std +
+                    calyear +
+                    (1 | shhadid) + (1 | ssuid_spanel_pnum), 
+                    data = person_year)
+
+
+unemp3_m3_hlm <- update(unemp3_m2_hlm, . ~. + industry_numeric)
+unemp3_m4_hlm <- update(unemp3_m3_hlm, . ~ . + industry_experience)
+unemp3_m5_hlm <- update(unemp3_m4_hlm, . ~ . + industry_experience*unemp_f12_3)
+unemp3_m6_hlm <- update(unemp3_m4_hlm, . ~ . + ln_thnetworth) 
+unemp3_m7_hlm <- update(unemp3_m2_hlm, . ~ . + industry_experience)
+unemp3_m8_hlm <- update(unemp3_m2_hlm, . ~ . + mode_industry)
+unemp3_m9_hlm <- update(unemp3_m8_hlm, . ~ . + industry_experience)
+unemp3_m10_hlm <- update(unemp3_m9_hlm, . ~. + ln_thnetworth)
+
+tbl6_unemp3_hlm <- modelsummary(list(unemp3_m1_hlm,
+                                    unemp3_m2_hlm, 
+                                    unemp3_m3_hlm, 
+                                    unemp3_m4_hlm,
+                                    unemp3_m5_hlm, 
+                                    unemp3_m6_hlm,
+                                    unemp3_m7_hlm, 
+                                    unemp3_m8_hlm,
+                                    unemp3_m9_hlm,
+                                    unemp3_m10_hlm), 
+                               coef_map = coef_map_unemp3, 
+                               add_rows = rows_to_add, 
+                               estimate = "{estimate} ({std.error}){stars}",
+                               statistic = NULL,
+                               title = "Table 6 HLM: 3-month Unemployment predicting Log Annual Earnings", 
+                               output = "huxtable",
+                               notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
+
+# Add to workbook
+addWorksheet(wb, "Tbl 6 HLM Unemp3")
+writeData(wb, tbl6_unemp3_hlm, sheet = "Tbl 6 HLM Unemp3")
+
+```
+
+
+```{r}
+output_name <- paste0("working_paper_outputs_10hrs_", format(Sys.Date(), "%Y%m%d"), ".xlsx")
+saveWorkbook(wb,output_name, overwrite = TRUE)
+```
+
+
+
+
