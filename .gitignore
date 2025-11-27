@@ -7,3 +7,6 @@
 *.dta 
 .Rproj.user
 scripts/_archive/
+*.xlsx
+*.csv
+*.rds
