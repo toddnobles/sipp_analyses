@@ -414,7 +414,7 @@ age
 
 ```{r}
 data_overview <- datasummary(
-  tpearn_annual + sex_fct + race_eth_fct_cpsd + educ_fct + immig_fct + married + parent_std + tage + thnetworth + factor(calyear) + factor(industry_experience) ~ N + Percent()+ Mean + SD + Median,
+  tpearn_annual + sex_fct + race_eth_fct_cpsd + educ_fct + immig_fct + married + parent_std + tage + thnetworth + factor(calyear) + factor(industry_experience) + unemp_f12_6 ~ N + Percent()+ Mean + SD + Median,
   data = person_year,
    fmt = fmt_sprintf("%.0f"),
     title = 'Data Overview Table',
@@ -433,7 +433,7 @@ writeData(wb, data_overview, sheet = "Data Overview")
 library(ggcorrplot)
 
 cor_df <- person_year %>% 
-  select(tpearn_annual, unemp_f12_6, sex_fct, race_eth_fct_cpsd, educ_fct, immig_fct, married, parent_std, tage, calyear, industry_experience)
+  select(tpearn_annual, unemp_f12_6, industry_experience,sex_fct, race_eth_fct_cpsd, educ_fct, immig_fct, married, parent_std, tage, calyear)
 cor_matrix <- model.matrix(~0+., data=cor_df) %>% 
   cor() %>% 
   rstatix::pull_lower_triangle()
@@ -1089,6 +1089,9 @@ vif_df <- map_dfr(objs, function(m) {
 })
 ```
 
+```{r}
+write_csv(vif_df, "vif_df.csv")
+```
 
 
 ## HLMS
@@ -1264,5 +1267,112 @@ saveWorkbook(wb,output_name, overwrite = TRUE)
 ```
 
 
+## Comparisons of coefs 
 
+
+
+```{r}
+# running a clogg test 
+# Extract coefficients and SEs
+# b_reduced <- coef(unemp_m2_plm)["unemp_f12_6Unemployed"]
+# b_full    <- coef(unemp_m3_plm)["unemp_f12_6Unemployed"]
+# 
+# se_reduced <- sqrt(diag(vcov(unemp_m2_plm)))["unemp_f12_6Unemployed"]
+# se_full    <- sqrt(diag(vcov(unemp_m3_plm)))["unemp_f12_6Unemployed"]
+# 
+# # Calculate the difference and its SE
+# beta_diff <- b_reduced - b_full
+# 
+# # Clogg et al. approximation for SE of difference
+# se_diff <- sqrt(se_reduced^2 - se_full^2) 
+# 
+# # Calculate Z-score and p-value
+# z_score <- beta_diff / se_diff
+# p_value <- 2 * (1 - pnorm(abs(z_score)))
+# 
+# p_value
+```
+
+```{r}
+# bootstrap approach 
+# library(boot)
+# library(plm)
+# 
+# # 1. Prepare a list of unique individuals for the cluster bootstrap
+# ids <- unique(person_year$ssuid_spanel_pnum)
+# 
+# # 2. Define the Bootstrap Function
+# boot_diff_fun <- function(data, indices) {
+#   
+#   # 'indices' provides the random sample of positions (e.g., 1, 1, 3, 5...)
+#   # We loop through these indices to rebuild the dataset
+#   
+#   # create a list to store the chunks of data
+#   boot_list <- vector("list", length(indices))
+#   
+#   # We iterate through the indices provided by boot()
+#   for (i in seq_along(indices)) {
+#     # Find the original ID corresponding to this index
+#     current_orig_id <- ids[indices[i]]
+#     
+#     # Extract that person's rows
+#     # Note: Using base R subsetting for speed inside a loop
+#     person_rows <- data[data$ssuid_spanel_pnum == current_orig_id, ]
+#     
+#     # CRITICAL STEP: Assign a NEW unique ID
+#     # We append the loop iterator 'i' to the ID to make it unique
+#     # e.g., "PersonA" becomes "PersonA_1", "PersonA_2"
+#     person_rows$new_id <- paste0(person_rows$ssuid_spanel_pnum, "_", i)
+#     
+#     boot_list[[i]] <- person_rows
+#   }
+#   
+#   # Combine into one dataframe
+#   d_boot <- bind_rows(boot_list)
+#   
+#   # Run the models on this new synthetic dataset
+#   # Note: We change the index to use 'new_id'
+#   tryCatch({
+#     m2 <- plm(ln_tpearn_annual ~ unemp_f12_6 + race_eth_fct_cpsd + 
+#               educ_fct + tage + age_sq + sex_fct + immig_fct + 
+#               married + parent_std + calyear, 
+#               data = d_boot, 
+#               index = c("new_id", "calyear"), # <--- Use the NEW ID
+#               model = "random", random.method = "walhus")
+#               
+#     m3 <- update(m2, . ~. + industry_numeric)
+#     
+#     # Return difference
+#     return(coef(m2)["unemp_f12_6"] - coef(m3)["unemp_f12_6"])
+#     
+#   }, error = function(e) {
+#     # If a model fails to converge (rare but possible), return NA
+#     return(NA) 
+#   })
+# }
+# 
+# # 3. Run the Bootstrap
+# # We strictly resample based on the number of unique clusters
+# set.seed(2025) # Reproducibility
+# 
+# results <- boot(data = person_year, 
+#                 statistic = boot_diff_fun, 
+#                 R = 200) # Start with 200 to test speed, aim for 1000
+# 
+# # 4. Check Results
+# print(results)
+# boot.ci(results, type = "perc")
+```
+
+```{r}
+# 
+# library(systemfit)
+# formula(unemp_m3_plm)
+# fits <- systemfit(list(m1 = unemp_m3_plm, m2 = unemp_m4_plm),
+#                   method = "SUR")
+# unemp_m3_plm <- update(unemp_m2_plm, . ~. + industry_numeric)
+# unemp_m4_plm <- update(unemp_m3_plm, . ~ . + industry_experience)
+# 
+
+```
 
