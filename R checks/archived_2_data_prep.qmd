@@ -332,7 +332,7 @@ long_wd %>%
  mutate(some_se = sum(employment_type ==2, na.rm = TRUE),
         ever_se = ifelse(some_se >0,1,0)) %>% 
  ungroup() %>% 
- group_by(ever_se) %>% distinct(ssuid_spanel_pnum, swave, monthcode) %>% count()
+ group_by(ever_se) %>% distinct(ssuid_spanel_pnum, swave) %>% count()
  
 ```
 
