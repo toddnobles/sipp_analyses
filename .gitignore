@@ -1,10 +1,13 @@
-# Ignore EVERYTHING
-*
-
-# Exceptions (Track these)
-!.gitignore
-!README.md
-!1_data_intake.R
-!2_data_prep_v2.qmd
-!3_working_paper_outputs_10hrs.qmd
-!3_working_paper_outputs.qmd
+*.log
+*.png
+*.docx
+*.rtf
+._*.do
+*.DS_Store
+*.dta 
+.Rproj.user
+scripts/*
+*.xlsx
+*.csv
+*.rds
+R checks/*
