@@ -21,6 +21,7 @@ library(bit64)
 library(tidylog)
 ```
 
+## Loading Data
 ```{r load data}
 monthly <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_monthly_combined.rds")
 joblevel_wide <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_joblevel_combined_wide.rds") 
@@ -48,6 +49,51 @@ joblevel_wide <- joblevel_wide %>% mutate(
       )
 )
 ```
+
+## Confirming that our individual ID variables work
+These align with the values on Page 14 of this guide https://www2.census.gov/programs-surveys/sipp/tech-documentation/methodology/2023_SIPP_Users_Guide_OCT24.pdf 
+
+```{r}
+monthly %>% group_by(spanel, swave) %>% distinct(ssuid_spanel_pnum) %>% count()
+
+monthly %>% group_by(spanel, swave) %>% distinct(ssuid, pnum) %>% count()
+
+joblevel_wide %>% group_by(spanel, swave) %>% distinct(ssuid_spanel_pnum) %>% count()
+```
+Confirming person-months counts match. The ones that should match here do. The 2014 waves all match exactly and then the later panel,waves don't show the exact numbers because the table we're comparing to does it by calendar yer
+```{r}
+monthly %>% group_by(swave,spanel) %>% count() %>% arrange(spanel)
+
+monthly %>% mutate(calyear = case_when(spanel == 2014 & swave == 1 ~ 2013, 
+                             spanel == 2014 & swave == 2 ~ 2014,
+                             spanel == 2014 & swave == 3 ~ 2015, 
+                             spanel == 2014 & swave == 4 ~ 2016, 
+                             
+                             spanel == 2018 & swave == 1 ~ 2017,
+                             spanel == 2018 & swave == 2 ~ 2018,
+                             spanel == 2018 & swave == 3 ~ 2019, 
+                             spanel == 2018 & swave == 4 ~ 2020, 
+                             
+                             spanel == 2019 & swave == 1 ~ 2018,
+                             
+                             spanel == 2020 & swave == 1 ~ 2019,
+                             spanel == 2020 & swave == 2 ~ 2020,
+                             spanel == 2020 & swave == 3 ~ 2021, 
+                             spanel == 2020 & swave == 4 ~ 2022,
+                             
+                             spanel == 2021 & swave == 1 ~ 2020,
+                             spanel == 2021 & swave == 2 ~ 2021,
+                             spanel == 2021 & swave == 3 ~ 2022,
+                             
+                             spanel == 2022 & swave == 1 ~ 2021,
+                             spanel == 2022 & swave == 2 ~ 2022,
+                             
+                             spanel == 2023 & swave == 1 ~ 2022,
+                             .default = NA)) %>% 
+  group_by(calyear) %>% count() 
+```
+
+
 
 Here we impute those instances where someone had all of the earnings and job information we care about but did not have a jobid value for that specific job. Because we conduct later analyses at the month level we don't particularly care if this job is just an uncoded version of ejobid 101 , 102, 103 for instance. Put differently, it's unclear from the data quality flags (ajb\_ vars) why these are "not in universe" for jobid, but the records contain all the information we'd want so we can impute some fictional jobids. We lose the ability to track if these are the same jobs they held before/after that month but we aren't concerned with that.
 
@@ -130,18 +176,24 @@ Next we combine the monthly level dataframe with the wide joblevel file.
 full_data_base <- tidylog::left_join(monthly, joblevel_wide, 
                                      by = c("ssuid_spanel_pnum", "spanel", "swave", "monthcode"))
 ```
+
+## Filter to working age population
 Then we filter to the working age population based on age at entry into dataset.
-
-
 ```{r filtering to working age sample by age at entry}
 full_data <- full_data_base %>% 
   group_by(ssuid_spanel_pnum) %>% 
   mutate(age_entry = min(tage),
          age_exit = max(tage)) %>% 
+  #         age_range = max(tage, na.rm = TRUE) - min(tage, na.rm = TRUE)) %>% 
+  # filter(age_entry >= 18 & age_entry <= 64) %>% 
+  # filter(age_range <= 5) %>% 
+  # ungroup()
   filter(age_entry >= 18 & age_entry <= 64) %>% ungroup()
 ```
 
-They changed the cooding of the unemployment flag (enjflag) between panels, so correcting for that here.
+
+## Standardizing unemploymnent flag 
+They changed the coding of the unemployment flag (enjflag) between panels, so correcting for that here.
 
 ```{r standardizing enjflag unemployment flag}
 # Unemployment flag is 0 = not unemployed and 1 = unemployed for 2014 panel. Then switches to 2 = not unemployed and 1 = unemployed for 2018 onwards. So recoding accordingly here 
@@ -151,6 +203,8 @@ full_data <- full_data %>%
                                      ifelse(enjflag == 0 | enjflag == 2, 0, NA)))) 
 ```
 
+
+## Dropping those who never worked
 Dropping those who never worked.
 
 ```{r removing those who never worked}
@@ -165,6 +219,8 @@ full_data <- full_data %>%
 
 ```
 
+
+## Mark main job 
 Now we need to mark their main job based on number of hours worked and keep only that row for the month.To do that we first do some renaming to make the reshaping easier. Then we reshape the job variables to long format. This is done once and then saved out as it's fairly computationally intensive.
 
 ```{r }
@@ -176,8 +232,7 @@ full_data <- full_data %>%
   ) 
 ```
 
-```{r reshaping joblevel to long, include = FALSE, eval = FALSE}
-# this reshaping only needs to run if the underlying data change. Due to time it takes to run I'm leaving it unread here 
+```{r reshaping joblevel to long}
 ptm <- proc.time()
 
 long <- full_data %>% 
@@ -195,6 +250,8 @@ saveRDS(long, "/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_long_2014_2023.rds")
 ```{r}
 long <- readRDS("/Volumes/ExtremeSSD/SIPP Data Files/rds/sipp_long_2014_2023.rds")
 ```
+
+## Creating employment flag 
 
 Here we create a long_wd working dataset and leave the above dataset as a ground truth for data checks. Next we turn to create flags for the type of employment in each month. 1 = WS, 2 = SE, 3 = Other, and 4 = unemployed.
 
@@ -228,7 +285,9 @@ long_wd %>%
   
 ```
 
+## Demographic variable consistency checks
 
+### Race/ethnicity
 In the Stata analysis I noticed some issues with the sipp data having inconsistent race/ethnicity variables. Here again, as in the Stata version, we correct for this and impute the first race/eth reported forwards.
 
 For example, 378 people changed their response to whether or not they were hispanic during the course of their survey participation. Likewise, 1747 people changed their response to their race question during the course of the survey.
@@ -317,6 +376,8 @@ long_wd <- long_wd %>%
   )
 ```
 
+
+### Parent variable inconsistencies
 Similar to the race/ethnicity inconsistent coding, the parent variable has instances where someone flips from being a parent to not being a parent (at a scale that seems unlikely in the US mortality context). Obviously someone could go from not being a parent to being a parent, but we have people go from being a parent to not being a parent, using either of the parent variables we have (tceb or epar_scrnr). Really we're most interested in if they have a dependent child but we use this measure and impute forwards if someone ever reported having a child.
 
 ```{r}
@@ -385,7 +446,10 @@ long_wd <- long_wd %>% inner_join(full_year_markers, by = c("ssuid_spanel_pnum",
 table(long_wd$months_in_data) # confirming we have full years for everyone at this point. 
 ```
 
-Next we need to establish their frist year statuses so that we can group people according to how they're entering into SE.
+
+## Creating first year status flags
+
+Next we need to establish their first year statuses so that we can group people according to how they're entering into SE.
 
 ```{r function to find max mode}
 # this function calculates the mode of a set of values and breaks ties by selecting the larger mode. So in our use case we're defaulting towards unemployment if someone had 4 months of SE, 4 months of WS and 4 months of Unemployment we would categorize them as unemployed in that first year based on this funciton. 
@@ -407,6 +471,8 @@ long_wd <- long_wd %>%
   left_join(mode_statuses, by = "ssuid_spanel_pnum") # this adds their mode status during the first year to all records for the individual. 
 ```
 
+
+## Creating consecutive months of unemployment measure 
 We're also interested in the consecutive months of unemployment, not just when unemployment is most common status.
 
 A note on the unemployment measures. Our unemployment flag is based on enjflag variable which captures if during the month they had any period of unemployment. However, this period does not have to be a full month of unemployment. We previously used this variable equaling 1 as a flag for unemployment. We still use this, but given our new rule that allows for people to keep months where employment hours were less than 15 we have months where someone can be flagged as unemployed and still report earnings. This is a better reflection of reality, but wanted to raise it as a minor change.
@@ -450,7 +516,7 @@ long_wd <- long_wd %>%
   left_join(consec_unemp_coll, by = "ssuid_spanel_pnum")
 ```
 
-We decided to exclud those in the military and those who were ever employed as "other" employment type. So I drop those here.
+We decided to exclude those in the military and those who were ever employed as "other" employment type. So I drop those here.
 
 ```{r filtering out those who started out as other employment as modal status}
 long_wd <- long_wd %>% 
@@ -460,6 +526,9 @@ long_wd <- long_wd %>%
   ungroup()
 
 ```
+
+
+## More generous unemployment measure y1_status_v2 
 
 Next we create our more generous measure of unemployment where even if unemployment wasn't the modal status during the first year, if they experienced a period of 3 months of unemployment we mark them as unemployed during their first year.
 
@@ -490,9 +559,11 @@ Dropping those we only have one year of data for as we won't be able to set thei
 ```{r dropping those we only have one year of data on}
 table(long_wd$months_in_data, useNA = "ifany")
 long_wd <- long_wd %>% 
-  filter(months_in_data > 12 ) ## really only == 12 here since we've already filterd to only thsoe with full years. We can do this without grouping because we have 
+  filter(months_in_data > 12 ) ## really only == 12 here since we've already filtered to only those with full years. We can do this without grouping because we have 
 ```
 
+
+## Quantifying self-employment and work status
 Here I create measures of the number of months people held each employment status and number of hours.
 
 ```{r}
@@ -577,41 +648,45 @@ long_wd %>% filter(ssuid_spanel_pnum == "1142851342014101") %>% flextable::flext
 long_wd %>% filter(ssuid_spanel_pnum == "292092406784182018101") %>% flextable::flextable()
 ```
 
-```{r filtering to our SE sample}
-# here we filter to those with employment at least every month post month 12. But we relax the restriction on the need to be full-time employed 
 
-# se_sample <- long_wd %>%
-#   left_join(se_quantified, by = "ssuid_spanel_pnum") %>%
-#   group_by(ssuid_spanel_pnum) %>%
-#   # getting rid of first year data as we don't need it for analysis since we already made the flags for their y1 statuses.
-#   filter(row_number() > 12) %>%
-#   ungroup() %>%
-#   # Here we want only those who were continuously employed from month 13 onwards.
-#   filter(months_employed_py1 == months_after_y1) %>%
-#   # at this point we are safe to use their mean hours worked during months employed to filter out people who were really only in side hustles
-#   filter(mean_hrs >= 15) %>% 
-#   # now we need to filter to those who were only employed in SE 
-#   filter(se_months_py1 == months_after_y1)
-
-
-
-se_sample <- long_wd %>% 
-  left_join(se_quantified, by = "ssuid_spanel_pnum") %>%
-  group_by(ssuid_spanel_pnum) %>% 
-  mutate(months_employed =sum(ifelse(employment_type != 4,1,0)) ) %>% 
-  filter(row_number() > 12) %>%
-  ungroup() %>% 
-  # Here we want only those who were continuously employed from month 13 onwards.
-  filter(months_employed_py1 == months_after_y1) %>%
-  # at this point we are safe to use their mean hours worked during months employed to filter out people who were really only in side hustles
-  filter(mean_hrs >= 15) %>% 
-  # now we need to filter to those who were only employed in SE 
-  filter(se_months_py1 == months_after_y1)
-
+## updating marriage variable 
+```{r}
+long_wd <- long_wd %>% 
+  mutate(
+    married = case_when (
+      ems %in% c(1,2) ~ 1,
+      ems %in% c(3,4,5,6) ~ 0,
+      .default = NA
+  ))
 ```
 
+## Finding their first year industry 
+```{r}
+find_mode <- function(x) {
+  # Remove missing values from the vector
+  x <- x[!is.na(x)]
+  
+  # If there are no non-missing values, return NA
+  if (length(x) == 0) {
+    return(NA)
+  }
+  
+  # Find the mode of the non-missing values
+  unique_x <- unique(x)
+  tabulated <- tabulate(match(x, unique_x))
+  mode_value <- unique_x[which.max(tabulated)]
+  
+  return(mode_value)
+}
 
-
+industry_y1 <- long_wd %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(min_swave = min(swave)) %>% 
+  ungroup() %>% 
+  filter(swave == min_swave) %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  summarize(industry_y1_mode = find_mode(industry_fct),.groups = "drop")
+```
 
 
 
@@ -758,6 +833,37 @@ saveWorkbook(wb, paste0("working_paper_outputs_prep",Sys.Date(),".xlsx"), overwr
 
 ```
 
+
+
+
+## Creating our SE Sample
+```{r filtering to our SE sample}
+# here we filter to those with employment at least every month post month 12. But we relax the restriction on the need to be full-time employed 
+
+
+se_sample <- long_wd %>% 
+  left_join(se_quantified, by = "ssuid_spanel_pnum") %>%
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(months_employed =sum(ifelse(employment_type != 4,1,0)) ) %>% 
+  filter(row_number() > 12) %>%
+  ungroup() %>% 
+  # Here we want only those who were continuously employed from month 13 onwards.
+  filter(months_employed_py1 == months_after_y1) %>%
+  # at this point we are safe to use their mean hours worked during months employed to filter out people who were really only in side hustles
+  filter(mean_hrs >= 15) %>% 
+  # now we need to filter to those who were only employed in SE 
+  filter(se_months_py1 == months_after_y1) %>% 
+  left_join(industry_y1, by = "ssuid_spanel_pnum") 
+
+```
+
+
+
+
+
+
+
+
 ```{r filtering to those with employment past month 12}
 se_sample.5 <- long_wd %>%
   left_join(se_quantified, by = "ssuid_spanel_pnum") %>%
@@ -770,8 +876,12 @@ se_sample.5 <- long_wd %>%
   # at this point we are safe to use their mean hours worked during months employed to filter out people who were really only in side hustles. We're safe to use it now because the mean_hrs calc ignores NA months so wouldn't be valid if we still had NA months post 12 but we don't based on the above filter of continuously employed. 
   filter(mean_hrs >= 15) %>% 
   # now we need to filter to those who were only employed in SE 
-  filter(se_months_py1/months_after_y1 >=.5)
+  filter(se_months_py1/months_after_y1 >=.5) %>% 
+  left_join(industry_y1, by = "ssuid_spanel_pnum")
 ```
+
+
+## Missingness checks 
 
 Examining missings in the key variables we care about
 
@@ -795,11 +905,10 @@ se_sample %>%
       employment_type,
       tpearn, msum, prftb, val,
       thval_home, tval_ast, tval_home, thval_ast, eawbmort, eawbgas, rhlthmth,
-      thcyincpov,thcyincpovt2 ) %>% 
+      thcyincpov,thcyincpovt2, thnetworth ) %>% 
   naniar::gg_miss_var()
 ```
 
-**Business value is the primary issue above. In an ideal dataset it shouldn't be possible to have business value missing if SE. For now we don't drop them since we're really just concerned with earnings, but need to discuss this.**
 
 ```{r cleanup missings}
 se_sample <- se_sample %>%
@@ -821,17 +930,11 @@ se_sample <- se_sample %>%
       mode_status,
       max_consec_unemp,
       employment_type, 
-      #val, 
       msum, 
       tpearn,
       prftb, 
-      eawbmort, 
-      eawbgas,
-      rhlthmth,
-      rfoods,
-      rfoodr,
-      thcyincpov,
-      thcyincpovt2
+      thnetworth,
+      married
     ),
     ~ !is.na(.)
   )) 
@@ -861,17 +964,11 @@ se_sample.5 <- se_sample.5 %>%
       mode_status,
       max_consec_unemp,
       employment_type, 
-      #val, 
       msum, 
       tpearn,
       prftb, 
-      eawbmort, 
-      eawbgas,
-      rhlthmth,
-      rfoodr,
-      rfoods,
-      thcyincpov,
-      thcyincpovt2
+      thnetworth, 
+      married
     ),
     ~ !is.na(.)
   )) 
@@ -921,7 +1018,7 @@ How big of an issue are these various problems?
 
 Well we have a total of `r se_sample  %>% distinct(ssuid_spanel_pnum) %>% count()` people in the dataset.
 
-The chunk below calculates the number of poeople who at some point report a month with work hours but report no income of any sort during that month.
+The chunk below calculates the number of people who at some point report a month with work hours but report no income of any sort during that month.
 
 ```{r, message = FALSE }
 se_sample %>% filter(mwkhrs > 0 & tpearn == 0 & msum == 0 & tptotinc == 0 & prftb == 0 ) %>% distinct(ssuid_spanel_pnum) %>% count()

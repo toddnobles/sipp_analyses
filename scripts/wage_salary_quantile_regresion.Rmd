@@ -1,0 +1,375 @@
+---
+title: "wage_salary_quantile_regression"
+author: "Todd Nobles"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lqmm)
+library(lme4)
+library(kableExtra)
+library(haven)
+library(tidyverse)
+options(width = 110)
+options(scipen = 9)
+```
+
+Reading in the data from Stata. At this point we've collapsed down to annual earnings, filtered out the first year for everyone and then 
+```{r}
+# df <- read_dta("/Users/toddnobles/Documents/sipp_analyses/earnings_models.dta")
+df2 <- read_dta("/Users/toddnobles/Documents/sipp_analyses/earnings_models_v2.dta")
+```
+
+
+```{r}
+earnings <- df2 %>%
+  mutate(across(c(sex, immigrant, educ_collapsed, race_collapsed,
+                 y1_status_v2, parent, mari_status_collapsed, calyear), 
+                as_factor, 
+                .names = "{col}_fct"),
+         ssuid_spanel_pnum_id_fct = factor(ssuid_spanel_pnum_id),
+         y1_status_v2_fct = fct_drop(y1_status_v2_fct))
+earnings <- earnings %>% 
+  mutate(y1_status_v2_fct = fct_recode(y1_status_v2_fct, 
+                                       "remainedW&S" = "W&S", 
+                                       "formerlySE" = "SE"),
+         parent_fct = fct_relevel(parent_fct, "Parent"),
+         mari_status_collapsed_fct = fct_relevel(mari_status_collapsed_fct, "Married"))
+         
+
+```
+
+
+```{r}
+# 1  "Forestry, Farming, Fishing and Hunting, and Mining") ///
+# 2  Construction) ///
+# 3 Manufacturing) ///
+# 4  "Wholesale Trade") ///
+# 5  "Retail Trade") ///
+# 6 "Transportation and Warehousing, and Utilities") ///
+# 7  Information) ///
+# 8  "Finance and Insurance,  and Real Estate and Rental and Leasing") ///
+# 9  "Professional, Scientific, and Management, and  Administrative and Waste Management Services") ///
+# 10  "Educational Services, and Health Care and Social Assistance") ///
+# 11  "Arts, Entertainment, and Recreation, and  Accommodation and Food Services")
+# 12  "Other Services (except Public Administration)") ///
+# 13  "Public Administration") ///
+# 15 Military), gen(industry2)
+earnings <- earnings %>% 
+  mutate(industry_fct = factor(mode_industry_year, 
+                               labels = c("FFHM", 
+                                          "Construction", 
+                                          "Manufacturing",
+                                          "Wholesale Trade",
+                                          "Retail Trade", 
+                                          "Transporation, Warehousing, Utilities",
+                                          "Information",
+                                          "FIRE",
+                                          "Professional, Scientific, Managementing Services",
+                                          "Educational and Healthcare Services",
+                                          "Arts, Entertainment, Accomodation and Fodd Services",
+                                          "Other Services (except Public Administration)",
+                                          "Public Administration",
+                                          "Military"))) %>% 
+  mutate(industry_fct = fct_relevel(industry_fct, "Educational and Healthcare Services"))
+```
+
+
+Below is a plot of the ln_tpearn distributions for our two groups. 
+```{r}
+earnings %>% ggplot() + geom_density(aes(x = ln_tpearn, color = y1_status_v2_fct))
+```
+
+
+Same plot but restricting the distribution a bit. 
+```{r}
+earnings %>% 
+  filter(ln_tpearn > 1) %>% 
+  ggplot() + geom_density(aes(x = ln_tpearn, color = y1_status_v2_fct))
+
+```
+
+
+
+
+Descriptive table of means/medians 
+```{r}
+earnings %>% 
+  group_by(y1_status_v2_fct) %>% 
+  summarize(person_years = n(), people = n_distinct(ssuid_spanel_pnum_id), mean = mean(ln_tpearn), sd = sd(ln_tpearn), p25 = quantile(ln_tpearn,.25), p50 = quantile(ln_tpearn,.5), p75 = quantile(ln_tpearn,.75))
+```
+
+
+What about in our raw values? 
+```{r}
+earnings %>% ggplot() + geom_density(aes(x = tpearn, color = y1_status_v2_fct))
+
+```
+
+
+Descriptives of raw values just for reference. 
+```{r}
+overall <- earnings %>% 
+  group_by(y1_status_v2_fct) %>% 
+  summarize(person_years = n(), people = n_distinct(ssuid_spanel_pnum_id), mean = mean(tpearn), sd = sd(tpearn), p25 = quantile(tpearn,.25), p50 = quantile(tpearn,.5), p75 = quantile(tpearn,.75))
+```
+
+
+
+
+```{r}
+earnings %>% count(sex_fct)
+```
+
+```{r}
+average_earnings <- earnings %>%
+  group_by(ssuid_spanel_pnum_id) %>%
+  summarize(
+    people = n_distinct(ssuid_spanel_pnum_id),
+    y1_status_v2_fct = first(y1_status_v2_fct),
+    race_collapsed_fct = first(race_collapsed_fct),
+    sex_fct = first(sex_fct),
+    educ_collapsed_fct = first(educ_collapsed_fct),
+    # Categorize as White or Nonwhite
+    avg_earnings_ln = mean(ln_tpearn),
+    avg_earnings = mean(tpearn)
+  ) %>% ungroup()
+
+
+```
+
+
+```{r}
+comparison_race <- average_earnings  %>% 
+  group_by(y1_status_v2_fct, race_collapsed_fct) %>% 
+  summarize(people = n_distinct(ssuid_spanel_pnum_id),
+            mean = mean(avg_earnings),
+            mean_ln = mean(avg_earnings_ln),
+            p25 = quantile(avg_earnings,.25), 
+            p50 = quantile(avg_earnings,.5), 
+            p75 = quantile(avg_earnings,.75))
+
+```
+
+```{r}
+comparison_sex <- average_earnings  %>% 
+  group_by(y1_status_v2_fct, sex_fct) %>% 
+  summarize(people = n_distinct(ssuid_spanel_pnum_id),
+            mean = mean(avg_earnings),
+            mean_ln = mean(avg_earnings_ln),
+            p25 = quantile(avg_earnings,.25), 
+            p50 = quantile(avg_earnings,.5), 
+            p75 = quantile(avg_earnings,.75))
+```
+
+```{r}
+comparison_education <- average_earnings  %>% 
+  group_by(y1_status_v2_fct, educ_collapsed_fct) %>% 
+  summarize(people = n_distinct(ssuid_spanel_pnum_id),
+            mean = mean(avg_earnings),
+            mean_ln = mean(avg_earnings_ln),
+            p25 = quantile(avg_earnings,.25), 
+            p50 = quantile(avg_earnings,.5), 
+            p75 = quantile(avg_earnings,.75))
+```
+
+
+
+```{r}
+library(openxlsx)
+# Create a new Excel workbook
+wb <- createWorkbook()
+
+# Add each table to a separate sheet
+addWorksheet(wb, "Education")
+writeData(wb, "Education", comparison_education)
+
+addWorksheet(wb, "Race")
+writeData(wb, "Race", comparison_race)
+
+addWorksheet(wb, "Sex")
+writeData(wb, "Sex", comparison_sex)
+
+
+
+# Save the workbook
+saveWorkbook(wb, "summary_tables.xlsx", overwrite = TRUE)
+```
+
+Bivariate Model 
+```{r}
+m1 <- lqmm(fixed = ln_tpearn ~ y1_status_v2_fct, 
+                       random = ~1, 
+                               group = + ssuid_spanel_pnum_id, 
+                               tau = c( 0.25, 0.5, .75),
+                               data = earnings,
+                               control = lqmmControl(method = "df"))
+```
+
+
+
+
+```{r}
+m2<- lqmm(fixed = ln_tpearn ~ y1_status_v2_fct + 
+            sex_fct + 
+            race_collapsed_fct, 
+                       random = ~1, 
+                               group = + ssuid_spanel_pnum_id, 
+                               tau = c( 0.25, 0.5, .75),
+                               data = earnings,
+                               control = lqmmControl(method = "df"))
+```
+
+
+Adding in age, calyear, immigrant status and industry
+
+```{r}
+m3 <- lqmm(
+  fixed = ln_tpearn ~ y1_status_v2_fct + 
+    sex_fct + 
+    race_collapsed_fct +
+    educ_collapsed_fct +
+    age + age2 + 
+    immigrant_fct + 
+    calyear  + 
+    parent_fct + 
+    mari_status_collapsed_fct + 
+    mode_industry_year,
+  random = ~ 1,
+  group = +ssuid_spanel_pnum_id,
+  tau = c(0.25, 0.5, .75),
+  data = earnings,
+  control = lqmmControl(method = "df")
+)
+```
+
+```{r}
+m4 <- lqmm(fixed = ln_tpearn ~ y1_status_v2_fct + 
+             sex_fct + 
+             race_collapsed_fct + 
+             educ_collapsed_fct+ 
+             age + age2 + 
+             immigrant_fct + 
+             calyear_fct  + 
+             parent_fct + 
+             mari_status_collapsed_fct + 
+             industry_fct, 
+                       random = ~1, 
+                               group = + ssuid_spanel_pnum_id, 
+                               tau = c( 0.25, 0.5, .75),
+                               data = earnings,
+                               control = lqmmControl(method = "df"))
+```
+
+```{r}
+m5 <- lqmm(fixed = ln_tpearn ~ y1_status_v2_fct + sex_fct + race_collapsed_fct + educ_collapsed_fct + age + age2 + immigrant_fct + calyear_fct  + parent_fct + mari_status_collapsed_fct + mode_industry_year, 
+                       random = ~1, 
+                               group = + ssuid_spanel_pnum_id, 
+                               tau = c( 0.25, 0.5, .75),
+                               data = earnings,
+                               control = lqmmControl(method = "df"))
+```
+
+```{r}
+summary_m1 <- summary(m1)
+summary_m2 <- summary(m2)
+summary_m3 <- summary(m3)
+summary_m4 <- summary(m4)
+summary_m5 <- summary(m5)
+```
+
+
+```{r}
+# Assuming `temp2` and `temp2_model2` are the lists containing the coefficients and their statistics for each quantile for Model 1 and Model 2
+
+# Function to convert p-values to stars
+pval_to_stars <- function(p) {
+  if (p < 0.001) "***"
+  else if (p < 0.01) "**"
+  else if (p < 0.05) "*"
+  else if (p < 0.1) "."
+  else ""
+}
+
+# Function to format model results. Have to feed it in the ttab from each model 
+
+m1_table <- summary_m1$tTable
+m2_table <- summary_m2$tTable
+m3_table <- summary_m3$tTable
+m4_table <- summary_m4$tTable
+m5_table <- summary_m5$tTable
+
+format_model_results <- function(model_results, model_name) {
+  coefficients_pvalues <- lapply(names(model_results), function(q) {
+    data <- model_results[[q]]
+    stars <- sapply(data[, "Pr(>|t|)"], pval_to_stars)
+    data.frame(
+      Term = rownames(data),
+      Quantile = q,
+      Coefficient = sprintf("%.4f%s", data[, "Value"], stars)
+    )
+  })
+  result <- do.call(rbind, coefficients_pvalues)
+  result$Model <- model_name
+  return(result)
+}
+
+# Format results for both models
+result_model1 <- format_model_results(m1_table, "Model 1")
+result_model2 <- format_model_results(m2_table, "Model 2")
+result_model3 <- format_model_results(m3_table, "Model 3")
+result_model4 <- format_model_results(m4_table, "Model 4")
+result_model5 <- format_model_results(m5_table, "Model 5")
+
+# Combine results from both models
+combined_results <- rbind(result_model1, result_model2, result_model3, result_model4, result_model5)
+
+# Reshape the data to the desired wide format
+library(tidyr)
+formatted_combined_result <- pivot_wider(combined_results, 
+                                         names_from = c(Quantile, Model), 
+                                         values_from = Coefficient)
+
+# View the formatted combined result
+print(formatted_combined_result)
+
+
+```
+
+
+
+
+```{r}
+library(writexl)
+write_xlsx(formatted_combined_result, "combined_model_results2.xlsx")
+```
+
+
+
+Some non-parametric tests of differences between medians for the mood.medtest and distribution (sort of median) for the wilcox.test 
+```{r}
+RVAideMemoire::mood.medtest(ln_tpearn ~ y1_status_v2_fct, data = earnings)
+```
+
+```{r}
+wilcox.test(ln_tpearn ~ y1_status_v2_fct, data = earnings)
+```
+
+
+
+What if we try it with the lqmix package? 
+
+when m = 1 then there are time consistent random variables only. when G is 1 then the model simplifies to time varying random variables only 
+```{r}
+lqmix1 <- lqmix(ln_tpearn ~ y1_status_v2_fct, 
+                randomTC =  ~1,
+                group = "ssuid_spanel_pnum_id",
+                time = "calyear",
+                G = 2, 
+                data = earnings)
+```
+

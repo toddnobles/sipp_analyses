@@ -1,0 +1,391 @@
+---
+title: "Sequence Analysis: Clustering on Edit Distance"
+---
+
+##Overview##
+Sequence analysis utilizes repeated-measures data to examine patterns within and across categorical time series. 
+
+##Outline##
+
+0. Introduction to Sequence Analysis.
+1. Data Management and Descriptives.
+2. Creating Sequences.
+3. Establishing a Cost Matrix and Sequence Analysis.
+4. Cluster Determination.
+5. Examine Group Differences among Clusters.
+
+
+##0. Introduction to Sequence Analysis.
+
+Sequence analysis is a descriptive analytic technique to capture within-sequence patterns and allow for between-sequence comparisons. This analytic technique has previously been used in biology to identify and group DNA sequences (i.e., categorical sequences depicting the order of the four nucleotides-A, C, T, and G) that are similar, and in sociology to examine occupational trajectories (e.g., Halpin & Cban, 1998), dance rituals (MacIndoe & Abbott, 2004), and residential mobility (Stovel & Bolan, 2004). In sum, sequence analysis is suitable for series of categorical data to identify potential patterns, to group participants based upon the similarity of their patterns, and to examine differences across pattern groups (e.g., in age, personality).
+
+In this tutorial, we will be walking through an example that examines the order of the *type* of social interaction partner (i.e., co-worker, friend, romantic partner, etc.) a participant has over the course of a week, and whether the resulting clusters of patterns of interaction are associated to any of the Big 5 personality characteristics (openness, conscientiousness, extraversion, agreeableness, and neuroticism). Data come from one of our example data sets - where 184 individuals reported on up to seven social interactions they had each day over the course of a week. 
+
+Load libraries and read in data.
+```{r, warning= FALSE, message= FALSE}
+#loading needed libraries
+library(cluster)
+library(dplyr)
+library(ggplot2)
+library(psych)
+library(reshape)
+library(reshape2)
+library(stats)
+library(TraMineR)
+library(TraMineRextras)
+
+#set filepath for repeated measures of happiness data file
+# filepath <- "https://quantdev.ssri.psu.edu/sites/qdev/files/gridsequence_simulation_data.csv" 
+# data <- read.csv(file=url(filepath),header=TRUE)
+# head(data)
+
+
+#read in repeated measures data
+data <- read.csv(file = url("https://quantdev.ssri.psu.edu/sites/qdev/files/amib_partners.csv"), head=TRUE, sep=",")
+
+#read in between-person personality data
+btwn <- read.csv(file = url("https://quantdev.ssri.psu.edu/sites/qdev/files/amib_personality.csv"), head=TRUE, sep=",")
+```
+
+##1. Data Management and Descriptives.
+
+###Management. 
+
+Depending on the format of your data set, some data management may be necessary. The final product should be two data sets:
+
+1. "data" contains repeated measures of the variable of interest (in this case, interaction partner category). There should be a column that contains a participant ID variable, a column the contains a continuous measure of time ("occasion"), and a column for the type of interaction partner.
+
+Let's take a quick peek at the data.
+```{r}
+#repeated measures data
+head(data)
+names(data)
+str(data)
+```
+
+We see that we have a column indicating participant id, an integer variable that indicates measurement occasion, and a variable that indicates type of interaction partner. 
+
+2. "btwn" contains participant-level, time-invariant variables. These are the variables in which you will test between-group differences in Step 5 of sequence analysis. This data file should include a column for participant ID, and columns with the between-person variables of interest (in this case, the Big 5 personality characteristics).
+
+Let's take a look at our data.
+```{r}
+#between-person personality data
+head(btwn)
+names(btwn)
+str(btwn)
+```
+
+All looks good!
+
+###Descriptives.
+We begin by getting a feel for our data. Let's examine:  
+(1) how many participants we have in the data set,  
+(2) how many "occasions" there are for each participant, and  
+(3) the frequency of interaction with a type of interaction partner across all participants.
+
+1. Number of participants.
+```{r, warnings = FALSE}
+length(unique(data$id))
+length(unique(btwn$id))
+```
+There are 184 participants in both data sets.
+
+2. Number of occasions (i.e., social interactions) for each participant.
+```{r, message = FALSE}
+num_occ <- data %>%
+           group_by(id) %>%
+           summarise(count=n(), occasion = first(occasion))
+
+describe(num_occ$count)
+
+#plot
+ggplot(data = num_occ, aes(x = count)) +
+  geom_histogram(binwidth = 5, fill = "white", color="black") + 
+  xlim(0, 60) +
+  ylim(0, 60) +
+  labs(x = "Number of Social Interactions")
+```
+
+The average participant had approximately 41 social interactions (*M* = 41.13, *SD* = 13.62), with participants ranging from 10 to 56 social interactions over the course of a week.
+
+3. The number of total interactions for each interaction partner type.
+```{r}
+partner_table <- table(data$partner_status)
+partner_table
+```
+We can see that participants overall had the most interactions with *friends* and the fewest interactions with *supervisees*. Conceptually, this makes sense given that we are analyzing data from college students.
+
+##2. Creating Sequences.
+
+In this step, we:  
+(1) re-format the repeated measures data from long to wide,  
+(2) create an "alphabet" that represents each of our categories,  
+(3) and formally create and plot the categorical sequence. 
+
+Re-formatting the data from long to wide.
+```{r, message= FALSE}
+data_wide <- dcast(data, id ~ occasion, value.var = "partner_status")
+
+#add "occ_" to each column heading
+colnames(data_wide)[2:57] <- paste("occ", colnames(data_wide[, 2:57]), sep = "_")
+```
+
+Create alphabet.  
+These characters represent each possible category within the variable of interest. The actual naming of these values is not important, but we are going to name them in such a way that facilitates interpretation.
+```{r}
+#this object contains the numbers (i.e., categories) that appear in the data set.
+partner_alphabet <- c("supervisor", "coworker", "supervisee", "friend", "acquaintance", "romantic_partner", "parent", "sibling", "roommate")
+
+#this object allows for more helpful labels if applicable 
+partner_labels <- c("supervisor", "coworker", "supervisee", "friend", "acquaintance", "romantic_partner", "parent", "sibling", "roommate")
+```
+
+Formally create sequences.  
+First we assign colors to each of the categories (this is not necessary since there is a default color palette, but this give us more control). 
+```{r}
+supervisor <- "#FF0000"       #red
+coworker <- "#FFA500"         #orange
+supervisee <- "#FFFF00"       #yellow
+friend <- "#008000"           #green
+acquaintance <- "#0000FF"     #blue
+romantic_partner <- "#800080" #purple
+parent <- "#FFC0CB"           #pink
+sibling <- "#000000"          #black
+roommate <- "#40E0D0"         #turquoise
+```
+
+Next, we create an object that contains all of the sequences.
+```{r}
+partner_seq <- seqdef(data_wide,                      #data   
+                      var = 2:57,                     #columns containing repeated measures data
+                      alphabet = partner_alphabet,    #alphabet  
+                      labels = partner_labels,        #labels
+                      xtstep = 6,                     #steps between tick marks
+                      cpal=c(supervisor, coworker, 
+                             supervisee, friend, 
+                             acquaintance, 
+                             romantic_partner, 
+                             parent, sibling, 
+                             roommate))               #color palette
+```
+
+Plot the sequences.
+```{r}
+seqIplot(partner_seq, withlegend = FALSE, title="Type of Social Interaction Partner")
+```
+
+##3. Establishing a Cost Matrix and Sequence Analysis.
+
+Sequence analysis aims to minimize the "cost" of transforming one sequence into another and relies on an optimal matching algorithm. There are costs for inserting, deleting, and substituting letters, as well as costs for missingness. The researcher establishes a cost matrix, and often use standards, such as insertion/deletion costs of 1.0 and missingness costs of half the highest cost within the matrix. 
+
+There are a number of ways to determine *substitution* costs. Typically, substitution costs are established as the distance between cells. However, we do not have an ordinal scale for the categories (although, we could order social interaction partners by inferred closeness, e.g., stranger, ..., spouse). In this case, we use a constant cost matrix (i.e., the distance between any type of social interaction partner is the same). If we were to use a theoretical rationale to sort interaction partner types that were more or less similar, we could use Manhattan (city-block) distance or Euclidian distance. Finally, the substitution cost matrix will be (n+1) by (n+1) with n = number of cells in the grid, since we add a right-most column and a bottom row to represent missingness costs (half of the highest cost, which in this case is half of 2).
+
+Here, we establish our cost matrix.
+```{r}
+costmatrix <- seqsubm(partner_seq, 
+                      method="CONSTANT", 
+                      cval = 2, 
+                      with.missing=TRUE,
+                      miss.cost=1, 
+                      time.varying=FALSE, 
+                      weighted=TRUE,
+                      transition="both", 
+                      lag=1)
+
+costmatrix
+```
+
+Next, we use an optimal matching technique for sequence analysis. The output of sequence analysis is a n x n (n = number of participants) dissimilarity matrix with the cost of transforming one sequence into the corresponding sequence in each cell of the matrix.
+```{r}
+dist_om <- seqdist(partner_seq,         #sequence object
+                   method = "OM",       #optimal matching
+                   indel = 1.0,         #insert/deletion costs set to 1
+                   sm = costmatrix,     #substitution cost matrix
+                   with.missing = TRUE)
+
+#printing out the top left corner of the dissimilarity matrix
+dist_om[1:10, 1:10]
+```
+
+##4. Cluster Determination.
+
+We next take the distance matrix obtained in the step three to determine an appropriate number of clusters. Several clustering techniques are available, but we use hierarchical cluster analysis using Ward's single linkage method. Other possible methods include k-mediods clustering or latent mixture models. After determining the number of clusters that work for the data, we create an object that contains cluster membership for each dyad (which will be used in the final step) and plot the clusters.
+
+Conduct hierarchical cluster analysis.
+```{r}
+clusterward1 <- agnes(dist_om, diss = TRUE, method = "ward")
+plot(clusterward1, which.plot = 2)
+```
+
+In this example, the resulting dendrogram indicated three clusters. We reached this conclusion by examining the length of the vertical lines (longer vertical line indicates greater difference between groups) and the number of participants within each group (we didn't want a group with too few participants). After selecting a three cluster solution, we plotted the sequences of the three clusters for visual comparison.
+```{r, message= FALSE}
+#cutting dendrogram (or tree) by the number of determined groups (in this case, 3)
+cl3 <- cutree(clusterward1, k = 3) 
+
+#turning cut points into a factor variable and labeling them
+cl3fac <- factor(cl3, labels = paste("Type", 1:3)) 
+
+#plot
+seqplot(partner_seq, group = cl3fac, type="I", sortv = "from.start",with.legend = FALSE, border = NA)
+```
+
+It appears that "Type 1" participants interact primarily with friends, "Type 2" participants interact with a variety of social partner types, and "Type 3" usually interact with friends and roommates. In the next steps, we will formally test whether the participants within these clusters differ on any theoretically meaningful variables.
+
+##5. Examine Group Differences among Clusters.
+
+The final step of sequence analysis is to examine group differences among the clusters. One can use a variety of methods to examine group differences, and the choice of method will depend on the number of clusters chosen and the research question. For example, if only two clusters are chosen and one wants to examine the clusters as a predictor variable, then one would use the cluster membership variable as a predictor in a logistic regression. In this case, we use analysis of variance (ANOVA) to examine group differences.
+
+We examined whether the Big 5 characteristics differed by cluster membership, which represented type of social interaction partner patterns. As you can see below, the only significant difference between clusters in this sample was in levels of extraversion. 
+```{r, eval = FALSE}
+#adding grouping variables to participant-level data set
+btwn$cl3 <- cl3
+
+#examining differences in openness
+open_results <- aov(btwn$bfi_o ~ factor(btwn$cl3)) 
+summary(open_results)
+TukeyHSD(open_results) #post hoc test if needed
+
+#examining differences in conscientiousness
+con_results <- aov(btwn$bfi_c ~ factor(btwn$cl3)) 
+summary(con_results)
+TukeyHSD(con_results) #post hoc test if needed
+
+#examining differences in extraversion
+ext_results <- aov(btwn$bfi_e ~ factor(btwn$cl3)) 
+summary(ext_results)
+TukeyHSD(ext_results) #post hoc test if needed
+
+#examining differences in agreeableness
+agree_results <- aov(btwn$bfi_a ~ factor(btwn$cl3)) 
+summary(agree_results)
+TukeyHSD(agree_results) #post hoc test if needed
+
+#examining differences in neuroticism
+neuro_results <- aov(btwn$bfi_n ~ factor(btwn$cl3)) 
+summary(neuro_results)
+TukeyHSD(neuro_results) #post hoc test if needed
+```
+
+Although there are not many differnces, we do see that the clusters differ with respect to Extraversion! That makes some sense. 
+
+##Cautions
+
+Although there are several distinct advantages of sequence analysis, there are several limitations and considerations to the process, which include:
+
+1. The length of time series needed (dependent on the process under examination, but could be lengthy).
+2. The need for an ordinal or categorical variable. 
+3. The determination of the cost matrices (which in turn effects the prioritization of left/right shifts vs. substitution of letters in the sequence).
+4. The extent of missingness.
+
+##Conclusion
+
+Theories of interpersonal dynamics and social interaction emphasize the need to study within-person dynamics. Sequence analysis is an approach that allows researchers to capture within-person dynamics and to make between-person comparisons using repeated-measures data. 
+
+##Testing out the missing data/shorter sequences issue.
+
+I'm going to only examine the first 20 interactions for each participant and see if we get the same results.
+
+###2. Creating Sequences.
+
+Next, we create an object that contains all of the sequences.
+```{r}
+partner_seq1 <- seqdef(data_wide,                      #data   
+                      var = 2:21,                     #columns containing repeated measures data
+                      alphabet = partner_alphabet,    #alphabet  
+                      labels = partner_labels,        #labels
+                      xtstep = 6,                     #steps between tick marks
+                      cpal=c(supervisor, coworker, 
+                             supervisee, friend, 
+                             acquaintance, 
+                             romantic_partner, 
+                             parent, sibling, 
+                             roommate))               #color palette
+```
+
+Plot the sequences.
+```{r}
+seqIplot(partner_seq1, with.legend = FALSE, main="Type of Social Interaction Partner")
+```
+
+###3. Establishing a Cost Matrix and Sequence Analysis.
+
+Here, we establish our cost matrix.
+```{r}
+costmatrix <- seqsubm(partner_seq1, 
+                      method="CONSTANT", 
+                      cval = 2, 
+                      with.missing=TRUE,
+                      miss.cost=1, 
+                      time.varying=FALSE, 
+                      weighted=TRUE,
+                      transition="both", 
+                      lag=1)
+
+costmatrix
+```
+
+```{r}
+dist_om1 <- seqdist(partner_seq1,         #sequence object
+                   method = "OM",       #optimal matching
+                   indel = 1.0,         #insert/deletion costs set to 1
+                   sm = costmatrix,     #substitution cost matrix
+                   with.missing = TRUE)
+
+#printing out the top left corner of the dissimilarity matrix
+dist_om1[1:10, 1:10]
+```
+
+###4. Cluster Determination.
+
+Conduct hierarchical cluster analysis.
+```{r}
+clusterward2 <- agnes(dist_om1, diss = TRUE, method = "ward")
+plot(clusterward2, which.plot = 2)
+```
+
+Could argue for a 3 or 5 cluster solution. I'm going to pick 3 to be consistent with the full data set analyses.
+```{r, message= FALSE}
+#cutting dendrogram (or tree) by the number of determined groups (in this case, 3)
+cl3 <- cutree(clusterward2, k = 3) 
+
+#turning cut points into a factor variable and labeling them
+cl3fac <- factor(cl3, labels = paste("Type", 1:3)) 
+
+#plot
+seqplot(partner_seq1, group = cl3fac, type="I", sortv = "from.start",with.legend = FALSE, border = NA)
+```
+
+It's a bit easier to differentiate the groups in these clusters than the full data set clusters.
+
+###5. Examine Group Differences among Clusters.
+
+Results basically the same as above (i.e., no findings), except the significant differences in extraversion between clusters goes away.
+```{r, eval = FALSE}
+#adding grouping variables to participant-level data set
+btwn$cl3_sub <- cl3
+
+#examining differences in openness
+open_results <- aov(btwn$bfi_o ~ factor(btwn$cl3_sub)) 
+summary(open_results)
+TukeyHSD(open_results) #post hoc test if needed
+
+#examining differences in conscientiousness
+con_results <- aov(btwn$bfi_c ~ factor(btwn$cl3_sub)) 
+summary(con_results)
+TukeyHSD(con_results) #post hoc test if needed
+
+#examining differences in extraversion
+ext_results <- aov(btwn$bfi_e ~ factor(btwn$cl3_sub)) 
+summary(ext_results)
+TukeyHSD(ext_results) #post hoc test if needed
+
+#examining differences in agreeableness
+agree_results <- aov(btwn$bfi_a ~ factor(btwn$cl3_sub)) 
+summary(agree_results)
+TukeyHSD(agree_results) #post hoc test if needed
+
+#examining differences in neuroticism
+neuro_results <- aov(btwn$bfi_n ~ factor(btwn$cl3_sub)) 
+summary(neuro_results)
+TukeyHSD(neuro_results) #post hoc test if needed
+```

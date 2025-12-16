@@ -9,9 +9,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-<https://cran.r-project.org/web/packages/TraMineR/vignettes/TraMineR-state-sequence.pdf>
+## Data Cleaning
 
-```{r}
+```{r, warning = FALSE, message = FALSE }
 library(TraMineR)
 library(tidyverse)
 library(bit64)
@@ -54,8 +54,8 @@ Then we filter to the working age population based on age at entry into dataset.
 ```{r filtering to working age sample by age at entry}
 full_data <- full_data_base %>% 
   group_by(ssuid_spanel_pnum) %>% 
-  mutate(age_entry = min(tage),
-         age_exit = max(tage)) %>% 
+  mutate(age_entry = min(tage.x),
+         age_exit = max(tage.x)) %>% 
   filter(age_entry >= 18 & age_entry <= 64) %>% ungroup()
 ```
 
@@ -70,6 +70,7 @@ full_data <- full_data %>%
 ```
 
 ```{r}
+rm(joblevel_wide, monthly)
 full_data <- full_data %>% 
   tidylog::select(-ends_with(".y"), -starts_with("ajb")) %>% 
   rename_with(
@@ -78,38 +79,19 @@ full_data <- full_data %>%
   ) 
 ```
 
-Most basic analysis is monthly level using the enjflag for unemployment during that month and then the ejb_jborse variable for the type of work in that month. However, we can combine the ejb_jborse data with the rwkesr1-rwkesr5 to track employment at a weekly level.
+Most basic analysis is monthly level using the enjflag for unemployment during that month and then the ejb_jborse variable for the type of work in that month.
 
-\
-1. With job/business - working
+## Basic Monthly analysis
 
--   2\. With job/business - not on layoff, absent without pay
+This presents the most basic one-job version just to get a feel for the methods. Future versions will account for people holding multiple jobs at once by modeling the sequence as follows:
 
--   3\. With job/business - on layoff, absent without pay
-
--   4\. No job/business - looking for work or on layoff
-
--   5\. No job/business - not looking for work and not on layoff![](images/clipboard-4102659134.png)
-
-### Basic Monthly analysis 
-
-Need one row per individual with their employment status during that month.
-
-We'll handle multiple jobs at once using the grouped alphabet approach where
-
-R\> seq.ex1[, 10:25]
-
-Sequence
-
-[1] 000-000-000-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0WU-0WU-0WU-0WU
-
-[2] 000-000-000-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0
+Sequence: [1] 000-000-000-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0WU-0WU-0WU-0WU [2] 000-000-000-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0-0W0
 
 For each state in the sequence, the first character stands for the number of children (0=no children, 1=1 children, etc...), the second character for the work status (0=not working, W=working) and the third character for the union status (0=not in union, U=in union). The alphabet contains 16 distinct states (see Table 1, page 376 in Aassve et al., 2007).
 
-So ours will be
+So ours will be something like the following where the first entry is their job with highest hours, second entry will be their job with second highest hours, etc.
 
-[1] 123456 - 123456 - 123456- 123456
+[1] 123 - 123 - 123- 123
 
 ```{r}
 sipp_seq <- full_data %>% 
@@ -126,80 +108,159 @@ sipp_seq <- full_data %>%
     is.na(.) ~ 0,
     .default = .
   ))) %>% 
-  mutate(sequence = paste0(ejb1_jborse, ejb2_jborse, ejb3_jborse, ejb4_jborse))
-  
+  mutate(sequence = paste0(ejb1_jborse, ejb2_jborse, ejb3_jborse, ejb4_jborse, ejb5_jborse, ejb6_jborse, ejb7_jborse),
+         ## now we need to mark people who were ever self-employed and restrict to those
+         some_se = ifelse(str_detect(sequence, "2"), 1, 0))%>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(ever_se = ifelse(sum(some_se) >0,1,0)) %>%  
+  ungroup()
 ```
 
-
-# To-dos
-*   still need to remove those without full years of data as they'll throw off the sequences 
-
-
+Filtering to people who at least had some SE
 ```{r}
-data(mvad)
-seqstatl(mvad[, 17:86])
+se_sipp_seq <- sipp_seq %>% 
+  filter(ever_se == 1)
+
+se_sipp_seq %>% distinct(ssuid_spanel_pnum) %>% nrow()
+
 ```
 
+## Testing with most basic version of only considering job 1
+
+Getting to a wide dataframe for sequence analysis. 
 ```{r}
-mvad.alphabet <- c("employment", "FE", "HE", "joblessness", "school", 
-    "training")
-mvad.labels <- c("employment", "further education", "higher education", 
-    "joblessness", "school", "training")
-mvad.scodes <- c("EM", "FE", "HE", "JL", "SC", "TR")
-mvad.seq <- seqdef(mvad, 17:86, alphabet = mvad.alphabet, states = mvad.scodes, 
-    labels = mvad.labels, xtstep = 6)
+se_sipp_seq_wide <- se_sipp_seq %>% 
+  select(ssuid_spanel_pnum, seq_month, ejb1_jborse) %>%
+  rename(status = ejb1_jborse) %>% 
+  group_by(ssuid_spanel_pnum) %>% 
+  mutate(nobs = n()) %>% 
+  ungroup() %>% 
+  filter(nobs == 48) %>% 
+  pivot_wider(names_from = c(seq_month), values_from = status)
+```
+
+### Setting up the alphabet and labels for the sequence data
+
+```{r}
+sipp.alphabet <- c("0", "1", "2", "3")
+sipp.labels <- c("unemployed", "wage_salary", "self_emp", "other")
+sipp.labels <- c("U", "WS", "SE", "O")
+sipp.seq <- seqdef(se_sipp_seq_wide, 3:50, alphabet = sipp.alphabet, states = sipp.labels, 
+    labels = sipp.labels, xtstep = 1)
 ```
 
 ```{r}
 par(mfrow = c(2, 2))
-seqiplot(mvad.seq, with.legend = FALSE, border = NA)
-seqIplot(mvad.seq, sortv = "from.start", with.legend = FALSE)
-seqIplot(mvad.seq, sortv = "from.end", with.legend = FALSE)
-seqfplot(mvad.seq, with.legend = FALSE, border = NA)
+seqIplot(sipp.seq, sortv = "from.start", with.legend = FALSE, main = "Sorted by start")
+seqIplot(sipp.seq, sortv = "from.end", with.legend = FALSE, main = "Sorted by end")
+seqfplot(sipp.seq, with.legend = FALSE, border = NA, main = "Sequence Frequency")
+seqlegend(sipp.seq, fontsize = 1)
 
-```
 
-```{r}
-seqdplot(mvad.seq, with.legend = FALSE, border = NA)
 
 ```
 
 Compute the optimal matching distances using substitution costs based on transition rates observed in the data and a 1 indel cost. The resulting distance matrix is stored in the dist.om1 object.
 
 ```{r}
-dist.om1 <- seqdist(mvad.seq, method = "OM", indel = 1, sm = "TRATE")
-
+dist.om1 <- seqdist(sipp.seq, method = "OM", indel = 1, sm = "TRATE")
 ```
 
-Make a typology of the trajectories: load the cluster library, build a Ward hierarchical clustering of the sequences from the optimal matching distances and retrieve for each individual sequence the cluster membership of the 4 class solution. We do not show here the dendrogram produced by plot(clusterward1), which, indeed, is not a TraMineR feature.
+Make a typology of the trajectories:
+
+-   load the cluster library,
+-   build a Ward hierarchical clustering of the sequences from the optimal matching distances and
+-   retrieve for each individual sequence the cluster membership of the 4 class solution.
 
 ```{r}
 library(cluster)
 clusterward1 <- agnes(dist.om1, diss = TRUE, method = "ward")
 plot(clusterward1, which.plot = 2)
-cl1.4 <- cutree(clusterward1, k = 4)
-cl1.4fac <- factor(cl1.4, labels = paste("Type", 1:4))
+```
+
+Another way of viewing the tree above with the color coding for sequences and how they align with the clusters. 
+
+```{r}
+seqhandbook::seq_heatmap(sipp.seq, clusterward1)
+
+```
+
+Getting a sense of where it might make sense to trim. 
+
+```{r}
+plot(sort(clusterward1$height, decreasing=TRUE)[1:20], type="s", xlab="number of clusters", ylab="inertia")
+
+```
+
+
+```{r}
+cl1.4 <- cutree(clusterward1, k = 6)
+cl1.4fac <- factor(cl1.4, labels = paste("Type", 1:6))
+```
+
+
+
+```{r, fig.dim = c(8, 6)}
+seqdplot(sipp.seq, group=cl1.4fac, border=NA, cex.legend=0.8)
 ```
 
 Plot all the sequences within each cluster.
 
-```{r}
-seqIplot(mvad.seq, group = cl1.4fac, sortv = "from.start")
+```{r, fig.dim = c(8, 6)}
+opar <- par(mar=c(0, 0, 2, 0) + 0.1) 
+seqIplot(sipp.seq, group=cl1.4fac, border=NA,  
+          yaxis=FALSE)
+par(opar) ## resetting default margins
+```
+
+
+Again plotting all sequences, but sorting within each cluster by most representative cluster at the top of each figure and descending to those that are least similar at the bottom of each subfigure. 
+
+```{r, fig.dim = c(8, 6)}
+opar <- par(mar=c(2, 2, 2, 2) + 0.1)
+sil <- WeightedCluster::wcSilhouetteObs(dist.om1, cl1.4fac,measure = "ASWw")
+seqIplot(sipp.seq, group = cl1.4fac, sortv = sil, yaxis = FALSE, ylab = "")
+par(opar)
 
 ```
 
-Plot the representative sequences of each cluster.
 
-```{r}
-seqrplot(mvad.seq, diss = dist.om1, group = cl1.4fac,
-    border = NA)
-
+```{r, fig.dim = c(8, 6)}
+opar <- par(mar=c(2, 2, 2, 2) + 0.1)
+seqfplot(sipp.seq, group=cl1.4fac, ylab="", cex.legend=0.8)
+par(opar)
 ```
+
+# To-dos
+
+-   still need to remove those without full years of data as they'll throw off the sequences
+-   We can combine the ejb_jborse data with the rwkesr1-rwkesr5 to track employment at a weekly level.
+
+    Coding for those variables is as follows:
+
+    -   1\. With job/business - working
+    -   2\. With job/business - not on layoff, absent without pay
+    -   3\. With job/business - on layoff, absent without pay
+    -   4\. No job/business - looking for work or on layoff
+    -   5\. No job/business - not looking for work and not on layoff
+    -   ![](images/clipboard-4102659134.png){width="545"}
+
+<https://cran.r-project.org/web/packages/seqhandbook/vignettes/Tutorial.html>
+
+![](images/clipboard-695077405.png)
 
 Resource to work on sequence commands <https://traminer.unige.ch/preview-event.shtml>
+
+https://quantdev.ssri.psu.edu/tutorials/sequence-analysis-clustering-edit-distance 
+
+https://dspg-young-scholars-program.github.io/dspg20career/data/?type=dspg 
+
+
 
 <https://traminer.unige.ch/doc/seqMD.html>
 
 <https://stackoverflow.com/questions/17020023/multiple-events-in-traminer>
 
 SIPP resources: <https://www.census.gov/library/publications/2019/demo/p70br-163.html> (use this as a check for the share of people holding multiple jobs to make sure my calculations are okay. )
+
+<https://www2.census.gov/programs-surveys/sipp/2023/2023_SIPP_PAA_Workshop_SEP23.pdf>

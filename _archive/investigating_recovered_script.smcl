@@ -1,0 +1,336 @@
+{smcl}
+{com}{sf}{ul off}{txt}{.-}
+      name:  {res}<unnamed>
+       {txt}log:  {res}/Users/toddnobles/Documents/sipp_analyses/investigating_recovered_script.smcl
+  {txt}log type:  {res}smcl
+ {txt}opened on:  {res} 5 Sep 2024, 22:17:10
+
+{com}. list in 1/10
+
+     {txt}{c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  1. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}       2 {txt}{c |} {res}  2018  {txt}{c |} {res}Female  {txt}{c |} {res}Native Born  {txt}{c |} {res}   White  {txt}{c |} {res}   2017  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 35453 {txt}{c |} {res}   35453 {txt}{c |} {res}    2 {txt}{c |} {res}       2 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 36                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  2. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}       2 {txt}{c |} {res}  2018  {txt}{c |} {res}Female  {txt}{c |} {res}Native Born  {txt}{c |} {res}   White  {txt}{c |} {res}   2018  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 35453 {txt}{c |} {res}   35453 {txt}{c |} {res}    2 {txt}{c |} {res}       2 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 38                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  3. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}       2 {txt}{c |} {res}  2018  {txt}{c |} {res}Female  {txt}{c |} {res}Native Born  {txt}{c |} {res}   White  {txt}{c |} {res}   2019  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 37337 {txt}{c |} {res}   37337 {txt}{c |} {res}    2 {txt}{c |} {res}       2 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 38                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  4. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}       5 {txt}{c |} {res}  2018  {txt}{c |} {res}Female  {txt}{c |} {res}Native Born  {txt}{c |} {res}Hispanic  {txt}{c |} {res}   2017  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 27212 {txt}{c |} {res}   27212 {txt}{c |} {res}    1 {txt}{c |} {res}      11 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 35                 {txt}{c |}                 {res}       9                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  5. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}       5 {txt}{c |} {res}  2018  {txt}{c |} {res}Female  {txt}{c |} {res}Native Born  {txt}{c |} {res}Hispanic  {txt}{c |} {res}   2018  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 23043 {txt}{c |} {res}   23043 {txt}{c |} {res}    1 {txt}{c |} {res}      11 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 36                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  6. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}      13 {txt}{c |} {res}  2014  {txt}{c |} {res}  Male  {txt}{c |} {res}  Immigrant  {txt}{c |} {res}Hispanic  {txt}{c |} {res}   2013  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 42387 {txt}{c |} {res}   42387 {txt}{c |} {res}    1 {txt}{c |} {res}       2 {txt}{c |} {res}     1 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 47                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  7. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}      13 {txt}{c |} {res}  2014  {txt}{c |} {res}  Male  {txt}{c |} {res}  Immigrant  {txt}{c |} {res}Hispanic  {txt}{c |} {res}   2014  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 43800 {txt}{c |} {res}   43800 {txt}{c |} {res}    1 {txt}{c |} {res}       2 {txt}{c |} {res}     1 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 48                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  8. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}      13 {txt}{c |} {res}  2014  {txt}{c |} {res}  Male  {txt}{c |} {res}  Immigrant  {txt}{c |} {res}Hispanic  {txt}{c |} {res}   2015  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 43800 {txt}{c |} {res}   43800 {txt}{c |} {res}    1 {txt}{c |} {res}       2 {txt}{c |} {res}     1 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 49                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  9. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}      13 {txt}{c |} {res}  2014  {txt}{c |} {res}  Male  {txt}{c |} {res}  Immigrant  {txt}{c |} {res}Hispanic  {txt}{c |} {res}   2016  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 48101 {txt}{c |} {res}   48101 {txt}{c |} {res}    1 {txt}{c |} {res}       2 {txt}{c |} {res}     1 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 50                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+ 10. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}      15 {txt}{c |} {res}  2014  {txt}{c |} {res}  Male  {txt}{c |} {res}Native Born  {txt}{c |} {res}Hispanic  {txt}{c |} {res}   2013  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 12548 {txt}{c |} {res}   12548 {txt}{c |} {res}    1 {txt}{c |} {res}       9 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 22                 {txt}{c |}                 {res}      10                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+{com}. do "/var/folders/g8/shwkk_k975v8286wp634mjxw0000gn/T//SD15267.000000"
+{txt}
+{com}. bysort ssuid_spanel_pnum_id (calyear): drop if _n == 1 
+{txt}(38,753 observations deleted)
+
+{com}. 
+{txt}end of do-file
+
+{com}. list in 1/10
+
+     {txt}{c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  1. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}       2 {txt}{c |} {res}  2018  {txt}{c |} {res}Female  {txt}{c |} {res}Native Born  {txt}{c |} {res}   White  {txt}{c |} {res}   2018  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 35453 {txt}{c |} {res}   35453 {txt}{c |} {res}    2 {txt}{c |} {res}       2 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 38                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  2. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}       2 {txt}{c |} {res}  2018  {txt}{c |} {res}Female  {txt}{c |} {res}Native Born  {txt}{c |} {res}   White  {txt}{c |} {res}   2019  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 37337 {txt}{c |} {res}   37337 {txt}{c |} {res}    2 {txt}{c |} {res}       2 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 38                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  3. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}       5 {txt}{c |} {res}  2018  {txt}{c |} {res}Female  {txt}{c |} {res}Native Born  {txt}{c |} {res}Hispanic  {txt}{c |} {res}   2018  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 23043 {txt}{c |} {res}   23043 {txt}{c |} {res}    1 {txt}{c |} {res}      11 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 36                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  4. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}      13 {txt}{c |} {res}  2014  {txt}{c |} {res}  Male  {txt}{c |} {res}  Immigrant  {txt}{c |} {res}Hispanic  {txt}{c |} {res}   2014  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 43800 {txt}{c |} {res}   43800 {txt}{c |} {res}    1 {txt}{c |} {res}       2 {txt}{c |} {res}     1 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 48                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  5. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}      13 {txt}{c |} {res}  2014  {txt}{c |} {res}  Male  {txt}{c |} {res}  Immigrant  {txt}{c |} {res}Hispanic  {txt}{c |} {res}   2015  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 43800 {txt}{c |} {res}   43800 {txt}{c |} {res}    1 {txt}{c |} {res}       2 {txt}{c |} {res}     1 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 49                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  6. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}      13 {txt}{c |} {res}  2014  {txt}{c |} {res}  Male  {txt}{c |} {res}  Immigrant  {txt}{c |} {res}Hispanic  {txt}{c |} {res}   2016  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 48101 {txt}{c |} {res}   48101 {txt}{c |} {res}    1 {txt}{c |} {res}       2 {txt}{c |} {res}     1 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 50                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  7. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}      15 {txt}{c |} {res}  2014  {txt}{c |} {res}  Male  {txt}{c |} {res}Native Born  {txt}{c |} {res}Hispanic  {txt}{c |} {res}   2014  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 27117 {txt}{c |} {res}   27117 {txt}{c |} {res}    1 {txt}{c |} {res}       9 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 23                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  8. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}      17 {txt}{c |} {res}  2014  {txt}{c |} {res}Female  {txt}{c |} {res}Native Born  {txt}{c |} {res}   White  {txt}{c |} {res}   2014  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 61278 {txt}{c |} {res}   61278 {txt}{c |} {res}    4 {txt}{c |} {res}      10 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 44                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+  9. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}      17 {txt}{c |} {res}  2014  {txt}{c |} {res}Female  {txt}{c |} {res}Native Born  {txt}{c |} {res}   White  {txt}{c |} {res}   2015  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 68476 {txt}{c |} {res}   68476 {txt}{c |} {res}    4 {txt}{c |} {res}      10 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 45                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 9}{c TT}{hline 9}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 10}{c TT}{hline 11}{c TRC}
+ 10. {c |} ssuid_~d {c |} spanel  {c |}    sex  {c |}   immigrant  {c |} combin~h  {c |} calyear  {c |} unempf~6  {c |}
+     {c |} {res}      17 {txt}{c |} {res}  2014  {txt}{c |} {res}Female  {txt}{c |} {res}Native Born  {txt}{c |} {res}   White  {txt}{c |} {res}   2016  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 9}{c BT}{c TT}{hline 8}{c BT}{hline 1}{c TT}{hline 8}{c TT}{hline 3}{c BT}{hline 6}{c TT}{hline 4}{c BT}{hline 2}{c TT}{hline 7}{c BT}{hline 2}{c TT}{hline 8}{c RT}
+     {c |} pct_s~12 {c |} pct_w~12 {c |} mode_s~2 {c |} tpearn {c |} tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |}
+     {c |} {res}       0 {txt}{c |} {res}       1 {txt}{c |} {res}     W&S {txt}{c |} {res} 70140 {txt}{c |} {res}   70140 {txt}{c |} {res}    4 {txt}{c |} {res}      10 {txt}{c |} {res}     0 {txt}{c |}
+     {c LT}{hline 10}{c BT}{hline 10}{c BT}{hline 10}{c BT}{hline 4}{c TT}{hline 3}{c BT}{hline 10}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c RT}
+     {c |}                 age                 {c |}                 n_months                 {c |}
+     {c |}                 {res} 46                 {txt}{c |}                 {res}      12                 {txt}{c |}
+     {c BLC}{hline 37}{c BT}{hline 42}{c BRC}
+
+{com}. do "/var/folders/g8/shwkk_k975v8286wp634mjxw0000gn/T//SD15267.000000"
+{txt}
+{com}. collapse (mean) tpearn tjb_msum (max) educ3 (first) mode_industry parent age (count) n_years = tpearn, by(ssuid_spanel_pnum_id mode_status_f12v2 combine_race_eth immigrant sex pct_se_after_12 unempf12_6 pct_ws_after_12)
+{res}{txt}
+{com}. 
+{txt}end of do-file
+
+{com}. list in 1/10
+
+     {txt}{c TLC}{hline 10}{c TT}{hline 8}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TRC}
+  1. {c |} ssuid_~d {c |}    sex {c |}   immigrant  {c |} combin~h  {c |} unempf~6  {c |} pct_s~12  {c |} pct_w~12  {c |}
+     {c |} {res}       2 {txt}{c |} {res}Female {txt}{c |} {res}Native Born  {txt}{c |} {res}   White  {txt}{c |} {res}       0  {txt}{c |} {res}       0  {txt}{c |} {res}       1  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 8}{c BT}{hline 4}{c TT}{hline 9}{c BT}{hline 3}{c TT}{hline 7}{c +}{hline 10}{c TT}{c BT}{hline 7}{c TT}{hline 3}{c BT}{hline 1}{c TT}{hline 9}{c RT}
+     {c |} mode_s~2 {c |}      tpearn {c |}    tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |} age {c |} n_years {c |}
+     {c |} {res}     W&S {txt}{c |} {res}      36395 {txt}{c |} {res}      36395 {txt}{c |} {res}    2 {txt}{c |} {res}       2 {txt}{c |} {res}     0 {txt}{c |} {res} 38 {txt}{c |} {res}      2 {txt}{c |}
+     {c BLC}{hline 10}{c BT}{hline 13}{c BT}{hline 13}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c BT}{hline 5}{c BT}{hline 9}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 8}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TRC}
+  2. {c |} ssuid_~d {c |}    sex {c |}   immigrant  {c |} combin~h  {c |} unempf~6  {c |} pct_s~12  {c |} pct_w~12  {c |}
+     {c |} {res}       5 {txt}{c |} {res}Female {txt}{c |} {res}Native Born  {txt}{c |} {res}Hispanic  {txt}{c |} {res}       0  {txt}{c |} {res}       0  {txt}{c |} {res}       1  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 8}{c BT}{hline 4}{c TT}{hline 9}{c BT}{hline 3}{c TT}{hline 7}{c +}{hline 10}{c TT}{c BT}{hline 7}{c TT}{hline 3}{c BT}{hline 1}{c TT}{hline 9}{c RT}
+     {c |} mode_s~2 {c |}      tpearn {c |}    tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |} age {c |} n_years {c |}
+     {c |} {res}     W&S {txt}{c |} {res}      23043 {txt}{c |} {res}      23043 {txt}{c |} {res}    1 {txt}{c |} {res}      11 {txt}{c |} {res}     0 {txt}{c |} {res} 36 {txt}{c |} {res}      1 {txt}{c |}
+     {c BLC}{hline 10}{c BT}{hline 13}{c BT}{hline 13}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c BT}{hline 5}{c BT}{hline 9}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 8}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TRC}
+  3. {c |} ssuid_~d {c |}    sex {c |}   immigrant  {c |} combin~h  {c |} unempf~6  {c |} pct_s~12  {c |} pct_w~12  {c |}
+     {c |} {res}      13 {txt}{c |} {res}  Male {txt}{c |} {res}  Immigrant  {txt}{c |} {res}Hispanic  {txt}{c |} {res}       0  {txt}{c |} {res}       0  {txt}{c |} {res}       1  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 8}{c BT}{hline 4}{c TT}{hline 9}{c BT}{hline 3}{c TT}{hline 7}{c +}{hline 10}{c TT}{c BT}{hline 7}{c TT}{hline 3}{c BT}{hline 1}{c TT}{hline 9}{c RT}
+     {c |} mode_s~2 {c |}      tpearn {c |}    tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |} age {c |} n_years {c |}
+     {c |} {res}     W&S {txt}{c |} {res}45233.66667 {txt}{c |} {res}45233.66667 {txt}{c |} {res}    1 {txt}{c |} {res}       2 {txt}{c |} {res}     1 {txt}{c |} {res} 48 {txt}{c |} {res}      3 {txt}{c |}
+     {c BLC}{hline 10}{c BT}{hline 13}{c BT}{hline 13}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c BT}{hline 5}{c BT}{hline 9}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 8}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TRC}
+  4. {c |} ssuid_~d {c |}    sex {c |}   immigrant  {c |} combin~h  {c |} unempf~6  {c |} pct_s~12  {c |} pct_w~12  {c |}
+     {c |} {res}      15 {txt}{c |} {res}  Male {txt}{c |} {res}Native Born  {txt}{c |} {res}Hispanic  {txt}{c |} {res}       0  {txt}{c |} {res}       0  {txt}{c |} {res}       1  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 8}{c BT}{hline 4}{c TT}{hline 9}{c BT}{hline 3}{c TT}{hline 7}{c +}{hline 10}{c TT}{c BT}{hline 7}{c TT}{hline 3}{c BT}{hline 1}{c TT}{hline 9}{c RT}
+     {c |} mode_s~2 {c |}      tpearn {c |}    tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |} age {c |} n_years {c |}
+     {c |} {res}     W&S {txt}{c |} {res}      27117 {txt}{c |} {res}      27117 {txt}{c |} {res}    1 {txt}{c |} {res}       9 {txt}{c |} {res}     0 {txt}{c |} {res} 23 {txt}{c |} {res}      1 {txt}{c |}
+     {c BLC}{hline 10}{c BT}{hline 13}{c BT}{hline 13}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c BT}{hline 5}{c BT}{hline 9}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 8}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TRC}
+  5. {c |} ssuid_~d {c |}    sex {c |}   immigrant  {c |} combin~h  {c |} unempf~6  {c |} pct_s~12  {c |} pct_w~12  {c |}
+     {c |} {res}      17 {txt}{c |} {res}Female {txt}{c |} {res}Native Born  {txt}{c |} {res}   White  {txt}{c |} {res}       0  {txt}{c |} {res}       0  {txt}{c |} {res}       1  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 8}{c BT}{hline 4}{c TT}{hline 9}{c BT}{hline 3}{c TT}{hline 7}{c +}{hline 10}{c TT}{c BT}{hline 7}{c TT}{hline 3}{c BT}{hline 1}{c TT}{hline 9}{c RT}
+     {c |} mode_s~2 {c |}      tpearn {c |}    tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |} age {c |} n_years {c |}
+     {c |} {res}     W&S {txt}{c |} {res}66631.33333 {txt}{c |} {res}66631.33333 {txt}{c |} {res}    4 {txt}{c |} {res}      10 {txt}{c |} {res}     0 {txt}{c |} {res} 44 {txt}{c |} {res}      3 {txt}{c |}
+     {c BLC}{hline 10}{c BT}{hline 13}{c BT}{hline 13}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c BT}{hline 5}{c BT}{hline 9}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 8}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TRC}
+  6. {c |} ssuid_~d {c |}    sex {c |}   immigrant  {c |} combin~h  {c |} unempf~6  {c |} pct_s~12  {c |} pct_w~12  {c |}
+     {c |} {res}      32 {txt}{c |} {res}  Male {txt}{c |} {res}  Immigrant  {txt}{c |} {res}Hispanic  {txt}{c |} {res}       0  {txt}{c |} {res}       1  {txt}{c |} {res}       0  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 8}{c BT}{hline 4}{c TT}{hline 9}{c BT}{hline 3}{c TT}{hline 7}{c +}{hline 10}{c TT}{c BT}{hline 7}{c TT}{hline 3}{c BT}{hline 1}{c TT}{hline 9}{c RT}
+     {c |} mode_s~2 {c |}      tpearn {c |}    tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |} age {c |} n_years {c |}
+     {c |} {res}      SE {txt}{c |} {res}      24070 {txt}{c |} {res}      16800 {txt}{c |} {res}    1 {txt}{c |} {res}      12 {txt}{c |} {res}     1 {txt}{c |} {res} 38 {txt}{c |} {res}      2 {txt}{c |}
+     {c BLC}{hline 10}{c BT}{hline 13}{c BT}{hline 13}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c BT}{hline 5}{c BT}{hline 9}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 8}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TRC}
+  7. {c |} ssuid_~d {c |}    sex {c |}   immigrant  {c |} combin~h  {c |} unempf~6  {c |} pct_s~12  {c |} pct_w~12  {c |}
+     {c |} {res}      62 {txt}{c |} {res}Female {txt}{c |} {res}Native Born  {txt}{c |} {res}   Black  {txt}{c |} {res}       0  {txt}{c |} {res}       0  {txt}{c |} {res}       1  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 8}{c BT}{hline 4}{c TT}{hline 9}{c BT}{hline 3}{c TT}{hline 7}{c +}{hline 10}{c TT}{c BT}{hline 7}{c TT}{hline 3}{c BT}{hline 1}{c TT}{hline 9}{c RT}
+     {c |} mode_s~2 {c |}      tpearn {c |}    tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |} age {c |} n_years {c |}
+     {c |} {res}     W&S {txt}{c |} {res}      30506 {txt}{c |} {res}      30506 {txt}{c |} {res}    3 {txt}{c |} {res}      10 {txt}{c |} {res}     1 {txt}{c |} {res} 26 {txt}{c |} {res}      3 {txt}{c |}
+     {c BLC}{hline 10}{c BT}{hline 13}{c BT}{hline 13}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c BT}{hline 5}{c BT}{hline 9}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 8}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TRC}
+  8. {c |} ssuid_~d {c |}    sex {c |}   immigrant  {c |} combin~h  {c |} unempf~6  {c |} pct_s~12  {c |} pct_w~12  {c |}
+     {c |} {res}      72 {txt}{c |} {res}  Male {txt}{c |} {res}  Immigrant  {txt}{c |} {res}Hispanic  {txt}{c |} {res}       0  {txt}{c |} {res}       0  {txt}{c |} {res}       1  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 8}{c BT}{hline 4}{c TT}{hline 9}{c BT}{hline 3}{c TT}{hline 7}{c +}{hline 10}{c TT}{c BT}{hline 7}{c TT}{hline 3}{c BT}{hline 1}{c TT}{hline 9}{c RT}
+     {c |} mode_s~2 {c |}      tpearn {c |}    tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |} age {c |} n_years {c |}
+     {c |} {res}     W&S {txt}{c |} {res}      32739 {txt}{c |} {res}32592.33333 {txt}{c |} {res}    1 {txt}{c |} {res}       8 {txt}{c |} {res}     1 {txt}{c |} {res} 49 {txt}{c |} {res}      3 {txt}{c |}
+     {c BLC}{hline 10}{c BT}{hline 13}{c BT}{hline 13}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c BT}{hline 5}{c BT}{hline 9}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 8}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TRC}
+  9. {c |} ssuid_~d {c |}    sex {c |}   immigrant  {c |} combin~h  {c |} unempf~6  {c |} pct_s~12  {c |} pct_w~12  {c |}
+     {c |} {res}      74 {txt}{c |} {res}  Male {txt}{c |} {res}  Immigrant  {txt}{c |} {res}Hispanic  {txt}{c |} {res}       0  {txt}{c |} {res}       0  {txt}{c |} {res}       1  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 8}{c BT}{hline 4}{c TT}{hline 9}{c BT}{hline 3}{c TT}{hline 7}{c +}{hline 10}{c TT}{c BT}{hline 7}{c TT}{hline 3}{c BT}{hline 1}{c TT}{hline 9}{c RT}
+     {c |} mode_s~2 {c |}      tpearn {c |}    tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |} age {c |} n_years {c |}
+     {c |} {res}      SE {txt}{c |} {res}      69377 {txt}{c |} {res}      69377 {txt}{c |} {res}    1 {txt}{c |} {res}       2 {txt}{c |} {res}     0 {txt}{c |} {res} 33 {txt}{c |} {res}      1 {txt}{c |}
+     {c BLC}{hline 10}{c BT}{hline 13}{c BT}{hline 13}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c BT}{hline 5}{c BT}{hline 9}{c BRC}
+
+     {c TLC}{hline 10}{c TT}{hline 8}{c TT}{hline 14}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TT}{hline 11}{c TRC}
+ 10. {c |} ssuid_~d {c |}    sex {c |}   immigrant  {c |} combin~h  {c |} unempf~6  {c |} pct_s~12  {c |} pct_w~12  {c |}
+     {c |} {res}      82 {txt}{c |} {res}  Male {txt}{c |} {res}  Immigrant  {txt}{c |} {res}   White  {txt}{c |} {res}       0  {txt}{c |} {res}       0  {txt}{c |} {res}       1  {txt}{c |}
+     {c LT}{hline 10}{c +}{hline 8}{c BT}{hline 4}{c TT}{hline 9}{c BT}{hline 3}{c TT}{hline 7}{c +}{hline 10}{c TT}{c BT}{hline 7}{c TT}{hline 3}{c BT}{hline 1}{c TT}{hline 9}{c RT}
+     {c |} mode_s~2 {c |}      tpearn {c |}    tjb_msum {c |} educ3 {c |} mode_i~y {c |} parent {c |} age {c |} n_years {c |}
+     {c |} {res}     W&S {txt}{c |} {res}33898.66667 {txt}{c |} {res}33898.66667 {txt}{c |} {res}    3 {txt}{c |} {res}      11 {txt}{c |} {res}     0 {txt}{c |} {res} 58 {txt}{c |} {res}      3 {txt}{c |}
+     {c BLC}{hline 10}{c BT}{hline 13}{c BT}{hline 13}{c BT}{hline 7}{c BT}{hline 10}{c BT}{hline 8}{c BT}{hline 5}{c BT}{hline 9}{c BRC}
+
+{com}. log close
+      {txt}name:  {res}<unnamed>
+       {txt}log:  {res}/Users/toddnobles/Documents/sipp_analyses/investigating_recovered_script.smcl
+  {txt}log type:  {res}smcl
+ {txt}closed on:  {res} 5 Sep 2024, 22:18:48
+{txt}{.-}
+{smcl}
+{txt}{sf}{ul off}

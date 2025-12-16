@@ -323,12 +323,54 @@ m3 <- lqmm(
 )
 ```
 
+Adding interactions
+```{r}
+m4 <- lqmm(
+  fixed = ln_tpearn_annual ~ y1_status_v2_fct*sex_fct + 
+    race_eth_fct_cpsd +
+    educ_fct +
+    age + 
+    age2 +
+    immig_fct +  
+    calyear_fct +
+    parent_fct +
+    mari_status_collapsed + 
+    industry_fct,
+  ,random = ~ 1,
+  group = + ssuid_spanel_pnum,
+  tau = c(0.25, 0.5, .75),
+  data = person_year,
+  control = lqmmControl(method = "df")
+)
+
+
+m5 <- lqmm(
+  fixed = ln_tpearn_annual ~ y1_status_v2_fct*race_eth_fct_cpsd + 
+    sex_fct + 
+    educ_fct +
+    age + 
+    age2 +
+    immig_fct +  
+    calyear_fct +
+    parent_fct +
+    mari_status_collapsed + 
+    industry_fct,
+  ,random = ~ 1,
+  group = + ssuid_spanel_pnum,
+  tau = c(0.25, 0.5, .75),
+  data = person_year,
+  control = lqmmControl(method = "df")
+)
+```
+
 
 
 ```{r}
 summary_m1 <- summary(m1)
 summary_m2 <- summary(m2)
 summary_m3 <- summary(m3)
+summary_m4 <- summary(m4)
+summary_m5 <- summary(m5)
 ```
 
 
@@ -348,8 +390,8 @@ pval_to_stars <- function(p) {
 m1_table <- summary_m1$tTable
 m2_table <- summary_m2$tTable
 m3_table <- summary_m3$tTable
-# m4_table <- summary_m4$tTable
-# m5_table <- summary_m5$tTable
+m4_table <- summary_m4$tTable
+m5_table <- summary_m5$tTable
 
 format_model_results <- function(model_results, model_name) {
   coefficients_pvalues <- lapply(names(model_results), function(q) {
@@ -370,11 +412,11 @@ format_model_results <- function(model_results, model_name) {
 result_model1 <- format_model_results(m1_table, "Model 1")
 result_model2 <- format_model_results(m2_table, "Model 2")
 result_model3 <- format_model_results(m3_table, "Model 3")
-# result_model4 <- format_model_results(m4_table, "Model 4")
-# result_model5 <- format_model_results(m5_table, "Model 5")
+result_model4 <- format_model_results(m4_table, "Model 4")
+result_model5 <- format_model_results(m5_table, "Model 5")
 
 # Combine results from both models
-combined_results <- rbind(result_model1, result_model2, result_model3)
+combined_results <- rbind(result_model1, result_model2, result_model3, result_model4, result_model5)
 
 # Reshape the data to the desired wide format
 library(tidyr)

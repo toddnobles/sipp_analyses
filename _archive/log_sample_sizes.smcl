@@ -1,0 +1,235 @@
+{smcl}
+{com}{sf}{ul off}{txt}{.-}
+      name:  {res}<unnamed>
+       {txt}log:  {res}/Users/toddnobles/Documents/sipp_analyses/log_sample_sizes.smcl
+  {txt}log type:  {res}smcl
+ {txt}opened on:  {res}19 Sep 2024, 19:51:25
+
+{com}. unique ssuid_spanel_pnum_id  if mode_status_f12v2 == .
+{txt}Number of unique values of ssuid_spanel_pnum_id is  {res}1228
+{txt}Number of records is  {res}21493
+
+{com}. ds "That's the number of people who end up without a valid modal status during the first 12 months. From looking into it this is due to the filtering out of the observations where they were employed for less than 15 hours."
+{err}factor-variable and time-series operators not allowed
+{txt}{search r(101), local:r(101);}
+
+{com}. di "That's the number of people who end up without a valid modal status during the first 12 months. From looking into it this is due to the filtering out of the observations where they were employed for less than 15 hours."
+{res}That's the number of people who end up without a valid modal status during the first 12 months. From looking into it this is due to the filtering out of the observations where they were employed for less than 15 hours.
+
+{com}. list ssuid_spanel_pnum_id spanel swave monthcode month_individ employment_type1 tjb_mwkhrs  if ssuid_spanel_pnum_id  == 823 | ssuid_spanel_pnum_id == 70
+{txt}
+         {c TLC}{hline 10}{c -}{hline 8}{c -}{hline 7}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c TRC}
+         {c |} {res}ssuid_~d   spanel   swave   monthc~e   month_~d   employ~1   tjb_mw~s {txt}{c |}
+         {c LT}{hline 10}{c -}{hline 8}{c -}{hline 7}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c RT}
+    654. {c |} {res}      70     2018       3          1         25        W&S         20 {txt}{c |}
+    655. {c |} {res}      70     2018       3          2         26        W&S         20 {txt}{c |}
+    656. {c |} {res}      70     2018       3          3         27        W&S         20 {txt}{c |}
+    657. {c |} {res}      70     2018       3          4         28        W&S         20 {txt}{c |}
+    658. {c |} {res}      70     2018       3          5         29        W&S         20 {txt}{c |}
+         {c LT}{hline 10}{c -}{hline 8}{c -}{hline 7}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c RT}
+    659. {c |} {res}      70     2018       3          6         30        W&S         20 {txt}{c |}
+    660. {c |} {res}      70     2018       3          7         31        W&S         20 {txt}{c |}
+    661. {c |} {res}      70     2018       3          8         32        W&S         20 {txt}{c |}
+    662. {c |} {res}      70     2018       3          9         33        W&S         20 {txt}{c |}
+    663. {c |} {res}      70     2018       3         10         34        W&S         20 {txt}{c |}
+         {c LT}{hline 10}{c -}{hline 8}{c -}{hline 7}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c RT}
+    664. {c |} {res}      70     2018       3         11         35        W&S         20 {txt}{c |}
+    665. {c |} {res}      70     2018       3         12         36        W&S         20 {txt}{c |}
+   8957. {c |} {res}     823     2014       3          1         25         SE         40 {txt}{c |}
+   8958. {c |} {res}     823     2014       3          2         26         SE         40 {txt}{c |}
+   8959. {c |} {res}     823     2014       3          3         27         SE         40 {txt}{c |}
+         {c LT}{hline 10}{c -}{hline 8}{c -}{hline 7}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c RT}
+   8960. {c |} {res}     823     2014       3          4         28         SE         40 {txt}{c |}
+   8961. {c |} {res}     823     2014       3          5         29         SE         40 {txt}{c |}
+   8962. {c |} {res}     823     2014       3          6         30         SE         40 {txt}{c |}
+   8963. {c |} {res}     823     2014       3          7         31         SE         40 {txt}{c |}
+   8964. {c |} {res}     823     2014       3          8         32         SE         40 {txt}{c |}
+         {c LT}{hline 10}{c -}{hline 8}{c -}{hline 7}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c RT}
+   8965. {c |} {res}     823     2014       3          9         33         SE         40 {txt}{c |}
+   8966. {c |} {res}     823     2014       3         10         34         SE         40 {txt}{c |}
+   8967. {c |} {res}     823     2014       3         11         35         SE         40 {txt}{c |}
+   8968. {c |} {res}     823     2014       3         12         36         SE         40 {txt}{c |}
+   8969. {c |} {res}     823     2014       4          1         37         SE         20 {txt}{c |}
+         {c LT}{hline 10}{c -}{hline 8}{c -}{hline 7}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c RT}
+   8970. {c |} {res}     823     2014       4          2         38         SE         20 {txt}{c |}
+   8971. {c |} {res}     823     2014       4          3         39         SE         20 {txt}{c |}
+   8972. {c |} {res}     823     2014       4          4         40         SE         20 {txt}{c |}
+   8973. {c |} {res}     823     2014       4          5         41         SE         20 {txt}{c |}
+   8974. {c |} {res}     823     2014       4          6         42         SE         20 {txt}{c |}
+         {c LT}{hline 10}{c -}{hline 8}{c -}{hline 7}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c RT}
+   8975. {c |} {res}     823     2014       4          7         43         SE         20 {txt}{c |}
+   8976. {c |} {res}     823     2014       4          8         44         SE         20 {txt}{c |}
+   8977. {c |} {res}     823     2014       4          9         45         SE         20 {txt}{c |}
+   8978. {c |} {res}     823     2014       4         10         46         SE         20 {txt}{c |}
+   8979. {c |} {res}     823     2014       4         11         47         SE         20 {txt}{c |}
+         {c LT}{hline 10}{c -}{hline 8}{c -}{hline 7}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c RT}
+   8980. {c |} {res}     823     2014       4         12         48         SE         20 {txt}{c |}
+         {c BLC}{hline 10}{c -}{hline 8}{c -}{hline 7}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c -}{hline 10}{c BRC}
+
+{com}. list ssuid_spanel_pnum_id spanel swave monthcode month_individ employment_type1 tjb_mwkhrs  if ssuid_spanel_pnum_id  == 823 | ssuid_spanel_pnum_id == 70, ab(15)
+{txt}
+         {c TLC}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c TRC}
+         {c |} {res}ssuid_spanel_~d   spanel   swave   monthcode   month_individ   employment_ty~1   tjb_mwkhrs {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+    654. {c |} {res}             70     2018       3           1              25               W&S           20 {txt}{c |}
+    655. {c |} {res}             70     2018       3           2              26               W&S           20 {txt}{c |}
+    656. {c |} {res}             70     2018       3           3              27               W&S           20 {txt}{c |}
+    657. {c |} {res}             70     2018       3           4              28               W&S           20 {txt}{c |}
+    658. {c |} {res}             70     2018       3           5              29               W&S           20 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+    659. {c |} {res}             70     2018       3           6              30               W&S           20 {txt}{c |}
+    660. {c |} {res}             70     2018       3           7              31               W&S           20 {txt}{c |}
+    661. {c |} {res}             70     2018       3           8              32               W&S           20 {txt}{c |}
+    662. {c |} {res}             70     2018       3           9              33               W&S           20 {txt}{c |}
+    663. {c |} {res}             70     2018       3          10              34               W&S           20 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+    664. {c |} {res}             70     2018       3          11              35               W&S           20 {txt}{c |}
+    665. {c |} {res}             70     2018       3          12              36               W&S           20 {txt}{c |}
+   8957. {c |} {res}            823     2014       3           1              25                SE           40 {txt}{c |}
+   8958. {c |} {res}            823     2014       3           2              26                SE           40 {txt}{c |}
+   8959. {c |} {res}            823     2014       3           3              27                SE           40 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+   8960. {c |} {res}            823     2014       3           4              28                SE           40 {txt}{c |}
+   8961. {c |} {res}            823     2014       3           5              29                SE           40 {txt}{c |}
+   8962. {c |} {res}            823     2014       3           6              30                SE           40 {txt}{c |}
+   8963. {c |} {res}            823     2014       3           7              31                SE           40 {txt}{c |}
+   8964. {c |} {res}            823     2014       3           8              32                SE           40 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+   8965. {c |} {res}            823     2014       3           9              33                SE           40 {txt}{c |}
+   8966. {c |} {res}            823     2014       3          10              34                SE           40 {txt}{c |}
+   8967. {c |} {res}            823     2014       3          11              35                SE           40 {txt}{c |}
+   8968. {c |} {res}            823     2014       3          12              36                SE           40 {txt}{c |}
+   8969. {c |} {res}            823     2014       4           1              37                SE           20 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+   8970. {c |} {res}            823     2014       4           2              38                SE           20 {txt}{c |}
+   8971. {c |} {res}            823     2014       4           3              39                SE           20 {txt}{c |}
+   8972. {c |} {res}            823     2014       4           4              40                SE           20 {txt}{c |}
+   8973. {c |} {res}            823     2014       4           5              41                SE           20 {txt}{c |}
+   8974. {c |} {res}            823     2014       4           6              42                SE           20 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+   8975. {c |} {res}            823     2014       4           7              43                SE           20 {txt}{c |}
+   8976. {c |} {res}            823     2014       4           8              44                SE           20 {txt}{c |}
+   8977. {c |} {res}            823     2014       4           9              45                SE           20 {txt}{c |}
+   8978. {c |} {res}            823     2014       4          10              46                SE           20 {txt}{c |}
+   8979. {c |} {res}            823     2014       4          11              47                SE           20 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+   8980. {c |} {res}            823     2014       4          12              48                SE           20 {txt}{c |}
+         {c BLC}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c BRC}
+
+{com}. frame change default 
+
+. list ssuid_spanel_pnum_id spanel swave monthcode month_individ employment_type1 tjb_mwkhrs  if ssuid_spanel_pnum_id  == 823 | ssuid_spanel_pnum_id == 70, ab(15)
+{txt}
+         {c TLC}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c TRC}
+         {c |} {res}ssuid_spanel_~d   spanel   swave   monthcode   month_individ   employment_ty~1   tjb_mwkhrs {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+    872. {c |} {res}             70     2018       1           1               1               W&S           10 {txt}{c |}
+    873. {c |} {res}             70     2018       1           2               2               W&S           10 {txt}{c |}
+    874. {c |} {res}             70     2018       1           3               3               W&S           10 {txt}{c |}
+    875. {c |} {res}             70     2018       1           4               4               W&S           10 {txt}{c |}
+    876. {c |} {res}             70     2018       1           5               5               W&S           10 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+    877. {c |} {res}             70     2018       1           6               6               W&S           10 {txt}{c |}
+    878. {c |} {res}             70     2018       1           7               7               W&S           10 {txt}{c |}
+    879. {c |} {res}             70     2018       1           8               8               W&S           10 {txt}{c |}
+    880. {c |} {res}             70     2018       1           9               9               W&S           10 {txt}{c |}
+    881. {c |} {res}             70     2018       1          10              10               W&S           10 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+    882. {c |} {res}             70     2018       1          11              11               W&S           10 {txt}{c |}
+    883. {c |} {res}             70     2018       1          12              12               W&S           10 {txt}{c |}
+    884. {c |} {res}             70     2018       2           1              13               W&S           10 {txt}{c |}
+    885. {c |} {res}             70     2018       2           2              14               W&S           10 {txt}{c |}
+    886. {c |} {res}             70     2018       2           3              15               W&S           10 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+    887. {c |} {res}             70     2018       2           4              16               W&S           10 {txt}{c |}
+    888. {c |} {res}             70     2018       2           5              17               W&S           10 {txt}{c |}
+    889. {c |} {res}             70     2018       2           6              18               W&S           10 {txt}{c |}
+    890. {c |} {res}             70     2018       2           7              19               W&S           10 {txt}{c |}
+    891. {c |} {res}             70     2018       2           8              20               W&S            5 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+    892. {c |} {res}             70     2018       2           9              21               W&S            5 {txt}{c |}
+    893. {c |} {res}             70     2018       2          10              22               W&S            5 {txt}{c |}
+    894. {c |} {res}             70     2018       2          11              23               W&S            5 {txt}{c |}
+    895. {c |} {res}             70     2018       2          12              24               W&S            5 {txt}{c |}
+    896. {c |} {res}             70     2018       3           1              25               W&S           20 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+    897. {c |} {res}             70     2018       3           2              26               W&S           20 {txt}{c |}
+    898. {c |} {res}             70     2018       3           3              27               W&S           20 {txt}{c |}
+    899. {c |} {res}             70     2018       3           4              28               W&S           20 {txt}{c |}
+    900. {c |} {res}             70     2018       3           5              29               W&S           20 {txt}{c |}
+    901. {c |} {res}             70     2018       3           6              30               W&S           20 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+    902. {c |} {res}             70     2018       3           7              31               W&S           20 {txt}{c |}
+    903. {c |} {res}             70     2018       3           8              32               W&S           20 {txt}{c |}
+    904. {c |} {res}             70     2018       3           9              33               W&S           20 {txt}{c |}
+    905. {c |} {res}             70     2018       3          10              34               W&S           20 {txt}{c |}
+    906. {c |} {res}             70     2018       3          11              35               W&S           20 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+    907. {c |} {res}             70     2018       3          12              36               W&S           20 {txt}{c |}
+  11176. {c |} {res}            823     2014       1           1               1                SE           10 {txt}{c |}
+  11177. {c |} {res}            823     2014       1           2               2                SE           10 {txt}{c |}
+  11178. {c |} {res}            823     2014       1           3               3                SE           10 {txt}{c |}
+  11179. {c |} {res}            823     2014       1           4               4                SE           10 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+  11180. {c |} {res}            823     2014       1           5               5                SE           10 {txt}{c |}
+  11181. {c |} {res}            823     2014       1           6               6                SE           10 {txt}{c |}
+  11182. {c |} {res}            823     2014       1           7               7                SE           10 {txt}{c |}
+  11183. {c |} {res}            823     2014       1           8               8                SE           10 {txt}{c |}
+  11184. {c |} {res}            823     2014       1           9               9                SE           10 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+  11185. {c |} {res}            823     2014       1          10              10                SE           10 {txt}{c |}
+  11186. {c |} {res}            823     2014       1          11              11                SE           10 {txt}{c |}
+  11187. {c |} {res}            823     2014       1          12              12                SE           10 {txt}{c |}
+  11188. {c |} {res}            823     2014       2           1              13                SE           10 {txt}{c |}
+  11189. {c |} {res}            823     2014       2           2              14                SE           10 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+  11190. {c |} {res}            823     2014       2           3              15                SE           10 {txt}{c |}
+  11191. {c |} {res}            823     2014       2           4              16                SE           10 {txt}{c |}
+  11192. {c |} {res}            823     2014       2           5              17                SE           10 {txt}{c |}
+  11193. {c |} {res}            823     2014       2           6              18                SE           10 {txt}{c |}
+  11194. {c |} {res}            823     2014       2           7              19                SE           10 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+  11195. {c |} {res}            823     2014       2           8              20                SE           10 {txt}{c |}
+  11196. {c |} {res}            823     2014       2           9              21                SE           10 {txt}{c |}
+  11197. {c |} {res}            823     2014       2          10              22                SE           10 {txt}{c |}
+  11198. {c |} {res}            823     2014       2          11              23                SE           10 {txt}{c |}
+  11199. {c |} {res}            823     2014       2          12              24                SE           10 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+  11200. {c |} {res}            823     2014       3           1              25                SE           40 {txt}{c |}
+  11201. {c |} {res}            823     2014       3           2              26                SE           40 {txt}{c |}
+  11202. {c |} {res}            823     2014       3           3              27                SE           40 {txt}{c |}
+  11203. {c |} {res}            823     2014       3           4              28                SE           40 {txt}{c |}
+  11204. {c |} {res}            823     2014       3           5              29                SE           40 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+  11205. {c |} {res}            823     2014       3           6              30                SE           40 {txt}{c |}
+  11206. {c |} {res}            823     2014       3           7              31                SE           40 {txt}{c |}
+  11207. {c |} {res}            823     2014       3           8              32                SE           40 {txt}{c |}
+  11208. {c |} {res}            823     2014       3           9              33                SE           40 {txt}{c |}
+  11209. {c |} {res}            823     2014       3          10              34                SE           40 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+  11210. {c |} {res}            823     2014       3          11              35                SE           40 {txt}{c |}
+  11211. {c |} {res}            823     2014       3          12              36                SE           40 {txt}{c |}
+  11212. {c |} {res}            823     2014       4           1              37                SE           20 {txt}{c |}
+  11213. {c |} {res}            823     2014       4           2              38                SE           20 {txt}{c |}
+  11214. {c |} {res}            823     2014       4           3              39                SE           20 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+  11215. {c |} {res}            823     2014       4           4              40                SE           20 {txt}{c |}
+  11216. {c |} {res}            823     2014       4           5              41                SE           20 {txt}{c |}
+  11217. {c |} {res}            823     2014       4           6              42                SE           20 {txt}{c |}
+  11218. {c |} {res}            823     2014       4           7              43                SE           20 {txt}{c |}
+  11219. {c |} {res}            823     2014       4           8              44                SE           20 {txt}{c |}
+         {c LT}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c RT}
+  11220. {c |} {res}            823     2014       4           9              45                SE           20 {txt}{c |}
+  11221. {c |} {res}            823     2014       4          10              46                SE           20 {txt}{c |}
+  11222. {c |} {res}            823     2014       4          11              47                SE           20 {txt}{c |}
+  11223. {c |} {res}            823     2014       4          12              48                SE           20 {txt}{c |}
+         {c BLC}{hline 17}{c -}{hline 8}{c -}{hline 7}{c -}{hline 11}{c -}{hline 15}{c -}{hline 17}{c -}{hline 12}{c BRC}
+
+{com}. log close 
+      {txt}name:  {res}<unnamed>
+       {txt}log:  {res}/Users/toddnobles/Documents/sipp_analyses/log_sample_sizes.smcl
+  {txt}log type:  {res}smcl
+ {txt}closed on:  {res}19 Sep 2024, 19:54:45
+{txt}{.-}
+{smcl}
+{txt}{sf}{ul off}

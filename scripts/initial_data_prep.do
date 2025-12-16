@@ -232,6 +232,28 @@ foreach num of numlist 1/8 {
 
 
 
+clear
+save sipp_monthly_combined, replace emptyok
+foreach num of numlist 1/8 {
+	
+di "wave `num'"
+
+use $varbasic_ids $demographics $wealth $debts using ${file`num'}, clear
+
+// now create the other monthly data (which doesn't have to be rehaped by job)	
+capture drop _merge 
+merge m:1 ssuid spanel pnum using unique_individuals , keep(1 3)
+capture drop _merge 
+
+compress 
+save sipp_wv`num'_monthly, replace
+
+append using sipp_monthly_combined
+save sipp_monthly_combined, replace  
+}
+
+
+
 
 
 
