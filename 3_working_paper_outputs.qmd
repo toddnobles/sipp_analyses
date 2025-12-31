@@ -540,10 +540,8 @@ writeData(wb, tbl8_unemp, sheet = "Table 8 Unemp")
 ## Table 4 Earnings Unemployment models 
 ```{r unemployment earnings models }
 person_year <- person_year %>% 
-  mutate(age_sq = tage^2,
-         industry_numeric = as.numeric(mode_industry)) %>% 
-  set_variable_labels(age_sq = "Age Squared",
-                      industry_numeric = "Industry") 
+  mutate(industry_numeric = as.numeric(mode_industry)) %>% 
+  set_variable_labels(industry_numeric = "Industry") 
 
 
 library(plm)
@@ -558,7 +556,6 @@ unemp_m2_plm <- plm(ln_tpearn_annual ~ unemp_f12_6  +
                    race_eth_fct_cpsd + 
                    educ_fct + 
                    tage + 
-                   age_sq + 
                    sex_fct + 
                    immig_fct + 
                    married + 
@@ -574,7 +571,6 @@ unemp_m2_plm <- plm(ln_tpearn_annual ~ unemp_f12_6  +
 #                    race_eth_fct_cpsd + 
 #                    educ_fct + 
 #                    tage + 
-#                    age_sq + 
 #                    sex_fct + 
 #                    immig_fct + 
 #                    married + 
@@ -617,7 +613,6 @@ mapping <- c(
   # Demographic Variables
   "sex_fctFemale" = "Female",
   "tage" = "Age", 
-  "age_sq" = "Age sq",
   "immig_fctImmigrant" = "Immigrant",
   "marriedMarried" = "Married",
   "parent_stdParent" = "Parent",
@@ -719,7 +714,6 @@ desired_order <- c(
   # Demographic Variables
   "sex_fctFemale",
   "tage" , 
-  "age_sq",
   "immig_fctImmigrant",
   "marriedMarried",
   "parent_stdParent",
@@ -850,7 +844,6 @@ status_m2_plm <- plm(ln_tpearn_annual ~ y1_status_v2  +
                    race_eth_fct_cpsd + 
                    educ_fct + 
                    tage + 
-                   age_sq + 
                    sex_fct + 
                    immig_fct + 
                    married + 
@@ -949,7 +942,6 @@ unemp3_m2_plm <- plm(ln_tpearn_annual ~ unemp_f12_3  +
                    race_eth_fct_cpsd + 
                    educ_fct + 
                    tage + 
-                   age_sq + 
                    sex_fct + 
                    immig_fct + 
                    married + 
@@ -1066,7 +1058,7 @@ addWorksheet(wb, "Tbl 7 Reg Unemp Earn WS")
 writeData(wb, tbl7_unemp_ws_models, sheet = "Tbl 7 Reg Unemp Earn WS")
 ```
 
-Testing VIF of all models 
+## Testing VIF of all models 
 
 ```{r} 
 objs <- ls(pattern = "^unemp|^status")
@@ -1110,7 +1102,6 @@ unemp_m2_hlm <- lmer(ln_tpearn_annual ~ unemp_f12_6  +
                     race_eth_fct_cpsd + 
                     educ_fct + 
                     tage + 
-                    age_sq + 
                     sex_fct + 
                     immig_fct + 
                     married + 
@@ -1163,7 +1154,6 @@ status_m2_hlm <- lmer(ln_tpearn_annual ~ y1_status_v2  +
                     race_eth_fct_cpsd + 
                     educ_fct + 
                     tage + 
-                    age_sq + 
                     sex_fct + 
                     immig_fct + 
                     married + 
@@ -1216,7 +1206,6 @@ unemp3_m2_hlm <- lmer(ln_tpearn_annual ~ unemp_f12_3  +
                     race_eth_fct_cpsd + 
                     educ_fct + 
                     tage + 
-                    age_sq + 
                     sex_fct + 
                     immig_fct + 
                     married + 
