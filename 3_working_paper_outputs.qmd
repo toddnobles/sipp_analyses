@@ -844,23 +844,6 @@ coef_map_status <- build_coef_map_ordered(list(status_m1_plm,
 
 
 Adding reference category rows
-```{r}
-rows_to_add_status <- tribble(
-  ~term, ~m1, ~m2, ~m3, ~m4, ~m5, ~m6, ~m7, ~m8, ~m9, ~m10,
-  "Wage & Salary (Reference)", "", "", "", "", "", "", "", "", "", "", #1
-  "White (Reference)", "", "", "", "", "", "", "", "", "", "", #3
-  "Prior Industry Experience: No (Reference)", "", "", "", "", "", "", "", "", "", "", #5
-  "Male (Reference)", "", "", "", "", "", "", "", "", "", "", # 8
-  "US Born (Reference)", "", "", "", "", "", "", "", "", "", "", #12
-  "Not Married (Reference)", "", "", "", "", "", "", "", "", "", "", #14
-  "Not Parent(Reference)", "", "", "", "", "", "", "", "", "", "", #16
-  "High School or Less (Reference)", "", "", "", "", "", "", "", "", "", "", # 18
-  "Professional, Scientific, and Management, and Administrative, and Waste Management Services (Reference)", "", "", "", "", "", "", "", "", "", "", 
-  "Calendar Year: 2014 (Reference)", "", "", "", "", "", "", "", "", "", "" 
-  )
-attr(rows_to_add_status, 'position') <- c(1, 4, 6, 10, 14, 16, 18, 20, 25, 38)
-```
-
 
 ```{r}
 tbl5_status_models_rse <- modelsummary(list(status_m1_plm,
