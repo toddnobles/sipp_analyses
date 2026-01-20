@@ -1085,7 +1085,12 @@ writeData(wb, tbl4_unemp_hlm, sheet = "Tbl 4 HLM Unemp")
 ```{r}
 ## HLM Status Models
 status_m1_hlm <- lmer(ln_tpearn_annual ~ y1_status_v2 + (1 | shhadid) + (1 | ssuid_spanel_pnum),
-                     data = person_year)
+                     data = person_year,
+                     control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 2e5)
+  )
+  ) 
 
 status_m2_hlm <- lmer(ln_tpearn_annual ~ y1_status_v2  + 
                     race_eth_fct_cpsd + 
@@ -1157,7 +1162,11 @@ unemp3_m5_hlm <- update(unemp3_m4_hlm, . ~ . + industry_experience*unemp_f12_3)
 unemp3_m6_hlm <- update(unemp3_m4_hlm, . ~ . + ln_thnetworth) 
 unemp3_m7_hlm <- update(unemp3_m2_hlm, . ~ . + industry_experience)
 unemp3_m8_hlm <- update(unemp3_m2_hlm, . ~ . + mode_industry)
-unemp3_m9_hlm <- update(unemp3_m8_hlm, . ~ . + industry_experience)
+unemp3_m9_hlm <- update(unemp3_m8_hlm, . ~ . + industry_experience,
+                        control = lmerControl(
+    optimizer = "bobyqa",
+    optCtrl = list(maxfun = 2e5)
+  )) # note this doesn't converge 
 unemp3_m10_hlm <- update(unemp3_m9_hlm, . ~. + ln_thnetworth)
 
 tbl6_unemp3_hlm <- modelsummary(list(unemp3_m1_hlm,
