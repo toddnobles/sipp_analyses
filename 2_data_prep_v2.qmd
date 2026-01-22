@@ -1083,9 +1083,9 @@ saveRDS(se_sample.5_10hrs_cleanest, "se_sample_5_10hrs_cleanest.rds")
 
 
 
-## March 2025 updates for descriptives comparing WS and SE 
+## Comparing WS and SE 
 ```{r March 2025 update for descriptives comparing WS and SE 1}
-## here we bring in the long_wd from above that isn't filtered to only SE sample, etc. 
+## here we bring in the long_wd from above that isn't filtered to only SE sample, etc. It is filtered to only looking at those who are in the data for at least two years. 
 full_time_period_flags <- long_wd %>% 
  arrange(ssuid_spanel_pnum, swave, monthcode) %>% 
  group_by(ssuid_spanel_pnum) %>%
@@ -1111,11 +1111,58 @@ full_time_period_flags <- long_wd %>%
  tidylog::filter(se_months/months == 1 | ws_months/months == 1 ) %>% 
  mutate(employment_group = case_when(se_months/months == 1 ~ "Self-Employed",
                                      ws_months/months == 1 ~ "Wage & Salary"))
+```
 
-## now with the left-join we'll keep only those we've identified above and get some summary stats on them. Could do this all above, but for clarity will keep it separated in case this gets moved to an analysis script later. 
-to_table <- full_time_period_flags %>% 
+```{r}
+full_time_period_flags %>% left_join(long_wd, by = "ssuid_spanel_pnum") %>% 
+  select(ssuid_spanel_pnum,
+     swave,
+     spanel,
+     shhadid,
+     monthcode,
+     race_eth_fct_cpsd,
+     sex_fct,
+     immig_fct,
+     calyear,
+     educ_fct,
+     industry_fct,
+     parent_std,
+     employment_group, 
+     msum, 
+     tpearn,
+     married) %>% 
+ naniar::gg_miss_var()
+```
+
+```{r March 2025 update for descriptives comparing WS and SE 1}
+## now with the left-join we'll keep only those we've identified above and get some summary stats on them. 
+ws_vs_se <- full_time_period_flags %>% 
  left_join(long_wd, by = "ssuid_spanel_pnum") %>% 
- mutate(
+  mutate(has_na = rowSums(is.na(pick(
+    monthcode, race_eth_fct_cpsd, sex_fct, immig_fct, 
+    educ_fct, industry_fct, parent_std, 
+    employment_group, msum, tpearn, married
+  ))) > 0) %>%
+  # Group and remove entire groups if ANY row in that group was flagged
+  group_by(ssuid_spanel_pnum, calyear) %>% 
+  filter(!any(has_na)) %>% 
+  ungroup() %>%
+  select(-has_na)
+
+
+ws_vs_se %>% group_by(ssuid_spanel_pnum) %>% count() %>% ungroup() %>% count(n)
+
+# for consistency we'll get back down to only those we observe for two years with no missingness
+ws_vs_se <- ws_vs_se %>% 
+  add_count(ssuid_spanel_pnum, name = "total_months") %>% 
+  filter(total_months > 12) %>% 
+  select(-total_months)
+```
+
+
+```{r March 2025 update for descriptives comparing WS and SE 1}
+ws_vs_se <- ws_vs_se %>% 
+  mutate(
    # Adjusting for inflation using the following CPI values from the Minneapolis Fed's inflation calculator:
    #https://www.minneapolisfed.org/about-us/monetary-policy/inflation-calculator/consumer-price-index-1913-
    tpearn = case_when(
@@ -1123,6 +1170,7 @@ to_table <- full_time_period_flags %>%
      calyear == 2014 ~ tpearn*304.7/236.7,
      calyear == 2015 ~ tpearn*304.7/237,
      calyear == 2016 ~ tpearn*304.7/240.0,
+     calyear == 2017 ~ tpearn*304.7/245.1,
      calyear == 2018 ~ tpearn*304.7/251.1,
      calyear == 2019 ~ tpearn*304.7/255.7,
      calyear == 2020 ~ tpearn*304.7/258.8,
@@ -1136,6 +1184,7 @@ to_table <- full_time_period_flags %>%
      calyear == 2014 ~ msum*304.7/236.7,
      calyear == 2015 ~ msum*304.7/237,
      calyear == 2016 ~ msum*304.7/240.0,
+     calyear == 2017 ~ msum*304.7/245.1,
      calyear == 2018 ~ msum*304.7/251.1,
      calyear == 2019 ~ msum*304.7/255.7,
      calyear == 2020 ~ msum*304.7/258.8,
@@ -1144,16 +1193,19 @@ to_table <- full_time_period_flags %>%
      calyear == 2023 ~ msum,
      .default = NA
    )
- ) %>%
- #can group by employment_group here to bring it along since it's constant within individuals based on above restrictions
+ ) 
+  
+```
+
+
+```{r descriptive table comparing ws vs se}
+ws_vs_se %>% 
+    #can group by employment_group here to bring it along since it's constant within individuals based on above restrictions
  group_by(ssuid_spanel_pnum, calyear, employment_group) %>% 
  summarize(tpearn = sum(tpearn, na.rm = TRUE),
            msum = sum(msum, na.rm = TRUE)) %>% 
  # the above gets us to yearly values. now we move to person-level summary stats of yearly values 
- ungroup()
- 
- 
- to_table %>% 
+ ungroup() %>% 
  gtsummary::tbl_summary(by = employment_group, include = c(tpearn, msum),
             statistic = list( ~ "{mean} [{median}] ({sd})")) %>% 
  gtsummary::add_overall() %>% 
@@ -1163,8 +1215,7 @@ to_table <- full_time_period_flags %>%
 
 
 ```{r n-counts}
-full_time_period_flags %>% 
- left_join(long_wd, by = "ssuid_spanel_pnum") %>% 
+ws_vs_se %>% 
  group_by(employment_group) %>% 
  summarize(n_people = n_distinct(ssuid_spanel_pnum),
            .groups = "drop")
@@ -1180,84 +1231,268 @@ log_transform <- function(x) {
 ```
 
 
-```{r March 2025 update for descriptives comparing WS and SE 2}
-# ws_vs_se <- full_time_period_flags %>% 
-#   left_join(long_wd, by = "ssuid_spanel_pnum") %>% 
-#   group_by(ssuid_spanel_pnum, calyear) %>% 
-#   summarize(tpearn = sum(tpearn, na.rm = TRUE),
-#             msum = sum(msum, na.rm = TRUE),
-#             employment_group = last(employment_group),
-#             age = max(tage), 
-#             educ_fct = last(educ_fct),
-#             race_eth_fct_cpsd = last(race_eth_fct_cpsd),
-#             sex_fct = last(sex_fct),
-#             immig_fct = last(immig_fct),
-#             parent_std = last(parent_std)) %>% 
-#   # the above gets us to yearly values. now we move to person-level summary stats of yearly values 
-#   ungroup() %>% 
-#   mutate(employment_group_fct = factor(employment_group, levels = c("Wage & Salary", "Self-Employed")),
-#          ln_tpearn = log_transform(tpearn),
-#          ln_msum = log_transform(msum))
+```{r ws vs se person year}
+## getting down to a dataset that has their demographic vars and yearly earnings at the person-year level
+temp <- ws_vs_se %>% 
+  filter(monthcode %% 12 == 0) %>% 
+  left_join(industry_y1, by = "ssuid_spanel_pnum") %>% 
+  select(ssuid_spanel_pnum, 
+         shhadid,
+         educ_fct, 
+         race_eth_fct_cpsd,
+         sex_fct,
+         immig_fct,
+         parent_std,
+         married,
+         industry_y1_mode,
+         tage,
+         calyear,
+         swave, spanel,
+         employment_group
+         ) 
+ 
+
+find_max_mode <- function(x) {
+  u <- unique(x)
+  tab <- tabulate(match(x, u))
+  max(u[tab == max(tab)]) 
+}
+
+## here we get their earnings in each calendar year as well as their most common industry in that year
+temp_earnings <- ws_vs_se %>% 
+  group_by(ssuid_spanel_pnum, calyear) %>% 
+  summarize(tpearn_annual= sum(tpearn),
+            msum_annual = sum(msum),
+            mode_industry = find_max_mode(industry_fct)) %>% 
+  ungroup() %>% 
+   mutate(
+         ln_tpearn_annual = log_transform(tpearn_annual),
+         ln_msum_annual = log_transform(msum_annual))
+
+
+library(labelled)
+person_year <- left_join(temp_earnings, temp, by = c("ssuid_spanel_pnum", "calyear")) %>% 
+  mutate(industry_experience = case_when(mode_industry == industry_y1_mode ~ 1,
+                                         .default = 0),
+         employment_group_fct = factor(employment_group, levels = c("Wage & Salary", "Self-Employed")),
+         married = factor(married, levels = c(0,1), labels = c( "Not Married", "Married")),
+         parent_std = factor(parent_std, levels = c(0,1), labels = c("Not Parent", "Parent"))) %>%
+  set_variable_labels(
+    ln_tpearn_annual = "Log earnings (tpearn)",
+    ln_msum_annual = "Log earnings (msum)",
+    sex_fct = "Sex",
+    race_eth_fct_cpsd = "Race",
+    educ_fct = "Education",
+    married = "Marital Status",
+    tage = "Age",
+    immig_fct = "Nativity",
+    calyear = "Year",
+    industry_experience = "Prior Industry Experience",
+    employment_group_fct = "Employment Type"
+  )
+
+```
+
+
+```{r models comparing WS and SE 2}
+library(plm)
+
+tpearn_m1_plm <- plm(ln_tpearn_annual ~ employment_group_fct, 
+                    data = person_year, 
+                    index = c("ssuid_spanel_pnum", "calyear"),
+                    model = "random",
+                    random.method = "walhus")
+
+
+tpearn_m2_plm <- plm(ln_tpearn_annual ~ employment_group_fct  + 
+                   race_eth_fct_cpsd + 
+                   educ_fct + 
+                   tage + 
+                   sex_fct + 
+                   immig_fct + 
+                   married + 
+                   parent_std +
+                   calyear , data = person_year,
+                   index = c("ssuid_spanel_pnum", "calyear"), 
+                   model = "random",random.method = "walhus")
+
+
+
+tpearn_m7_plm <- update(tpearn_m2_plm, . ~ . + industry_experience)
+
+
+
+
+msum_m1_plm <- plm(ln_msum_annual ~ employment_group_fct, 
+                    data = person_year, 
+                    index = c("ssuid_spanel_pnum", "calyear"),
+                    model = "random",
+                    random.method = "walhus")
+
+
+msum_m2_plm <- plm(ln_msum_annual ~ employment_group_fct  + 
+                   race_eth_fct_cpsd + 
+                   educ_fct + 
+                   tage + 
+                   sex_fct + 
+                   immig_fct + 
+                   married + 
+                   parent_std +
+                   calyear , data = person_year,
+                   index = c("ssuid_spanel_pnum", "calyear"), 
+                   model = "random",random.method = "walhus")
+
+
+
+msum_m7_plm <- update(msum_m2_plm, . ~ . + industry_experience)
+
+
+
+
+
+```
+
+```{r}
+mapping <- c(
+  # Main Variables of Interest
+  "industry_experience" = "Prior Industry Experience: Yes",
+  
+  # Demographic Variables
+  "sex_fctFemale" = "Female",
+  "tage" = "Age", 
+  "immig_fctImmigrant" = "Immigrant",
+  "marriedMarried" = "Married",
+  "parent_stdParent" = "Parent",
+  
+  # Education 
+  "educ_fctSome College or Assoc" = "Some College or Assoc",
+  "educ_fct4-year Degree or More" = "4-Year Degree +",
+  
+  # Year Effects
+  "calyear2015" = "2015",
+  "calyear2016" = "2016",
+  "calyear2017" = "2017",
+  "calyear2018" = "2018",
+  "calyear2019" = "2019",
+  "calyear2020" = "2020",
+  "calyear2021" = "2021",
+  "calyear2022" = "2022",
+  "calyear2023" = "2023",
+  "(Intercept)" = "(Intercept)",
+  "SD (Intercept ssuid_spanel_pnum)" = "SD (Intercept Individual ID)",
+  "SD (Intercept shhadid)" = "SD (Intercept Household)",
+  "SD (Observations)" = "SD (Observations)"
+  
+)
+```
+
+```{r}
+library(broom)  
+
+# Helper to build coef_map with custom labels & order
+build_coef_map_ordered <- function(models, custom, order) {
+  # Get all coefficient names across models
+  all_coefs <- unique(unlist(lapply(models, function(m) {
+    ch <- tryCatch(names(coef(m)), error = function(e) NULL)
+    if (is.null(ch)) {
+      td <- tryCatch(tidy(m)$term, error = function(e) NULL)
+      ch <- if (!is.null(td)) as.character(td) else character(0)
+    }
+    ch
+  })))
+  
+  # Default map: each coef name maps to itself
+  map <- setNames(all_coefs, all_coefs)
+  
+  # Overwrite custom names
+  map[names(custom)] <- custom
+  
+  # Reorder: put variables listed in 'order' first, then the rest
+  ordered_names <- c(order, setdiff(names(map), order))
+  map[ordered_names]
+}
+
+desired_order <- c( 
+  # Main Variables of Interest
+  "employment_group_fctSelf-Employed",
+  "industry_experience",
+  "race_eth_fct_cpsdNon_white" ,
+
+  
+  # Demographic Variables
+  "sex_fctFemale",
+  "tage" , 
+  "immig_fctImmigrant",
+  "marriedMarried",
+  "parent_stdParent",
+  
+  # Education 
+  "educ_fctSome College or Assoc",
+  "educ_fct4-year Degree or More",
+  
+  
+  # Industry Effects
+  "industry_numeric",
+  
+ 
+    # Year Effects
+  "calyear2014",
+  "calyear2015",
+  "calyear2016",
+  "calyear2017",
+  "calyear2018",
+  "calyear2019",
+  "calyear2020",
+  "calyear2021",
+  "calyear2022",
+  "calyear2023",
+  
+  "SD (Intercept ssuid_spanel_pnum)" ,
+  "SD (Intercept shhadid)",
+  "SD (Observations)"
+  
+  
+  )
+```
+
+
+```{r}
+coef_map <- build_coef_map_ordered(list(msum_m1_plm,
+                                           msum_m2_plm, 
+                                           msum_m7_plm, 
+                                          tpearn_m1_plm,
+                                          tpearn_m2_plm, 
+                                          tpearn_m7_plm ), mapping, desired_order)
+```
+
+
+```{r ws vs se table }
+library(modelsummary)
 # 
-# library(plm)
-# plm_msum <- plm(ln_msum ~ employment_group_fct  + 
-#                    calyear , 
-#                 data = ws_vs_se,
-#                    index = c("ssuid_spanel_pnum", "calyear"), 
-#                    model = "random")
-# 
-# plm_msum2 <- plm(ln_msum ~ employment_group_fct + 
-#                    age + 
-#                    I(age^2) + 
-#                    educ_fct + 
-#                    race_eth_fct_cpsd + 
-#                    sex_fct + 
-#                    immig_fct + 
-#                    factor(parent_std) + 
-#                    calyear, 
-#                  data = ws_vs_se, 
-#                  index = c("ssuid_spanel_pnum", "calyear"),
-#                  model = "random")
-# 
-# plm_tpearn <- plm(ln_tpearn ~ employment_group_fct  + 
-#                    calyear , 
-#                 data = ws_vs_se,
-#                    index = c("ssuid_spanel_pnum", "calyear"), 
-#                    model = "random")
-# 
-# plm_tpearn2 <- plm(ln_tpearn ~ employment_group_fct + 
-#                    age + 
-#                    I(age^2) + 
-#                    educ_fct + 
-#                    race_eth_fct_cpsd + 
-#                    sex_fct + 
-#                    immig_fct + 
-#                    factor(parent_std) + 
-#                    calyear, 
-#                  data = ws_vs_se, 
-#                  index = c("ssuid_spanel_pnum", "calyear"),
-#                  model = "random") 
-# 
-# library(modelsummary)
-# 
-# ws_vs_se_table <- modelsummary(list(plm_msum,
-#                                            plm_msum2, 
-#                                            plm_tpearn, 
-#                                            plm_tpearn2), 
-#                                       coef_rename = TRUE, 
-#                                       estimate = "{estimate} ({std.error}){stars}",
-#                                       vcov = "robust",
-#                                       statistic = NULL,
-#                                       title = "Table XX Robust SE Employment Type predciting Log Annual Earnings", 
-#                                       output = "gt")
-# 
-# ws_vs_se_table 
-# 
-# library(openxlsx)
-# wb <- createWorkbook()
-# addWorksheet(wb, "Wage vs SE earnings")
-# writeData(wb, ws_vs_se_table, sheet = "Wage vs SE earnings")
-# saveWorkbook(wb, paste0("working_paper_outputs_prep",Sys.Date(),".xlsx"), overwrite = TRUE)
+ws_vs_se_regressions <- modelsummary(list(tpearn_m1_plm,
+                                           tpearn_m2_plm, 
+                                           tpearn_m7_plm, 
+                                           msum_m1_plm,
+                                           msum_m2_plm, 
+                                           msum_m7_plm ), 
+                                      coef_map = coef_map,
+                                      estimate = "{estimate}{stars}",
+                                      vcov = "robust",
+                                      statistic = "({std.error})",
+                                      title = "Table XX Robust SE WS vs SE predicting Log Annual Earnings", 
+                                      output = "huxtable",
+                                       notes = "Significance levels: + p < 0.1, * p < 0.05, ** p < 0.01, *** p < 0.001")
+
+ws_vs_se_regressions
+```
+
+
+```{r ws vs se table outputs}
+library(openxlsx)
+wb <- createWorkbook()
+addWorksheet(wb, "Wage vs SE earnings")
+writeData(wb, ws_vs_se_table, sheet = "Wage vs SE earnings")
+saveWorkbook(wb, paste0("ws_vs_se",Sys.Date(),".xlsx"), overwrite = TRUE)
 # 
 
 ```
